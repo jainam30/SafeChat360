@@ -1,1 +1,47 @@
 # Docker Compose setup
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: safechat
+      POSTGRES_PASSWORD: safechatpass
+      POSTGRES_DB: safechatdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: safechat-backend
+    environment:
+      - DATABASE_URL=postgresql://safechat:safechatpass@db:5432/safechatdb
+      - JWT_SECRET=superstrongsecret_here_changeit
+      - ACCESS_TOKEN_EXPIRES_MINUTES=120
+      - TEXT_MODEL=unitary/toxic-bert
+      - WHISPER_MODEL=base
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: safechat-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/usr/src/app
+    command: npm run dev
+
+volumes:
+  pgdata:

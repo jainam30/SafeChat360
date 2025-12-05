@@ -1,6 +1,13 @@
 fastapi
 uvicorn
 transformers
+torch
 pillow
 python-multipart
-whisper
+openai-whisper
+sqlmodel
+psycopg2-binary
+passlib[bcrypt]
+python-jose[cryptography]
+email-validator
+opencv-python

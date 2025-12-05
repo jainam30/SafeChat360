@@ -1,5 +1,73 @@
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background-color: #f9f9f9;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #020204;
+    --bg-secondary: #07070a;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --accent-primary: #12c494;
+    --accent-glow: rgba(18, 196, 148, 0.5);
+  }
+
+  body {
+    @apply bg-cyber-black text-cyber-text antialiased;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(18, 196, 148, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 0% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-cyber-dark;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-cyber-card rounded-full border border-cyber-muted/20;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-cyber-muted/40;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-cyber-card/60 backdrop-blur-xl border border-white/5 shadow-xl;
+  }
+  
+  .glass-card {
+    @apply bg-cyber-card/40 backdrop-blur-md border border-white/5 rounded-xl transition-all duration-300 hover:bg-cyber-card/60 hover:border-cyber-primary/20 hover:shadow-lg hover:shadow-cyber-primary/5;
+  }
+
+  .glass-input {
+    @apply bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all;
+  }
+
+  .glass-button {
+    @apply bg-cyber-primary/10 text-cyber-primary border border-cyber-primary/20 px-4 py-2 rounded-lg hover:bg-cyber-primary/20 hover:border-cyber-primary/40 transition-all duration-300 font-medium tracking-wide shadow-[0_0_10px_rgba(18,196,148,0.1)];
+  }
+  
+  .glass-button-primary {
+    @apply bg-cyber-primary text-black font-bold px-6 py-2 rounded-lg hover:bg-opacity-90 hover:shadow-[0_0_20px_rgba(18,196,148,0.4)] transition-all duration-300 transform hover:-translate-y-0.5;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(18, 196, 148, 0.3);
+  }
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }

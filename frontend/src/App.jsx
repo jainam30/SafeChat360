@@ -1,15 +1,41 @@
-import React from "react";
-import Dashboard from "./pages/Dashboard";
-import ImageModeration from "./pages/ImageModeration";
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout/Layout';
+import Dashboard from './pages/Dashboard';
+import SocialFeed from './pages/SocialFeed';
+import VideoModeration from './pages/VideoModeration';
+import TextModeration from './pages/TextModeration';
+import ImageModeration from './pages/ImageModeration';
+import AudioModeration from './pages/AudioModeration';
+import History from './pages/History';
+import Settings from './pages/Settings';
+import About from './pages/About';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Account from './pages/Account';
+import ForgotPassword from './pages/ForgotPassword';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 
-function App() {
+export default function App() {
   return (
-    <div className="p-4">
-      <Dashboard />
-      <hr className="my-6" />
-      <ImageModeration />
-    </div>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+        <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+        <Route path="/social" element={<ProtectedRoute><Layout><SocialFeed /></Layout></ProtectedRoute>} />
+        <Route path="/video" element={<ProtectedRoute><Layout><VideoModeration /></Layout></ProtectedRoute>} />
+        <Route path="/text" element={<ProtectedRoute><Layout><TextModeration /></Layout></ProtectedRoute>} />
+        <Route path="/image" element={<ProtectedRoute><Layout><ImageModeration /></Layout></ProtectedRoute>} />
+        <Route path="/audio" element={<ProtectedRoute><Layout><AudioModeration /></Layout></ProtectedRoute>} />
+        <Route path="/history" element={<ProtectedRoute><Layout><History /></Layout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+        <Route path="/account" element={<ProtectedRoute><Layout><Account /></Layout></ProtectedRoute>} />
+        <Route path="/about" element={<About />} />
+      </Routes>
+    </AuthProvider>
   );
 }
-
-export default App;
