@@ -27,7 +27,7 @@ export default function Login() {
       const data = await res.json();
       if (res.ok && data.access_token) {
         login(data.access_token);
-        navigate('/');
+        navigate('/dashboard');
       } else {
         setError(data.detail || 'Login failed');
       }
