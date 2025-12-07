@@ -429,6 +429,20 @@ export default function Account() {
 
                     <div className="glass-card p-6">
                         <h3 className="text-sm font-medium text-cyber-muted uppercase tracking-wider mb-4">Account Status</h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-white">Trust Score</span>
+                            <div className={`flex items-center gap-2 ${profile?.trust_score >= 80 ? 'text-green-400' : profile?.trust_score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                <Shield size={16} />
+                                <span className="text-xl font-bold">{profile?.trust_score ?? 100}</span>
+                            </div>
+                        </div>
+                        <div className="w-full bg-black/30 rounded-full h-1.5 mb-6">
+                            <div
+                                className={`h-full rounded-full ${profile?.trust_score >= 80 ? 'bg-green-500' : profile?.trust_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                style={{ width: `${profile?.trust_score ?? 100}%` }}
+                            ></div>
+                        </div>
+
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-white">Role</span>
                             <span className="px-2 py-1 rounded bg-cyber-primary/10 text-cyber-primary text-xs font-bold uppercase">{profile?.role}</span>

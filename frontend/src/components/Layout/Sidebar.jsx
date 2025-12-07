@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, MessageSquare, Image, Mic, Clock, Settings, Info, Users, Film } from 'lucide-react'
+import { Home, MessageSquare, Image, Mic, Clock, Settings, Info, Users, Film, AlertTriangle } from 'lucide-react'
 
 const items = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -10,6 +10,7 @@ const items = [
   { to: '/image', label: 'Image', icon: Image },
   { to: '/audio', label: 'Audio', icon: Mic },
   { to: '/history', label: 'History', icon: Clock },
+  { to: '/review', label: 'Review Queue', icon: AlertTriangle },
   { to: '/settings', label: 'Settings', icon: Settings },
   { to: '/about', label: 'About', icon: Info },
 ]

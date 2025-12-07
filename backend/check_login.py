@@ -8,10 +8,6 @@ def test_flow():
     password = "TempPass123!"
     
     print(f"Testing login for {email}...")
-    # Skip registration since user exists
-    # try:
-    #     r = requests.post(f"{BASE_URL}/api/auth/register", json={...})
-    # except ...
 
     print("\n2. Attempting login...")
     try:
@@ -20,9 +16,13 @@ def test_flow():
             "password": password
         })
         print(f"Login status: {r.status_code}")
-        print(f"Login response: {r.text}")
+        try:
+            print(f"Login JSON: {r.json()}")
+        except:
+            print(f"Login Text: {r.text}")
+            
     except Exception as e:
-        print(f"Login failed: {e}")
+        print(f"Login Request Failed: {e}")
 
 if __name__ == "__main__":
     test_flow()

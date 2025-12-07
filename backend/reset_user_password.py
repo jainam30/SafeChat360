@@ -1,9 +1,7 @@
 import sqlite3
-import hashlib
+from app.auth_utils import get_password_hash
 
-def get_password_hash(password: str) -> str:
-    pwd_str = str(password).strip()
-    return hashlib.pbkdf2_hmac('sha256', pwd_str.encode(), b'salt_dev', 100000).hex()
+# Removed incompatible local get_password_hash implementation
 
 def reset_password(email, new_password):
     hashed = get_password_hash(new_password)

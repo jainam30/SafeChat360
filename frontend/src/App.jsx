@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Account from './pages/Account';
 import ForgotPassword from './pages/ForgotPassword';
+import ReviewQueue from './pages/ReviewQueue';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/history" element={<ProtectedRoute><Layout><History /></Layout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         <Route path="/account" element={<ProtectedRoute><Layout><Account /></Layout></ProtectedRoute>} />
+        <Route path="/review" element={<ProtectedRoute><Layout><ReviewQueue /></Layout></ProtectedRoute>} />
         <Route path="/about" element={<About />} />
       </Routes>
     </AuthProvider>

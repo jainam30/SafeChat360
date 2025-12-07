@@ -8,7 +8,7 @@ from app.deps import get_current_user
 from app.services.text_moderator import moderate_text
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/social", tags=["social"])
+router = APIRouter(prefix="/api/social", tags=["social"])
 
 class PostCreate(BaseModel):
     content: str
@@ -29,7 +29,11 @@ def create_post(
     session: Session = Depends(get_session)
 ):
     # Moderate the content
-    moderation_result = moderate_text(post_in.content)
+    from app.models import BlockedTerm
+    from sqlmodel import select
+    blocked_terms = session.exec(select(BlockedTerm.term)).all()
+    
+    moderation_result = moderate_text(post_in.content, additional_keywords=blocked_terms)
     is_flagged = moderation_result.get("is_flagged", False)
     flag_reason = None
     
@@ -39,6 +43,12 @@ def create_post(
              flag_reason = f"{flags[0].get('label')} ({flags[0].get('score')})"
         else:
              flag_reason = "Flagged by moderator"
+             
+        # Reputation System: Penalize if flagged
+        current_user.trust_score = max(0, current_user.trust_score - 5)
+        session.add(current_user)
+        session.commit()
+        session.refresh(current_user)
 
     # Create post
     post = crud.create_post(
