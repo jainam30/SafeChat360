@@ -38,6 +38,10 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
         if crud.get_user_by_phone(session, req.phone_number):
             raise HTTPException(status_code=400, detail="Phone number already registered")
 
+        print(f"DEBUG REGISTER: Email={req.email}, Password Length={len(req.password)}")
+        if len(req.password) > 72:
+             print(f"DEBUG WARNING: Password too long! ({len(req.password)} chars)")
+
         hashed = get_password_hash(req.password)
         user = crud.create_user(
             session, 
