@@ -50,7 +50,16 @@ app.include_router(blocklist.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "SafeChat360 Backend is running"}
+    from app.db import engine
+    import os
+    db_url = os.environ.get("DATABASE_URL", "sqlite")
+    db_type = "PostgreSQL" if "postgres" in db_url else "SQLite (Read-Only on Vercel)"
+    
+    return {
+        "message": "SafeChat360 Backend is running",
+        "database_type": db_type,
+        "env_check": "DATABASE_URL found" if "postgres" in db_url else "WARNING: DATABASE_URL missing, using SQLite"
+    }
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
