@@ -4,7 +4,7 @@ from typing import List, Dict
 from datetime import datetime, timedelta
 from app.db import get_session
 from app.models import ModerationLog, User, Post
-from app.auth_utils import get_current_user
+from app.deps import get_current_user
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
