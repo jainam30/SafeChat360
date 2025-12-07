@@ -1,4 +1,7 @@
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 import os
 import tempfile
 import base64
@@ -20,6 +23,9 @@ def moderate_video(file_path: str, frame_interval: int = 2) -> Dict:
     is_flagged = False
     
     try:
+        if cv2 is None:
+            return {"error": "Video moderation disabled (OpenCV not installed)", "is_flagged": False}
+
         # 1. Analyze Frames
         cap = cv2.VideoCapture(file_path)
         if not cap.isOpened():
