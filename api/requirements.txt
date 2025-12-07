@@ -12,3 +12,5 @@ email-validator
 # opencv-python-headless
 deep-translator
 Pillow
+python-multipart
+

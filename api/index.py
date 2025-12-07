@@ -10,12 +10,17 @@ backend_dir = os.path.join(root_dir, 'backend')
 
 sys.path.append(backend_dir)
 
+app_exception = None
+
 try:
     from app.main import app
 except Exception as e:
     import traceback
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse
+    
+    app_exception = e
+    app_traceback = traceback.format_exc()
 
     app = FastAPI()
 
@@ -23,8 +28,8 @@ except Exception as e:
     async def catch_all(path: str):
         error_msg = {
             "error": "Backend failed to start",
-            "details": str(e),
-            "traceback": traceback.format_exc()
+            "details": str(app_exception),
+            "traceback": app_traceback
         }
         return JSONResponse(status_code=500, content=error_msg)
 
