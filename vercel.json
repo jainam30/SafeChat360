@@ -18,12 +18,7 @@
             "dest": "/backend/api/index.py"
         },
         {
-            "src": "/assets/(.*)",
-            "dest": "/assets/$1"
-        },
-        {
-            "src": "/(.*)\\.(ico|png|svg|txt|json)",
-            "dest": "/$1.$2"
+            "handle": "filesystem"
         },
         {
             "src": "/(.*)",
