@@ -1,10 +1,22 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, moderation, history, social, users, video, analytics, review, blocklist
+from app.db import engine
+from sqlmodel import SQLModel
+import app.models  # Register models
 import uvicorn
 import os
 
-app = FastAPI(title="SafeChat360 Backend")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the DB
+    print("Creating database tables...")
+    SQLModel.metadata.create_all(engine)
+    print("Tables created.")
+    yield
+
+app = FastAPI(title="SafeChat360 Backend", lifespan=lifespan)
 
 # CORS setup
 origins = [
