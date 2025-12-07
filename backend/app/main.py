@@ -11,9 +11,13 @@ import os
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Load the DB
-    print("Creating database tables...")
-    SQLModel.metadata.create_all(engine)
-    print("Tables created.")
+    try:
+        print("Creating database tables...")
+        SQLModel.metadata.create_all(engine)
+        print("Tables created.")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+        # Continue anyway so the app starts and can return JSON errors
     yield
 
 app = FastAPI(title="SafeChat360 Backend", lifespan=lifespan)
