@@ -4,10 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
 
-const DEMO_CREDENTIALS = {
-  email: 'demo@safechat.com',
-  password: 'DemoPassword123!'
-};
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -41,10 +38,7 @@ export default function Login() {
     }
   };
 
-  const useDemoCredentials = () => {
-    setEmail(DEMO_CREDENTIALS.email);
-    setPassword(DEMO_CREDENTIALS.password);
-  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cyber-black">
@@ -124,33 +118,8 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-white/5">
-            <div className="bg-cyber-primary/5 border border-cyber-primary/10 rounded-xl p-4">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-xs font-bold text-cyber-primary uppercase tracking-wider">Demo Access</span>
-                <button
-                  type="button"
-                  onClick={useDemoCredentials}
-                  className="text-xs bg-cyber-primary/10 text-cyber-primary px-3 py-1 rounded-full hover:bg-cyber-primary/20 transition-colors"
-                >
-                  Auto-fill
-                </button>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-cyber-muted">Email:</span>
-                  <span className="text-white font-mono">{DEMO_CREDENTIALS.email}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-cyber-muted">Password:</span>
-                  <span className="text-white font-mono">{DEMO_CREDENTIALS.password}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center text-sm text-cyber-muted">
-              Don't have an account? <a href="/register" className="text-cyber-primary hover:text-cyber-secondary transition-colors font-medium">Create account</a>
-            </div>
+          <div className="mt-6 pt-6 border-t border-white/5 text-center text-sm text-cyber-muted">
+            Don't have an account? <a href="/register" className="text-cyber-primary hover:text-cyber-secondary transition-colors font-medium">Create account</a>
           </div>
         </div>
       </div>
