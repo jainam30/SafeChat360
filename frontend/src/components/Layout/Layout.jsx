@@ -1,6 +1,7 @@
 import React from 'react'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
+import FloatingModeration from './FloatingModeration'
 
 export default function Layout({ children }) {
   return (
@@ -17,6 +18,7 @@ export default function Layout({ children }) {
         <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
           {children}
         </main>
+        <FloatingModeration />
       </div>
     </div>
   )

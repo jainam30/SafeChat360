@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, moderation, history, social, users, video, analytics, review, blocklist
+from app.routes import auth, moderation, history, social, users, video, analytics, review, blocklist, chat, friends, groups
 from app.db import engine
 from sqlmodel import SQLModel
 import app.models  # Register models
@@ -47,6 +47,9 @@ app.include_router(video.router)
 app.include_router(review.router)
 app.include_router(analytics.router)
 app.include_router(blocklist.router)
+app.include_router(chat.router)
+app.include_router(friends.router)
+app.include_router(groups.router)
 
 @app.get("/")
 def read_root():

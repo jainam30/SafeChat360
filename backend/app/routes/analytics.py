@@ -18,9 +18,10 @@ def get_stats(
     flagged_logs = session.exec(select(func.count(ModerationLog.id)).where(ModerationLog.is_flagged == True)).one()
     safe_logs = total_logs - flagged_logs
 
-    # Flags by type (using content_type for now as approximation, or we need to look into details if it was structured)
-    # Ideally we'd group by violation type, but current schema might not have it strictly normalized.
-    # Let's count by content_type
+    # Flags by type (using content_type for now as approximation).
+    # NOTE: This assumes 'content_type' accurately reflects the media type.
+    # Future improvement: Normalize violation types in a separate table for cleaner grouping.
+    # For MVP, counting by content_type is sufficient.
     
     text_count = session.exec(select(func.count(ModerationLog.id)).where(ModerationLog.content_type == "text")).one()
     image_count = session.exec(select(func.count(ModerationLog.id)).where(ModerationLog.content_type == "image")).one()
@@ -49,8 +50,9 @@ def get_trends(
     current_user: User = Depends(get_current_user)
 ):
     # Get counts for last N days
-    # This is a bit complex in pure SQLModel without raw SQL for date truncation across diff DBs (sqlite vs postgres).
-    # Since we use SQLite dev / Postgres prod potential, we'll fetch last N days data and aggregate in python for simplicity/portability in MVP.
+    # NOTE: We fetch raw data and aggregate in Python to support both SQLite (dev) and PostgreSQL (prod)
+    # without relying on DB-specific date truncation functions (e.g., date_trunc vs strftime).
+    # This is acceptable for the MVP scale but should be optimized to raw SQL for high volume.
     
     cutoff = datetime.utcnow() - timedelta(days=days)
     logs = session.exec(select(ModerationLog).where(ModerationLog.created_at >= cutoff)).all()

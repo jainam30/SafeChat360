@@ -98,3 +98,24 @@ def update_password(
     new_hashed = get_password_hash(req.new_password)
     crud.update_user(session, user_in_session, {"hashed_password": new_hashed})
     return {"status": "success", "message": "Password updated successfully"}
+
+@router.get("/{user_id}", response_model=dict)
+def get_user_public_profile(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    user = crud.get_user(session, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "profile_photo": user.profile_photo,
+        "trust_score": user.trust_score,
+        "role": user.role,
+        "created_at": user.created_at,
+        "is_self": user.id == current_user.id
+    }

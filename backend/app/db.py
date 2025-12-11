@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env if present
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
+# DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
+DATABASE_URL = "sqlite:///./safechat.db" # Forced for local dev due to connection issues
 
 # Fix for Supabase/Heroku using deprecated 'postgres://' scheme
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):

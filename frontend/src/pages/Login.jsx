@@ -18,6 +18,14 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Basic email validation
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',

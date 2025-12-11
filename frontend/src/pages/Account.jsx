@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, Camera, Save, Lock, Shield, AlertCircle } from 'lucide-react';
@@ -12,7 +13,7 @@ const AVATARS = [
 ];
 
 export default function Account() {
-    const { token } = useAuth();
+    const { token, setUser } = useAuth();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -82,6 +83,7 @@ export default function Account() {
             if (res.ok) {
                 setSuccess('Profile updated successfully');
                 setProfile({ ...profile, ...data.data });
+                setUser(prev => ({ ...prev, ...data.data }));
             } else {
                 setError(data.detail || 'Update failed');
             }
@@ -114,6 +116,7 @@ export default function Account() {
             if (res.ok) {
                 setSuccess('Email updated successfully');
                 setProfile({ ...profile, email: data.data.email });
+                setUser(prev => ({ ...prev, email: data.data.email }));
                 setShowEmailForm(false);
                 setNewEmail('');
                 setPassword('');

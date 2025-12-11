@@ -17,9 +17,19 @@ class User(SQLModel, table=True):
 class Post(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     content: str
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None  # image, video
     user_id: int
+    username: str # Denormalized for simpler queries
     is_flagged: bool = False
     flag_reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Friendship(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    friend_id: int = Field(index=True)
+    status: str = "pending" # pending, accepted, rejected
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class ModerationLog(SQLModel, table=True):
@@ -38,3 +48,25 @@ class BlockedTerm(SQLModel, table=True):
     term: str = Field(index=True)
     added_by: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Message(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sender_id: int
+    sender_username: str  # Denormalize for easier display
+    receiver_id: Optional[int] = None # None = Global (if group_id also None)
+    group_id: Optional[int] = None # NEW: For Group Chats
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Group(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    admin_id: int # Creator
+    icon: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GroupMember(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    joined_at: datetime = Field(default_factory=datetime.utcnow)

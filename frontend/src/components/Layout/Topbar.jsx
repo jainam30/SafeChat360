@@ -8,9 +8,15 @@ export default function Topbar() {
   return (
     <header className="h-16 border-b border-white/5 bg-cyber-card/30 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10">
       <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold text-cyber-text">Dashboard</h1>
-        <div className="h-4 w-px bg-white/10"></div>
-        <div className="relative group">
+        <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyber-primary to-cyber-secondary header-glow">
+          SafeChat360
+        </h1>
+        <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
+        <div className="text-sm font-medium text-cyber-muted hidden sm:block">Dashboard</div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="relative group hidden md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-4 h-4 group-focus-within:text-cyber-primary transition-colors" />
           <input
             type="text"
@@ -18,9 +24,7 @@ export default function Topbar() {
             className="bg-black/20 border border-white/5 rounded-full pl-10 pr-4 py-1.5 text-sm text-cyber-text focus:outline-none focus:border-cyber-primary/30 focus:bg-black/40 transition-all w-64"
           />
         </div>
-      </div>
 
-      <div className="flex items-center gap-4">
         <button className="p-2 rounded-full hover:bg-white/5 text-cyber-muted hover:text-cyber-primary transition-colors relative">
           <Bell size={20} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-cyber-accent rounded-full animate-pulse"></span>

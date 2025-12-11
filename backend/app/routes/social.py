@@ -12,12 +12,16 @@ router = APIRouter(prefix="/api/social", tags=["social"])
 
 class PostCreate(BaseModel):
     content: str
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
 
 class PostResponse(BaseModel):
     id: int
     content: str
     username: str
     user_id: int
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
     is_flagged: bool
     flag_reason: Optional[str]
     created_at: str
@@ -55,6 +59,9 @@ def create_post(
         session,
         content=post_in.content,
         user_id=current_user.id,
+        username=current_user.username,
+        media_url=post_in.media_url,
+        media_type=post_in.media_type,
         is_flagged=is_flagged,
         flag_reason=flag_reason
     )
@@ -62,8 +69,10 @@ def create_post(
     return PostResponse(
         id=post.id,
         content=post.content,
-        username=current_user.username,
+        username=post.username,
         user_id=post.user_id,
+        media_url=post.media_url,
+        media_type=post.media_type,
         is_flagged=post.is_flagged,
         flag_reason=post.flag_reason,
         created_at=post.created_at.isoformat()
@@ -77,20 +86,25 @@ def get_posts(
 ):
     posts = crud.get_posts(session, limit=limit, offset=offset)
     
-    # We need to fetch usernames. In a real app we'd join tables, 
-    # but for simplicity we'll just fetch user for each post or rely on foreign keys if eager loaded.
-    # Since we didn't set up relationship loading, let's just fetch manually for now or use crud.
-    
     response = []
     for post in posts:
-        user = crud.get_user(session, post.user_id)
-        username = user.username if user else "Unknown"
+        # User is denormalized now? Or we rely on username field?
+        # Post model now has 'username' field. We should check if it's populated.
+        # If not (legacy), fetch from User. But we reset DB, so it should be fine.
         
+        # Fallback if username is missing (though we require it in crud now)
+        uname = post.username
+        if not uname:
+             user = crud.get_user(session, post.user_id)
+             uname = user.username if user else "Unknown"
+
         response.append(PostResponse(
             id=post.id,
             content=post.content,
-            username=username,
+            username=uname,
             user_id=post.user_id,
+            media_url=post.media_url,
+            media_type=post.media_type,
             is_flagged=post.is_flagged,
             flag_reason=post.flag_reason,
             created_at=post.created_at.isoformat()

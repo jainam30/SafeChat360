@@ -68,8 +68,16 @@ def get_logs(session: Session, limit: int = 50, offset: int = 0, content_type: O
     statement = statement.offset(offset).limit(limit).order_by(ModerationLog.created_at.desc())
     return session.exec(statement).all()
 
-def create_post(session: Session, content: str, user_id: int, is_flagged: bool, flag_reason: Optional[str] = None) -> Post:
-    post = Post(content=content, user_id=user_id, is_flagged=is_flagged, flag_reason=flag_reason)
+def create_post(session: Session, content: str, user_id: int, username: str, media_url: str = None, media_type: str = None, is_flagged: bool = False, flag_reason: Optional[str] = None) -> Post:
+    post = Post(
+        content=content, 
+        user_id=user_id, 
+        username=username,
+        media_url=media_url,
+        media_type=media_type,
+        is_flagged=is_flagged, 
+        flag_reason=flag_reason
+    )
     session.add(post)
     session.commit()
     session.refresh(post)
@@ -78,3 +86,52 @@ def create_post(session: Session, content: str, user_id: int, is_flagged: bool, 
 def get_posts(session: Session, limit: int = 100, offset: int = 0) -> List[Post]:
     statement = select(Post).offset(offset).limit(limit).order_by(Post.created_at.desc())
     return session.exec(statement).all()
+
+# --- Friendship ---
+
+from app.models import Friendship
+
+def create_friendship(session: Session, user_id: int, friend_id: int) -> Friendship:
+    # Check if exists
+    statement = select(Friendship).where(
+        ((Friendship.user_id == user_id) & (Friendship.friend_id == friend_id)) |
+        ((Friendship.user_id == friend_id) & (Friendship.friend_id == user_id))
+    )
+    existing = session.exec(statement).first()
+    if existing:
+        return existing
+    
+    friendship = Friendship(user_id=user_id, friend_id=friend_id, status="pending")
+    session.add(friendship)
+    session.commit()
+    session.refresh(friendship)
+    return friendship
+
+def get_friendship_requests(session: Session, user_id: int) -> List[Friendship]:
+    # Requests where I am the friend_id and status is pending
+    statement = select(Friendship).where(Friendship.friend_id == user_id, Friendship.status == "pending")
+    return session.exec(statement).all()
+
+def update_friendship_status(session: Session, friendship_id: int, status: str) -> Optional[Friendship]:
+    friendship = session.get(Friendship, friendship_id)
+    if friendship:
+        friendship.status = status
+        session.add(friendship)
+        session.commit()
+        session.refresh(friendship)
+    return friendship
+
+def get_friends(session: Session, user_id: int) -> List[int]:
+    # Get IDs of accepted friends
+    statement = select(Friendship).where(
+         ((Friendship.user_id == user_id) | (Friendship.friend_id == user_id)) & 
+         (Friendship.status == "accepted")
+    )
+    friendships = session.exec(statement).all()
+    friend_ids = []
+    for f in friendships:
+        if f.user_id == user_id:
+            friend_ids.append(f.friend_id)
+        else:
+            friend_ids.append(f.user_id)
+    return friend_ids
