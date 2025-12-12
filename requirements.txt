@@ -3,12 +3,15 @@ python-dotenv
 uvicorn
 # transformers
 # torch
+pillow
+python-multipart
 # openai-whisper
 sqlmodel
 psycopg2-binary
 passlib[bcrypt]
 python-jose[cryptography]
 email-validator
-# opencv-python-headless
+opencv-python-headless
+firebase-admin
+slowapi
 deep-translator
-Pillow
