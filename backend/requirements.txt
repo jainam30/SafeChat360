@@ -11,4 +11,6 @@ psycopg2-binary
 passlib[bcrypt]
 python-jose[cryptography]
 email-validator
-opencv-python
+opencv-python-headless
+firebase-admin
+slowapi
