@@ -47,7 +47,10 @@ def _load_model(model_name="unitary/toxic-bert"):
     global _model
     if _model is None:
         if pipeline is None:
-            raise RuntimeError("transformers not installed")
+            # Fallback: Just return False (failed to load) so we rely on keywords only
+            # raise RuntimeError("transformers not installed") 
+            _model = False
+            return _model
         try:
             _model = pipeline("text-classification", model=model_name, return_all_scores=True)
         except:

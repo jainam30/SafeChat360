@@ -1,11 +1,11 @@
 fastapi
 python-dotenv
 uvicorn
-transformers
-torch
+# transformers
+# torch
 pillow
 python-multipart
-openai-whisper
+# openai-whisper
 sqlmodel
 psycopg2-binary
 passlib[bcrypt]
