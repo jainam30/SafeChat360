@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import GradientButton from '../components/GradientButton';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { Shield, Lock, Mail, ArrowRight, AlertTriangle } from 'lucide-react';
@@ -146,17 +147,9 @@ export default function Login() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary flex items-center justify-center gap-2 group mt-6"
-            >
-              {loading ? 'Authenticating...' : (
-                <>
-                  Sign In <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </button>
+            <div className="flex justify-center mt-6">
+              <GradientButton text="Sign In" type="submit" disabled={loading} />
+            </div>
           </form>
 
           <div className="mt-8 pt-6 border-t border-white/5 text-center text-sm text-cyber-muted">

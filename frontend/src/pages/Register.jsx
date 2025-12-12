@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import GradientButton from '../components/GradientButton';
 import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 import logoImg from '../assets/safechat_logo.png';
@@ -137,19 +138,9 @@ export default function Register() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-white font-bold rounded-xl hover:opacity-90 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-              ) : (
-                <>
-                  Create Account <ArrowRight size={18} />
-                </>
-              )}
-            </button>
+            <div className="flex justify-center mt-6">
+              <GradientButton text="Sign Up" type="submit" disabled={loading} />
+            </div>
           </form>
 
           <div className="mt-6 text-center text-sm text-cyber-muted">
