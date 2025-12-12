@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import GradientButton from '../components/GradientButton';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
@@ -22,7 +23,7 @@ export default function Login() {
     setError('');
 
     if (!email) {
-      setError('Please enter a valid email or username');
+      toast.error('Please enter a valid email or username');
       setLoading(false);
       return;
     }
@@ -34,9 +35,19 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: email, password, device_id: navigator.userAgent }),
       });
-      const data = await res.json();
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.error("JSON Parse Error:", jsonErr);
+        const rawText = await res.text(); // Try to read text
+        console.error("Raw Response:", rawText);
+        throw new Error("Server returned an invalid response (500). Please check console.");
+      }
 
       if (res.ok && data.access_token) {
+        toast.success("Welcome back!");
         login(data.access_token);
         navigate('/dashboard');
         return;
@@ -47,7 +58,7 @@ export default function Login() {
         const proceed = window.confirm("New device detected or session limit exceeded. Verify identity to continue?");
 
         if (proceed) {
-          setError('Verifying identity with security provider...');
+          toast.loading('Verifying identity with security provider...', { id: 'verify' });
           // 3. Authenticate with Firebase to get proof
           try {
             // We use the password user just entered to get a firebase token
@@ -63,26 +74,31 @@ export default function Login() {
 
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.access_token) {
+              toast.dismiss('verify');
+              toast.success("Identity verified! Logging in...");
               login(verifyData.access_token);
               navigate('/dashboard');
               return;
             } else {
-              setError(verifyData.detail || 'Identity verification failed.');
+              toast.dismiss('verify');
+              toast.error(verifyData.detail || 'Identity verification failed.');
             }
 
           } catch (firebaseErr) {
             console.error("Firebase Auth Error", firebaseErr);
-            setError('Security verification failed. Please check your credentials.');
+            toast.dismiss('verify');
+            toast.error('Security verification failed. Please check your credentials.');
           }
         } else {
-          setError('Login cancelled.');
+          toast('Login cancelled.');
         }
       } else {
-        setError(data.detail || 'Login failed');
+        toast.error(data.detail || 'Login failed');
       }
 
     } catch (err) {
-      setError('Request failed: ' + err.message);
+      console.error("Login Error:", err);
+      toast.error(err.message || 'Request failed');
     } finally {
       setLoading(false);
     }
