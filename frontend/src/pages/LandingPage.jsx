@@ -38,20 +38,20 @@ export default function LandingPage() {
             </div>
 
             {/* Navigation */}
-            <nav className="fixed w-full z-50 top-0 transition-all duration-300 px-4 py-4">
-                <div className="container mx-auto max-w-6xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-sm rounded-2xl px-6 py-3 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                        <img src={logoImg} alt="SafeChat360 Logo" className="w-16 h-16 drop-shadow-md rounded-full object-cover" />
-                        <span className="text-2xl font-bold tracking-tight text-slate-800">SafeChat360</span>
+            <nav className="fixed w-full z-50 top-0 transition-all duration-300 px-2 py-2 md:px-4 md:py-4">
+                <div className="container mx-auto max-w-6xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-sm rounded-2xl px-3 py-2 md:px-6 md:py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2 md:gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                        <img src={logoImg} alt="SafeChat360 Logo" className="w-10 h-10 md:w-16 md:h-16 drop-shadow-md rounded-full object-cover" />
+                        <span className="text-lg md:text-2xl font-bold tracking-tight text-slate-800">SafeChat360</span>
                     </div>
                     <div className="hidden md:flex items-center gap-6">
                         <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-slate-600 hover:text-cyber-primary transition-colors">Features</button>
                         <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-slate-600 hover:text-cyber-primary transition-colors">How it works</button>
                         <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-slate-600 hover:text-cyber-primary transition-colors">Pricing</button>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Link to="/login" className="text-sm font-bold text-slate-600 hover:text-cyber-primary transition-colors px-3 py-2">Log In</Link>
-                        <Link to="/register" className="px-5 py-2.5 bg-cyber-primary text-white text-sm font-bold rounded-xl hover:bg-cyber-primary_hover transition-all shadow-lg shadow-cyber-primary/25 hover:shadow-cyber-primary/40 transform hover:-translate-y-0.5">
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <Link to="/login" className="text-xs md:text-sm font-bold text-slate-600 hover:text-cyber-primary transition-colors px-2 py-1 md:px-3 md:py-2">Log In</Link>
+                        <Link to="/register" className="px-3 py-1.5 md:px-5 md:py-2.5 bg-cyber-primary text-white text-xs md:text-sm font-bold rounded-xl hover:bg-cyber-primary_hover transition-all shadow-lg shadow-cyber-primary/25 hover:shadow-cyber-primary/40 transform hover:-translate-y-0.5">
                             Get Started
                         </Link>
                     </div>
