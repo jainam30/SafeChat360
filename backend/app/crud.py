@@ -68,7 +68,7 @@ def get_logs(session: Session, limit: int = 50, offset: int = 0, content_type: O
     statement = statement.offset(offset).limit(limit).order_by(ModerationLog.created_at.desc())
     return session.exec(statement).all()
 
-def create_post(session: Session, content: str, user_id: int, username: str, media_url: str = None, media_type: str = None, is_flagged: bool = False, flag_reason: Optional[str] = None) -> Post:
+def create_post(session: Session, content: str, user_id: int, username: str, media_url: str = None, media_type: str = None, is_flagged: bool = False, flag_reason: Optional[str] = None, privacy: str = "public", allowed_users: str = None) -> Post:
     post = Post(
         content=content, 
         user_id=user_id, 
@@ -76,16 +76,80 @@ def create_post(session: Session, content: str, user_id: int, username: str, med
         media_url=media_url,
         media_type=media_type,
         is_flagged=is_flagged, 
-        flag_reason=flag_reason
+        flag_reason=flag_reason,
+        privacy=privacy,
+        allowed_users=allowed_users
     )
     session.add(post)
     session.commit()
     session.refresh(post)
     return post
 
-def get_posts(session: Session, limit: int = 100, offset: int = 0) -> List[Post]:
-    statement = select(Post).offset(offset).limit(limit).order_by(Post.created_at.desc())
-    return session.exec(statement).all()
+def get_posts(session: Session, current_user_id: int, limit: int = 100, offset: int = 0) -> List[Post]:
+    # Logic:
+    # 1. Public posts
+    # 2. My own posts
+    # 3. Friends' posts where privacy is 'friends' (or 'public')
+    # 4. Private posts where I am in allowed_users
+    
+    # Get friend IDs
+    friend_ids = get_friends(session, current_user_id)
+    
+    # We need to filter in Python for complex logic or use complex OR
+    # Simplest approach with SQLModel:
+    # WHERE (privacy = 'public') 
+    # OR (user_id = current_user_id)
+    # OR (privacy = 'friends' AND user_id IN friend_ids)
+    # OR (privacy = 'private' AND allowed_users LIKE '%,' + str(current_user_id) + ',%') Note: better to use JSON or specific table but string is simple for now
+    
+    # For 'private' check, since we store allowed_users as string, we can't easily do SQL LIKE in a portable way for IDs.
+    # So we might fetch candidates and filter in Python, OR assume allowed_users contains ",ID," format.
+    
+    # Let's fetch potentially relevant posts first (public, friends, or mine) + private ones.
+    # Actually, fetching all recent posts and filtering in memory is safer for this scale.
+    # But let's try to be efficient.
+    
+    all_posts = session.exec(select(Post).order_by(Post.created_at.desc()).limit(limit + 50)).all() # Fetch a bit more to filter
+    
+    visible_posts = []
+    for post in all_posts:
+        if post.user_id == current_user_id:
+            visible_posts.append(post)
+            continue
+            
+        if post.privacy == 'public':
+            visible_posts.append(post)
+            continue
+            
+        if post.privacy == 'friends':
+            if post.user_id in friend_ids:
+                visible_posts.append(post)
+            continue
+            
+        if post.privacy == 'private':
+            if post.allowed_users:
+                 # Check if ID is in the list. List format expected: "id1,id2,id3"
+                 allowed = post.allowed_users.split(',')
+                 if str(current_user_id) in allowed:
+                     visible_posts.append(post)
+            continue
+            
+    return visible_posts[:limit]
+
+def get_post(session: Session, post_id: int) -> Optional[Post]:
+    return session.get(Post, post_id)
+
+def update_post(session: Session, post: Post, updates: Dict[str, Any]) -> Post:
+    for key, value in updates.items():
+        setattr(post, key, value)
+    session.add(post)
+    session.commit()
+    session.refresh(post)
+    return post
+
+def delete_post(session: Session, post: Post):
+    session.delete(post)
+    session.commit()
 
 # --- Friendship ---
 
@@ -104,6 +168,35 @@ def create_friendship(session: Session, user_id: int, friend_id: int) -> Friends
     friendship = Friendship(user_id=user_id, friend_id=friend_id, status="pending")
     session.add(friendship)
     session.commit()
+
+# --- Notifications ---
+
+def create_notification(session: Session, user_id: int, type: str, source_id: int = None, source_name: str = None, reference_id: int = None) -> Notification:
+    from app.models import Notification
+    notif = Notification(
+        user_id=user_id,
+        type=type,
+        source_id=source_id,
+        source_name=source_name,
+        reference_id=reference_id
+    )
+    session.add(notif)
+    session.commit()
+    session.refresh(notif)
+    return notif
+
+def get_notifications(session: Session, user_id: int, limit: int = 50) -> List[Notification]:
+    from app.models import Notification
+    statement = select(Notification).where(Notification.user_id == user_id).order_by(Notification.created_at.desc()).limit(limit)
+    return session.exec(statement).all()
+
+def mark_notification_read(session: Session, notification_id: int):
+    from app.models import Notification
+    notif = session.get(Notification, notification_id)
+    if notif:
+        notif.is_read = True
+        session.add(notif)
+        session.commit()
     session.refresh(friendship)
     return friendship
 

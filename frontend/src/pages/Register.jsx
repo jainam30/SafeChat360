@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 
@@ -17,6 +17,14 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Validate Phone Number
+    if (!phoneNumber.trim().startsWith('+') || phoneNumber.replace(/[^0-9]/g, '').length < 7) {
+      setError('Please enter a valid mobile number with country code (e.g. +91...)');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(getApiUrl('/api/auth/register'), {
         method: 'POST',
@@ -44,27 +52,27 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cyber-black">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cyber-background">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyber-primary/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-cyber-secondary/10 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-300/20 rounded-full blur-[120px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-300/20 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="w-full max-w-md relative z-10 p-4">
-        <div className="glass-panel p-8 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl">
+        <div className="glass-card p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20">
-              <div className="w-full h-full rounded-2xl bg-cyber-card flex items-center justify-center">
+            <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20 hover:scale-105 transition-transform">
+              <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center">
                 <Shield size={32} className="text-cyber-primary" />
               </div>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Create Account</h1>
+            </Link>
+            <h1 className="text-3xl font-bold text-cyber-text mb-2 tracking-tight">Create Account</h1>
             <p className="text-cyber-muted">Join the secure communication platform</p>
           </div>
 
           {error && (
-            <div className="p-4 mb-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
+            <div className="p-4 mb-6 bg-red-50 border border-red-100 text-red-500 rounded-lg text-sm flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
               {error}
             </div>
@@ -78,7 +86,7 @@ export default function Register() {
                 placeholder="Full Name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                className="glass-input pl-10"
               />
             </div>
 
@@ -90,7 +98,7 @@ export default function Register() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                className="glass-input pl-10"
               />
             </div>
 
@@ -102,7 +110,7 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                className="glass-input pl-10"
               />
             </div>
 
@@ -110,11 +118,11 @@ export default function Register() {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
               <input
                 type="tel"
-                placeholder="Phone Number"
+                placeholder="Mobile Number (e.g. +91 9876543210)"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 required
-                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                className="glass-input pl-10"
               />
             </div>
 
@@ -126,17 +134,17 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                className="glass-input pl-10"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-bold rounded-xl hover:opacity-90 hover:shadow-[0_0_20px_rgba(18,196,148,0.3)] transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+              className="w-full py-3 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-white font-bold rounded-xl hover:opacity-90 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
             >
               {loading ? (
-                <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin"></span>
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               ) : (
                 <>
                   Create Account <ArrowRight size={18} />

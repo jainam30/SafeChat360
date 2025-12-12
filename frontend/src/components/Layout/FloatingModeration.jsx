@@ -29,12 +29,12 @@ export default function FloatingModeration() {
                     <button
                         key={action.label}
                         onClick={() => handleNavigate(action.path)}
-                        className="flex items-center gap-3 bg-cyber-card/80 backdrop-blur-md border border-white/10 p-2 pr-4 rounded-full shadow-lg hover:bg-white/10 transition-all group"
+                        className="flex items-center gap-3 bg-white/90 backdrop-blur-xl border border-white/40 p-2 pr-4 rounded-full shadow-lg hover:bg-white transition-all group"
                     >
                         <div className={`${action.color} w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
                             <action.icon size={20} />
                         </div>
-                        <span className="text-white font-medium text-sm">{action.label} Moderation</span>
+                        <span className="text-cyber-text font-bold text-sm">{action.label} Moderation</span>
                     </button>
                 ))}
             </div>

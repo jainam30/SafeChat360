@@ -91,15 +91,15 @@ const StyledWrapper = styled.div`
 
   /* Valid checked state (Collapsed) */
   .toggle:checked + .slider {
-    background-color: rgba(18, 196, 148, 0.2); /* Cyber Primary transparent */
-    border-color: #12c494;
-    box-shadow: 0 0 10px rgba(18, 196, 148, 0.3), inset 0 2px 4px rgba(0,0,0,0.5);
+    background-color: rgba(99, 102, 241, 0.2); /* Cyber Primary transparent (Indigo) */
+    border-color: #6366F1;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.3), inset 0 2px 4px rgba(0,0,0,0.5);
   }
 
   .toggle:checked + .slider:before {
     transform: translateX(24px);
-    background-color: #12c494; /* Cyber Primary */
-    box-shadow: 0 0 10px #12c494;
+    background-color: #6366F1; /* Cyber Primary (Indigo) */
+    box-shadow: 0 0 10px #6366F1;
   }
 
   .toggle:checked + .slider .icon-open {
@@ -116,7 +116,7 @@ const StyledWrapper = styled.div`
   }
   
   .toggle:checked + .slider:hover:before {
-    box-shadow: 0 0 15px #12c494;
+    box-shadow: 0 0 15px #6366F1;
   }
 `;
 

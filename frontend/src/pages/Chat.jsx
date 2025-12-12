@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { formatTimeForUser } from '../utils/dateFormatter';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video } from 'lucide-react';
+import { Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video, Sparkles } from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
 import CallModal from '../components/CallModal';
 
@@ -97,13 +98,37 @@ export default function Chat() {
 
         if (ws.current) ws.current.close();
 
+        console.log("Connecting to WebSocket:", wsUrl);
         const socket = new WebSocket(wsUrl);
         ws.current = socket;
 
-        socket.onopen = () => setIsConnected(true);
-        socket.onclose = () => setIsConnected(false);
+        socket.onopen = () => {
+            console.log("WebSocket Connected!");
+            setIsConnected(true);
+        };
+        socket.onclose = (event) => {
+            console.log("WebSocket Closed:", event.code, event.reason);
+            setIsConnected(false);
+        };
+        socket.onerror = (error) => {
+            console.error("WebSocket Error:", error);
+        };
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
+
+            // Handle Errors (Blocking)
+            if (message.type === 'error') {
+                // Should use a toast here
+                console.error("Blocked:", message.message);
+                // Simple alert fallback if toaster not imported in this scope (but it is in App)
+                // We'll dispatch a custom event or just alert for now, 
+                // but better to import toast.
+                window.dispatchEvent(new CustomEvent('toast-error', { detail: message.message }));
+                // Or simplified:
+                alert(message.message);
+                return;
+            }
+
             const current = activeChatRef.current;
 
             // Determine if message belongs to current view
@@ -115,7 +140,7 @@ export default function Chat() {
                 if (message.group_id === current.id) isRelevant = true;
             } else if (current.type === 'private') {
                 // Private logic: matches if I am sender OR I am receiver AND other party is the active user
-                if (!message.group_id && !message.group_id) { // Ensure not group
+                if (!message.group_id) { // Ensure not group
                     const otherId = current.id;
                     if ((message.sender_id === user.id && message.receiver_id === otherId) ||
                         (message.sender_id === otherId && message.receiver_id === user.id)) {
@@ -148,7 +173,15 @@ export default function Chat() {
     };
 
     const sendMessage = () => {
-        if (!inputValue.trim() || !ws.current) return;
+        console.log("Attempting to send message...", { inputValue, wsCurrent: !!ws.current, isConnected });
+        if (!inputValue.trim()) {
+            console.log("Message empty, aborting.");
+            return;
+        }
+        if (!ws.current) {
+            console.log("WebSocket not initialized, aborting.");
+            return;
+        }
 
         const messageData = {
             sender_id: user.id,
@@ -158,12 +191,46 @@ export default function Chat() {
             group_id: activeChat.type === 'group' ? activeChat.id : null
         };
 
-        ws.current.send(JSON.stringify(messageData));
-        setInputValue('');
+        console.log("Sending message data:", messageData);
+
+        try {
+            ws.current.send(JSON.stringify(messageData));
+            console.log("Message sent to WebSocket.");
+            setInputValue('');
+        } catch (error) {
+            console.error("Error sending message via WebSocket:", error);
+        }
     };
 
     const handleKeyPress = (e) => {
         if (e.key === 'Enter') sendMessage();
+    };
+
+    const [isAiLoading, setIsAiLoading] = useState(false);
+
+    const handleAiAssist = async () => {
+        if (!inputValue.trim()) return;
+        setIsAiLoading(true);
+        try {
+            const res = await fetch(getApiUrl('/api/chat/assist'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ text: inputValue })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.improved_text) {
+                    setInputValue(data.improved_text);
+                }
+            }
+        } catch (err) {
+            console.error("AI Assist failed", err);
+        } finally {
+            setIsAiLoading(false);
+        }
     };
 
     const handleGroupCreated = (newGroup) => {
@@ -171,47 +238,47 @@ export default function Chat() {
         setActiveChat({ type: 'group', id: newGroup.id, data: newGroup });
     };
 
-    if (!user) return <div className="flex items-center justify-center h-full text-white">Loading...</div>;
+    if (!user) return <div className="flex items-center justify-center h-full text-cyber-muted">Loading...</div>;
 
     return (
         <div className="flex h-[calc(100vh-140px)] max-w-6xl mx-auto gap-4">
             {/* Sidebar */}
-            <div className="w-1/3 glass-card flex flex-col overflow-hidden rounded-xl border border-white/10">
-                <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="w-1/3 glass-card rounded-xl flex flex-col overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50">
+                <div className="p-4 border-b border-cyber-border bg-slate-50 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-cyber-text flex items-center gap-2">
                         <MessageSquare size={20} className="text-cyber-primary" />
                         Chats
                     </h2>
                     <button
                         onClick={() => setShowGroupModal(true)}
-                        className="p-1 hover:bg-white/10 rounded-full text-cyber-primary transition-colors"
+                        className="p-1 hover:bg-white rounded-full text-cyber-primary transition-colors shadow-sm"
                         title="Create Group"
                     >
                         <Plus size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-4 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                     {/* Global Chat */}
                     <button
                         onClick={() => setActiveChat({ type: 'global', id: null, data: null })}
                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'global'
-                            ? 'bg-cyber-primary/20 border border-cyber-primary/30 text-white'
-                            : 'text-cyber-muted hover:bg-white/5'
+                            ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
+                            : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
                             }`}
                     >
-                        <div className="w-10 h-10 rounded-full bg-cyber-primary/20 flex items-center justify-center">
-                            <Hash size={20} className="text-cyber-primary" />
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeChat.type === 'global' ? 'bg-cyber-primary text-white' : 'bg-slate-100 text-cyber-muted'}`}>
+                            <Hash size={20} />
                         </div>
                         <div>
-                            <div className="font-bold">Global Chat</div>
+                            <div className={`font-bold ${activeChat.type === 'global' ? 'text-cyber-primary' : 'text-cyber-text'}`}>Global Chat</div>
                             <div className="text-xs opacity-60">Public Channel</div>
                         </div>
                     </button>
 
                     {/* Groups */}
                     {groups.length > 0 && (
-                        <div>
+                        <div className="mt-4">
                             <div className="px-2 mb-2 text-xs font-bold text-cyber-muted uppercase tracking-wider">Groups</div>
                             <div className="space-y-1">
                                 {groups.map(g => (
@@ -219,15 +286,15 @@ export default function Chat() {
                                         key={g.id}
                                         onClick={() => setActiveChat({ type: 'group', id: g.id, data: g })}
                                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'group' && activeChat.id === g.id
-                                            ? 'bg-cyber-primary/20 border border-cyber-primary/30 text-white'
-                                            : 'text-cyber-muted hover:bg-white/5'
+                                            ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
+                                            : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
                                             }`}
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeChat.type === 'group' && activeChat.id === g.id ? 'bg-cyber-primary text-white' : 'bg-slate-100 text-cyber-muted'}`}>
                                             <Users size={16} />
                                         </div>
                                         <div>
-                                            <div className="font-bold">{g.name}</div>
+                                            <div className={`font-bold ${activeChat.type === 'group' && activeChat.id === g.id ? 'text-cyber-primary' : 'text-cyber-text'}`}>{g.name}</div>
                                             <div className="text-xs opacity-60">{g.member_count} members</div>
                                         </div>
                                     </button>
@@ -238,7 +305,7 @@ export default function Chat() {
 
                     {/* Friends */}
                     {friends.length > 0 && (
-                        <div>
+                        <div className="mt-4">
                             <div className="px-2 mb-2 text-xs font-bold text-cyber-muted uppercase tracking-wider">Friends</div>
                             <div className="space-y-1">
                                 {friends.map(u => (
@@ -246,21 +313,21 @@ export default function Chat() {
                                         key={u.id}
                                         onClick={() => setActiveChat({ type: 'private', id: u.id, data: u })}
                                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'private' && activeChat.id === u.id
-                                            ? 'bg-cyber-primary/20 border border-cyber-primary/30 text-white'
-                                            : 'text-cyber-muted hover:bg-white/5'
+                                            ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
+                                            : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
                                             }`}
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyber-primary to-purple-600 flex items-center justify-center text-white font-bold border border-white/10">
+                                        <div className={`w-10 h-10 rounded-full border border-cyber-border flex items-center justify-center overflow-hidden ${activeChat.type === 'private' && activeChat.id === u.id ? 'ring-2 ring-cyber-primary ring-offset-2' : 'bg-slate-100'}`}>
                                             {u.profile_photo ? (
-                                                <img src={u.profile_photo} alt={u.username} className="w-full h-full object-cover rounded-full" />
+                                                <img src={u.profile_photo} alt={u.username} className="w-full h-full object-cover" />
                                             ) : (
-                                                (u.username || "U").charAt(0).toUpperCase()
+                                                <span className="text-cyber-primary font-bold">{(u.username || "U").charAt(0).toUpperCase()}</span>
                                             )}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-white">{u.username}</div>
-                                            <div className="text-xs opacity-60 text-green-400 flex items-center gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-green-500"></span> Online
+                                            <div className={`font-bold ${activeChat.type === 'private' && activeChat.id === u.id ? 'text-cyber-primary' : 'text-cyber-text'}`}>{u.username}</div>
+                                            <div className="text-xs opacity-60 text-green-600 flex items-center gap-1 font-medium">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
                                             </div>
                                         </div>
                                     </button>
@@ -270,7 +337,7 @@ export default function Chat() {
                     )}
 
                     {/* Suggestions (Other Users) */}
-                    <div>
+                    <div className="mt-4">
                         <div className="px-2 mb-2 text-xs font-bold text-cyber-muted uppercase tracking-wider">Suggestions</div>
                         <div className="space-y-1">
                             {users.filter(u => !friends.find(f => f.id === u.id)).map(u => (
@@ -278,19 +345,19 @@ export default function Chat() {
                                     key={u.id}
                                     onClick={() => setActiveChat({ type: 'private', id: u.id, data: u })}
                                     className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'private' && activeChat.id === u.id
-                                        ? 'bg-cyber-primary/20 border border-cyber-primary/30 text-white'
-                                        : 'text-cyber-muted hover:bg-white/5'
+                                        ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
+                                        : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
                                         }`}
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden opacity-70">
+                                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-cyber-border flex items-center justify-center overflow-hidden opacity-70">
                                         {u.profile_photo ? (
                                             <img src={u.profile_photo} alt={u.username} className="w-full h-full object-cover" />
                                         ) : (
-                                            <UserIcon size={20} />
+                                            <UserIcon size={20} className="text-cyber-muted" />
                                         )}
                                     </div>
                                     <div>
-                                        <div className="font-bold">{u.username}</div>
+                                        <div className="font-bold text-cyber-text">{u.username}</div>
                                         <div className="text-xs opacity-40">User</div>
                                     </div>
                                 </button>
@@ -301,38 +368,41 @@ export default function Chat() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 flex flex-col glass-card rounded-xl border border-white/10 overflow-hidden">
-                <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="flex-1 flex flex-col glass-card rounded-xl overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50">
+                <div className="p-4 border-b border-cyber-border bg-slate-50 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-cyber-text flex items-center gap-2">
                         {activeChat.type === 'private' ? (
-                            <Link to={`/profile/${activeChat.data.id}`} className="hover:text-cyber-primary transition-colors flex items-center gap-2">
+                            <Link to={`/profile/${activeChat.data.id}`} className="hover:text-cyber-primary transition-colors flex items-center gap-2 group">
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                 @{activeChat.data.username}
                             </Link>
                         ) : activeChat.type === 'group' ? (
                             <span className="flex items-center gap-2">
-                                <Users size={20} className="text-purple-400" />
+                                <Users size={20} className="text-cyber-primary" />
                                 {activeChat.data.name}
                             </span>
                         ) : (
-                            <>Global Chat #{isConnected ? 'Connected' : 'Offline'}</>
+                            <span className="flex items-center gap-2">
+                                <Hash size={20} className="text-cyber-primary" />
+                                Global Chat <span className={`text-xs px-2 py-0.5 rounded-full ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isConnected ? 'Connected' : 'Offline'}</span>
+                            </span>
                         )}
                     </h2>
                     <div className="flex items-center gap-4">
                         {activeChat.type === 'private' && (
                             <div className="flex gap-2">
-                                <button onClick={() => startCall(false)} className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-white transition-colors" title="Voice Call">
+                                <button onClick={() => startCall(false)} className="p-2 hover:bg-white rounded-full text-cyber-muted hover:text-cyber-primary transition-colors shadow-sm" title="Voice Call">
                                     <Phone size={20} />
                                 </button>
-                                <button onClick={() => startCall(true)} className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-white transition-colors" title="Video Call">
+                                <button onClick={() => startCall(true)} className="p-2 hover:bg-white rounded-full text-cyber-muted hover:text-cyber-primary transition-colors shadow-sm" title="Video Call">
                                     <Video size={20} />
                                 </button>
                             </div>
                         )}
-                        <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500'}`}></div>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/20">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                     {messages.length === 0 && (
                         <div className="text-center text-cyber-muted opacity-50 mt-10">
                             {activeChat.type === 'global' ? 'Welcome to Global Chat!' : 'No messages yet. Say hello!'}
@@ -345,18 +415,18 @@ export default function Chat() {
 
                         return (
                             <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[70%] rounded-2xl p-4 ${isMe
-                                    ? 'bg-cyber-primary text-cyber-black rounded-br-none'
-                                    : 'bg-white/10 text-gray-200 rounded-bl-none'
+                                <div className={`max-w-[70%] rounded-2xl p-4 shadow-sm ${isMe
+                                    ? 'bg-cyber-primary text-white rounded-br-none shadow-cyber-primary/20'
+                                    : 'bg-white text-cyber-text rounded-bl-none border border-cyber-border shadow-sm'
                                     }`}>
                                     {!isMe && (
-                                        <Link to={msg.sender_id ? `/profile/${msg.sender_id}` : '#'} className="text-xs font-bold opacity-70 mb-1 flex items-center gap-1 hover:underline">
+                                        <Link to={msg.sender_id ? `/profile/${msg.sender_id}` : '#'} className="text-xs font-bold text-cyber-primary mb-1 flex items-center gap-1 hover:underline">
                                             {msg.sender_username}
                                         </Link>
                                     )}
                                     <div className="break-words leading-relaxed">{msg.content}</div>
-                                    <div className="text-[10px] opacity-40 mt-1 text-right">
-                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-white/70' : 'text-cyber-muted'}`}>
+                                        {formatTimeForUser(msg.created_at, user?.phone_number)}
                                     </div>
                                 </div>
                             </div>
@@ -365,19 +435,30 @@ export default function Chat() {
                     <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-4 bg-white/5 border-t border-white/5 flex gap-2">
+                <div className="p-4 bg-white border-t border-cyber-border flex gap-2">
                     <input
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder={`Message ${activeChat.type === 'global' ? 'Global' : activeChat.type === 'private' ? activeChat.data.username : activeChat.data.name}...`}
-                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all placeholder:text-gray-600"
+                        className="glass-input flex-1 bg-slate-50 border-cyber-border focus:bg-white transition-all shadow-inner"
                     />
+                    <button
+                        onClick={handleAiAssist}
+                        disabled={!inputValue.trim() || isAiLoading}
+                        className={`p-3 rounded-xl transition-all shadow-sm flex items-center justify-center border ${inputValue.trim() && !isAiLoading
+                            ? 'bg-purple-600 text-white border-transparent hover:bg-purple-700 shadow-md hover:scale-105 active:scale-95'
+                            : 'bg-white text-purple-400 border-purple-200 opacity-60 cursor-not-allowed'
+                            }`}
+                        title="AI Smart Assist (Rewrite)"
+                    >
+                        <Sparkles size={20} className={isAiLoading ? "animate-spin" : ""} />
+                    </button>
                     <button
                         onClick={sendMessage}
                         disabled={!isConnected}
-                        className="bg-cyber-primary hover:bg-cyber-primary/80 text-cyber-black font-bold rounded-xl px-6 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="glass-button-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 p-0 shadow-md"
                     >
                         <Send size={20} />
                     </button>

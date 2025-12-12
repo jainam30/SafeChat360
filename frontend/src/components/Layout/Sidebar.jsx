@@ -21,8 +21,8 @@ export default function Sidebar() {
   const { friendRequests } = useNotifications() || { friendRequests: 0 }; // Handle context missing if accessed outside provider (shouldn't happen)
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} border-r border-white/5 bg-cyber-card/30 backdrop-blur-xl flex flex-col relative z-20 transition-all duration-300 ease-in-out`}>
-      <div className="h-16 flex items-center justify-center border-b border-white/5 mb-2">
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} border-r border-cyber-border bg-white/70 backdrop-blur-xl flex flex-col relative z-20 transition-all duration-300 ease-in-out shadow-sm`}>
+      <div className="h-16 flex items-center justify-center border-b border-cyber-border mb-2">
         <SidebarSwitch checked={isCollapsed} onChange={() => setIsCollapsed(!isCollapsed)} />
       </div>
 
@@ -36,10 +36,10 @@ export default function Sidebar() {
               key={it.to}
               to={it.to}
               className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative
                 ${isActive
-                  ? 'bg-cyber-primary/10 text-cyber-primary border border-cyber-primary/20 shadow-[0_0_15px_rgba(18,196,148,0.1)]'
-                  : 'text-cyber-muted hover:bg-white/5 hover:text-cyber-text'
+                  ? 'bg-cyber-primary text-white shadow-md shadow-cyber-primary/30'
+                  : 'text-cyber-muted hover:bg-slate-100 hover:text-cyber-text'
                 }
                 ${isCollapsed ? 'justify-center px-2' : ''}
               `}
@@ -48,7 +48,7 @@ export default function Sidebar() {
               <div className="relative">
                 <Icon size={20} className={({ isActive }) => isActive ? 'animate-pulse' : 'group-hover:text-cyber-primary transition-colors'} />
                 {badgeCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-black/50">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-white">
                     {badgeCount}
                   </span>
                 )}
@@ -67,7 +67,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/5 flex flex-col items-center">
+      <div className="p-4 border-t border-cyber-border flex flex-col items-center">
         {!isCollapsed && (
           <div className="text-xs text-cyber-muted/50 text-center whitespace-nowrap">
             v1.0 • Secure Environment

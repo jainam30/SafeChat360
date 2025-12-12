@@ -36,7 +36,7 @@ const Dashboard = () => {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-cyber-text mb-2 flex items-center gap-3">
           <Shield className="text-cyber-primary" />
           SafeChat360 Dashboard
         </h1>
@@ -44,7 +44,7 @@ const Dashboard = () => {
       </div>
 
       {!analyticsData ? (
-        <div className="flex h-64 items-center justify-center text-white">
+        <div className="flex h-64 items-center justify-center text-cyber-muted">
           <span className="w-8 h-8 border-4 border-cyber-primary border-t-transparent rounded-full animate-spin mr-3"></span>
           Loading Analytics...
         </div>
@@ -52,7 +52,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="glass-card p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Activity size={48} />
+              <Activity size={48} className="text-cyber-primary" />
             </div>
             <h3 className="text-cyber-muted text-sm font-medium uppercase tracking-wider mb-1">System Status</h3>
             <div className="text-2xl font-bold text-cyber-primary flex items-center gap-2">
@@ -63,18 +63,18 @@ const Dashboard = () => {
 
           <div className="glass-card p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Zap size={48} />
+              <Zap size={48} className="text-cyber-primary" />
             </div>
             <h3 className="text-cyber-muted text-sm font-medium uppercase tracking-wider mb-1">Total Scanned</h3>
-            <div className="text-2xl font-bold text-white">{analyticsData?.overview?.total_scanned || '...'}</div>
+            <div className="text-2xl font-bold text-cyber-text">{analyticsData?.overview?.total_scanned || '...'}</div>
           </div>
 
           <div className="glass-card p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Shield size={48} />
+              <Shield size={48} className="text-cyber-primary" />
             </div>
             <h3 className="text-cyber-muted text-sm font-medium uppercase tracking-wider mb-1">Flag Rate</h3>
-            <div className="text-2xl font-bold text-white">{analyticsData?.overview?.flag_rate || 0}%</div>
+            <div className="text-2xl font-bold text-cyber-text">{analyticsData?.overview?.flag_rate || 0}%</div>
           </div>
         </div>
       )}

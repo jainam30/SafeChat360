@@ -9,35 +9,39 @@ module.exports = {
     extend: {
       colors: {
         cyber: {
-          black: '#020204',
-          dark: '#07070a',
-          card: '#0f1724',
-          text: '#e2e8f0',
-          muted: '#94a3b8',
-          primary: '#12c494', // Teal/Green
-          secondary: '#3b82f6', // Blue
-          accent: '#f43f5e', // Rose/Red for alerts
+          background: '#F0F4F8', // Soft Blue-Grey Light BG
+          surface: '#FFFFFF', // Clean White Surface
+          text: '#1E293B', // Slate 800 (Dark Grey for text)
+          muted: '#64748B', // Slate 500
+          primary: '#6366F1', // Indigo 500 (Vibrant, Friendly)
+          primary_hover: '#4F46E5', // Indigo 600
+          secondary: '#10B981', // Emerald 500 (Success)
+          accent: '#F43F5E', // Rose 500 (Alerts)
+          border: '#E2E8F0', // Slate 200 (Subtle Borders)
         }
       },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        mono: ['Fira Code', 'monospace'],
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'float': 'float 6s ease-in-out infinite',
-      },
-      keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
-        }
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'cyber-grid': 'linear-gradient(to right, #1f2937 1px, transparent 1px), linear-gradient(to bottom, #1f2937 1px, transparent 1px)',
+    },
+    fontFamily: {
+      sans: ['Inter', 'sans-serif'],
+      mono: ['Fira Code', 'monospace'],
+      hand: ['Caveat', 'cursive'], // Fun font for "stickers" or accents if needed
+    },
+    animation: {
+      'float-slow': 'float 8s ease-in-out infinite',
+      'float-medium': 'float 6s ease-in-out infinite',
+      'float-fast': 'float 4s ease-in-out infinite',
+      'spin-slow': 'spin 12s linear infinite',
+      'bounce-slow': 'bounce 3s infinite',
+    },
+    keyframes: {
+      float: {
+        '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+        '50%': { transform: 'translateY(-20px) rotate(5deg)' },
       }
     },
+    backgroundImage: {
+      'gradient-light': 'linear-gradient(135deg, #F0F4F8 0%, #E0E7FF 100%)',
+    }
   },
   plugins: [],
 }

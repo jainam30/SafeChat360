@@ -1,0 +1,39 @@
+Printing all routes:
+Path: /openapi.json, Name: openapi, Methods: {'HEAD', 'GET'}
+Path: /docs, Name: swagger_ui_html, Methods: {'HEAD', 'GET'}
+Path: /docs/oauth2-redirect, Name: swagger_ui_redirect, Methods: {'HEAD', 'GET'}
+Path: /redoc, Name: redoc_html, Methods: {'HEAD', 'GET'}
+Path: /api/auth/register, Name: register, Methods: {'POST'}
+Path: /api/auth/login, Name: login, Methods: {'POST'}
+Path: /api/moderate/text, Name: moderate_text_api, Methods: {'POST'}
+Path: /api/moderate/image-file, Name: moderate_image_file, Methods: {'POST'}
+Path: /api/moderate/image-base64, Name: moderate_image_b64, Methods: {'POST'}
+Path: /api/moderate/audio-base64, Name: moderate_audio_b64, Methods: {'POST'}
+Path: /api/history, Name: read_history, Methods: {'GET'}
+Path: /api/social/posts, Name: create_post, Methods: {'POST'}
+Path: /api/social/posts, Name: get_posts, Methods: {'GET'}
+Path: /api/users/me, Name: get_me, Methods: {'GET'}
+Path: /api/users/me, Name: update_profile, Methods: {'PUT'}
+Path: /api/users/me/email, Name: update_email, Methods: {'PUT'}
+Path: /api/users/me/password, Name: update_password, Methods: {'PUT'}
+Path: /api/users/{user_id}, Name: get_user_public_profile, Methods: {'GET'}
+Path: /api/moderate/video, Name: moderate_video_endpoint, Methods: {'POST'}
+Path: /api/review/queue, Name: get_review_queue, Methods: {'GET'}
+Path: /api/review/{log_id}/resolve, Name: resolve_log, Methods: {'POST'}
+Path: /api/analytics/stats, Name: get_stats, Methods: {'GET'}
+Path: /api/analytics/trends, Name: get_trends, Methods: {'GET'}
+Path: /api/blocklist/, Name: get_blocked_terms, Methods: {'GET'}
+Path: /api/blocklist/, Name: add_blocked_term, Methods: {'POST'}
+Path: /api/blocklist/{term_id}, Name: delete_blocked_term, Methods: {'DELETE'}
+Path: /api/chat/users, Name: get_users, Methods: {'GET'}
+Path: /api/chat/history, Name: get_chat_history, Methods: {'GET'}
+Path: /api/chat/ws/{client_id}, Name: websocket_endpoint, Methods: WS
+Path: /api/friends/request/{friend_id}, Name: send_friend_request, Methods: {'POST'}
+Path: /api/friends/requests, Name: get_incoming_requests, Methods: {'GET'}
+Path: /api/friends/accept/{friendship_id}, Name: accept_request, Methods: {'POST'}
+Path: /api/friends/, Name: get_my_friends, Methods: {'GET'}
+Path: /api/friends/search, Name: search_users, Methods: {'GET'}
+Path: /api/groups/, Name: create_group, Methods: {'POST'}
+Path: /api/groups/, Name: get_my_groups, Methods: {'GET'}
+Path: /api/groups/{group_id}/members, Name: get_group_members, Methods: {'GET'}
+Path: /, Name: read_root, Methods: {'GET'}

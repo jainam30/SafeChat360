@@ -6,6 +6,10 @@ from app.models import Message, User
 from app.deps import get_current_user
 import json
 from datetime import datetime
+from app.services.text_moderator import moderate_text
+from app.services.image_moderator import moderate_image_base64
+from app.services.ai_assistant import improve_text
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/chat", tags=["chat"]) # NOTE: Prefix was /chat in main.py, but for consistency with others /api/chat is better. 
 # However, main.py imports it. Let's keep prefix in main.py or here?
@@ -104,23 +108,27 @@ def get_chat_history(
         ).order_by(Message.created_at.desc()).limit(50)
     else:
         # Global history
-        statement = select(Message).where((Message.receiver_id == None) & (Message.group_id == None)).order_by(Message.created_at.desc()).limit(50)
+        statement = select(Message).where(Message.receiver_id == None).order_by(Message.created_at.desc()).limit(50)
         
     results = session.exec(statement).all() 
     return results[::-1] # Reverse for chronological
 
 @router.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = None):
+    print(f"WS: Connection attempt from client_id={client_id}, token={token}")
     try:
         user_id = int(client_id)
     except:
+        print("WS: Invalid client_id format")
         await websocket.close()
         return
 
     await manager.connect(websocket, user_id)
+    print(f"WS: User {user_id} connected")
     try:
         while True:
             data = await websocket.receive_text()
+            print(f"WS: Received data: {data}")
             try:
                 message_data = json.loads(data)
                 content = message_data.get("content")
@@ -128,7 +136,53 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
                 receiver_id = message_data.get("receiver_id") # Int or None
                 group_id = message_data.get("group_id") # Int or None
             except:
+                print("WS: Error parsing JSON data")
                 continue
+
+            # ------------------------------------------------------------------
+            # STRICT MODERATION CHECK (Blocking)
+            # ------------------------------------------------------------------
+            
+            # 1. Text Moderation
+            if content and not content.startswith(('data:image', 'data:video', 'data:audio')):
+                 mod_result = moderate_text(content)
+                 if mod_result.get("is_flagged"):
+                     reason = "Content Policy Violation"
+                     if mod_result.get("flags"):
+                         reason = f"Blocked: {mod_result['flags'][0].get('label', 'Inappropriate Content')}"
+                     
+                     # Send error back to sender
+                     await websocket.send_text(json.dumps({
+                         "type": "error",
+                         "message": f"Message blocked: {reason}"
+                     }))
+                     print(f"WS: Message blocked for User {user_id}: {reason}")
+                     continue # ABORT PROCESSING
+
+            # 2. Image Moderation (if content is base64 image)
+            # Basic check for data:image
+            if content and content.startswith('data:image'):
+                 # Extract base64 part
+                 try:
+                     header, b64data = content.split(',', 1)
+                     img_mod_result = moderate_image_base64(b64data)
+                     if img_mod_result.get("is_flagged"):
+                         reason = "NSFW/Inappropriate Image detected"
+                         if img_mod_result.get("flags"):
+                             reason = f"Blocked: {img_mod_result['flags'][0].get('label', 'Inappropriate Image')}"
+                         
+                         await websocket.send_text(json.dumps({
+                             "type": "error",
+                             "message": f"Image blocked: {reason}"
+                         }))
+                         print(f"WS: Image blocked for User {user_id}")
+                         continue # ABORT PROCESSING
+                 except Exception as e:
+                     print(f"WS: Image mod error: {e}")
+
+            # ------------------------------------------------------------------
+            # END MODERATION
+            # ------------------------------------------------------------------
 
             # Save to DB if it's a chat message
             from app.db import engine
@@ -137,6 +191,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
             # Signaling Messages (Don't save to DB)
             msg_type = message_data.get("type")
             if msg_type in ["call-request", "call-response", "offer", "answer", "ice-candidate"]:
+                 print(f"WS: Handling signaling message: {msg_type}")
                  if receiver_id:
                      # Relay to receiver
                      await manager.broadcast(
@@ -190,3 +245,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
+
+class AssistRequest(BaseModel):
+    text: str
+
+@router.post("/assist")
+def ai_assist(request: AssistRequest):
+    """
+    AI Assistant endpoint to improve text.
+    """
+    improved = improve_text(request.text)
+    return {"improved_text": improved}

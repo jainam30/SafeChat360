@@ -21,6 +21,8 @@ class Post(SQLModel, table=True):
     media_type: Optional[str] = None  # image, video
     user_id: int
     username: str # Denormalized for simpler queries
+    privacy: str = "public" # public, friends, private
+    allowed_users: Optional[str] = None # Comma separated user IDs for private posts
     is_flagged: bool = False
     flag_reason: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -70,3 +72,13 @@ class GroupMember(SQLModel, table=True):
     group_id: int = Field(index=True)
     user_id: int = Field(index=True)
     joined_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Notification(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True) # Recipient
+    type: str # 'mention', 'friend_request', 'friend_accepted', 'like', 'comment'
+    source_id: Optional[int] = None # User who triggered it
+    source_name: Optional[str] = None # Username of trigger
+    reference_id: Optional[int] = None # Post ID, etc.
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)

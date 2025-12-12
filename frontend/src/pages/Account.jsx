@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../config';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Camera, Save, Lock, Shield, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, Camera, Save, Lock, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 
 const AVATARS = [
     "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
@@ -176,7 +176,7 @@ export default function Account() {
     return (
         <div className="max-w-4xl mx-auto">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-cyber-text mb-2 flex items-center gap-3">
                     <Shield className="text-cyber-primary" />
                     Account Settings
                 </h1>
@@ -186,83 +186,99 @@ export default function Account() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Profile Card */}
                 <div className="lg:col-span-2 space-y-8">
-                    <div className="glass-panel p-8 rounded-2xl">
-                        <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                    <div className="glass-card p-8 rounded-2xl shadow-lg bg-white/80">
+                        <h2 className="text-xl font-bold text-cyber-text mb-6 flex items-center gap-2">
                             <User size={20} className="text-cyber-primary" />
                             Profile Information
                         </h2>
 
                         {error && (
-                            <div className="p-4 mb-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
+                            <div className="p-4 mb-6 bg-red-50 border border-red-200 text-red-500 rounded-lg text-sm flex items-center gap-2">
                                 <AlertCircle size={16} />
                                 {error}
                             </div>
                         )}
 
                         {success && (
-                            <div className="p-4 mb-6 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg text-sm flex items-center gap-2">
-                                <Shield size={16} />
+                            <div className="p-4 mb-6 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm flex items-center gap-2">
+                                <CheckCircle size={16} />
                                 {success}
                             </div>
                         )}
 
                         <form onSubmit={handleUpdateProfile} className="space-y-6">
                             {/* Avatar Selection */}
-                            <div className="mb-8">
-                                <label className="block text-sm font-medium text-cyber-muted mb-3">Profile Photo</label>
+                            <div className="mb-8 p-4 bg-slate-50 rounded-xl border border-cyber-border">
+                                <label className="block text-sm font-bold text-cyber-muted mb-3 uppercase tracking-wider">Profile Photo</label>
                                 <div className="flex items-center gap-6">
-                                    <div className="relative group">
-                                        <div className="w-24 h-24 rounded-full bg-cyber-card border-2 border-cyber-primary/30 overflow-hidden">
+                                    <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-input').click()}>
+                                        <div className="w-24 h-24 rounded-full bg-white border-2 border-cyber-primary/30 overflow-hidden shadow-sm">
                                             <img src={selectedAvatar} alt="Profile" className="w-full h-full object-cover" />
                                         </div>
-                                        <div className="absolute -bottom-1 -right-1 bg-cyber-primary text-black p-1.5 rounded-full">
+                                        <div className="absolute -bottom-1 -right-1 bg-cyber-primary text-white p-1.5 rounded-full shadow-md transition-transform hover:scale-110">
                                             <Camera size={14} />
                                         </div>
+                                        <input
+                                            id="avatar-input"
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setSelectedAvatar(reader.result);
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
                                     </div>
                                     <div className="flex-1">
-                                        <div className="flex gap-2 overflow-x-auto pb-2">
+                                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                             {AVATARS.map((avatar, i) => (
                                                 <button
                                                     key={i}
                                                     type="button"
                                                     onClick={() => setSelectedAvatar(avatar)}
-                                                    className={`w-12 h-12 rounded-full border-2 transition-all ${selectedAvatar === avatar ? 'border-cyber-primary scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                                                    className={`w-12 h-12 rounded-full border-2 transition-all ${selectedAvatar === avatar ? 'border-cyber-primary scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100 hover:bg-white'}`}
                                                 >
                                                     <img src={avatar} alt={`Avatar ${i}`} className="w-full h-full rounded-full" />
                                                 </button>
                                             ))}
                                         </div>
-                                        <p className="text-xs text-cyber-muted mt-2">Choose an animated avatar</p>
+                                        <p className="text-xs text-cyber-muted mt-2">Choose an avatar or upload your own</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-cyber-muted ml-1">Full Name</label>
+                                    <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">Full Name</label>
                                     <input
                                         type="text"
                                         value={fullName}
                                         onChange={(e) => setFullName(e.target.value)}
-                                        className="glass-input w-full"
+                                        className="glass-input w-full font-medium"
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-cyber-muted ml-1">Username</label>
+                                    <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">Username</label>
                                     <input
                                         type="text"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
-                                        className="glass-input w-full"
+                                        className="glass-input w-full font-medium"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex justify-end pt-4">
+                            <div className="flex justify-end pt-4 border-t border-cyber-border">
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="glass-button-primary flex items-center gap-2"
+                                    className="glass-button-primary flex items-center gap-2 shadow-sm"
                                 >
                                     {saving ? 'Saving...' : <><Save size={18} /> Save Changes</>}
                                 </button>
@@ -271,35 +287,35 @@ export default function Account() {
                     </div>
 
                     {/* Security Section */}
-                    <div className="glass-panel p-8 rounded-2xl">
-                        <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                    <div className="glass-card p-8 rounded-2xl shadow-lg bg-white/80">
+                        <h2 className="text-xl font-bold text-cyber-text mb-6 flex items-center gap-2">
                             <Lock size={20} className="text-cyber-primary" />
                             Security Settings
                         </h2>
 
                         <div className="space-y-6">
-                            <div className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5">
+                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-cyber-border">
                                 <div className="flex items-center gap-4">
                                     <div className="p-2 bg-cyber-primary/10 rounded-lg text-cyber-primary">
                                         <Mail size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-white">Email Address</p>
+                                        <p className="text-sm font-bold text-cyber-text">Email Address</p>
                                         <p className="text-xs text-cyber-muted">{profile?.email}</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setShowEmailForm(!showEmailForm)}
-                                    className="text-sm text-cyber-primary hover:text-cyber-secondary transition-colors"
+                                    className="text-sm text-cyber-primary hover:text-cyber-primary_hover font-medium transition-colors"
                                 >
                                     Change
                                 </button>
                             </div>
 
                             {showEmailForm && (
-                                <form onSubmit={handleUpdateEmail} className="p-4 bg-cyber-primary/5 rounded-xl border border-cyber-primary/10 space-y-4 animate-float">
+                                <form onSubmit={handleUpdateEmail} className="p-4 bg-white rounded-xl border border-cyber-border space-y-4 animate-float shadow-inner">
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-cyber-muted ml-1">New Email Address</label>
+                                        <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">New Email Address</label>
                                         <input
                                             type="email"
                                             value={newEmail}
@@ -309,7 +325,7 @@ export default function Account() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-cyber-muted ml-1">Confirm Password</label>
+                                        <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">Confirm Password</label>
                                         <input
                                             type="password"
                                             value={password}
@@ -318,7 +334,7 @@ export default function Account() {
                                             className="glass-input w-full"
                                         />
                                     </div>
-                                    <div className="flex justify-end gap-2">
+                                    <div className="flex justify-end gap-2 pt-2">
                                         <button
                                             type="button"
                                             onClick={() => setShowEmailForm(false)}
@@ -338,29 +354,29 @@ export default function Account() {
                             )}
                         </div>
 
-                        <div className="space-y-6 mt-6 pt-6 border-t border-white/5">
-                            <div className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5">
+                        <div className="space-y-6 mt-6 pt-6 border-t border-cyber-border">
+                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-cyber-border">
                                 <div className="flex items-center gap-4">
                                     <div className="p-2 bg-cyber-primary/10 rounded-lg text-cyber-primary">
                                         <Lock size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-white">Password</p>
+                                        <p className="text-sm font-bold text-cyber-text">Password</p>
                                         <p className="text-xs text-cyber-muted">Last changed recently</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setShowPasswordForm(!showPasswordForm)}
-                                    className="text-sm text-cyber-primary hover:text-cyber-secondary transition-colors"
+                                    className="text-sm text-cyber-primary hover:text-cyber-primary_hover font-medium transition-colors"
                                 >
                                     Change
                                 </button>
                             </div>
 
                             {showPasswordForm && (
-                                <form onSubmit={handleUpdatePassword} className="p-4 bg-cyber-primary/5 rounded-xl border border-cyber-primary/10 space-y-4 animate-float">
+                                <form onSubmit={handleUpdatePassword} className="p-4 bg-white rounded-xl border border-cyber-border space-y-4 animate-float shadow-inner">
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-cyber-muted ml-1">Current Password</label>
+                                        <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">Current Password</label>
                                         <input
                                             type="password"
                                             value={oldPassword}
@@ -370,7 +386,7 @@ export default function Account() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-cyber-muted ml-1">New Password</label>
+                                        <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">New Password</label>
                                         <input
                                             type="password"
                                             value={newPassword}
@@ -380,7 +396,7 @@ export default function Account() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-cyber-muted ml-1">Confirm New Password</label>
+                                        <label className="text-xs font-bold text-cyber-muted ml-1 uppercase">Confirm New Password</label>
                                         <input
                                             type="password"
                                             value={confirmPassword}
@@ -389,7 +405,7 @@ export default function Account() {
                                             className="glass-input w-full"
                                         />
                                     </div>
-                                    <div className="flex justify-end gap-2">
+                                    <div className="flex justify-end gap-2 pt-2">
                                         <button
                                             type="button"
                                             onClick={() => setShowPasswordForm(false)}
@@ -413,46 +429,46 @@ export default function Account() {
 
                 {/* Read-only Info */}
                 <div className="space-y-8">
-                    <div className="glass-card p-6">
-                        <h3 className="text-sm font-medium text-cyber-muted uppercase tracking-wider mb-4">Verified Contact</h3>
+                    <div className="glass-card p-6 bg-white/80 shadow-md">
+                        <h3 className="text-sm font-bold text-cyber-muted uppercase tracking-wider mb-4">Verified Contact</h3>
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-green-500/10 rounded-lg text-green-500">
+                            <div className="p-2 bg-green-100 rounded-lg text-green-600 border border-green-200">
                                 <Phone size={20} />
                             </div>
                             <div>
                                 <p className="text-xs text-cyber-muted">Registered Number</p>
-                                <p className="text-lg font-mono text-white">{profile?.phone_number}</p>
+                                <p className="text-lg font-mono text-cyber-text font-bold">{profile?.phone_number}</p>
                             </div>
                         </div>
-                        <div className="mt-4 flex items-center gap-2 text-xs text-cyber-muted bg-black/20 p-2 rounded">
+                        <div className="mt-4 flex items-center gap-2 text-xs text-cyber-muted bg-slate-100 p-2 rounded border border-cyber-border">
                             <Lock size={12} />
                             <span>This number cannot be changed</span>
                         </div>
                     </div>
 
-                    <div className="glass-card p-6">
-                        <h3 className="text-sm font-medium text-cyber-muted uppercase tracking-wider mb-4">Account Status</h3>
+                    <div className="glass-card p-6 bg-white/80 shadow-md">
+                        <h3 className="text-sm font-bold text-cyber-muted uppercase tracking-wider mb-4">Account Status</h3>
                         <div className="flex items-center justify-between mb-4">
-                            <span className="text-white">Trust Score</span>
-                            <div className={`flex items-center gap-2 ${profile?.trust_score >= 80 ? 'text-green-400' : profile?.trust_score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            <span className="text-cyber-text font-medium">Trust Score</span>
+                            <div className={`flex items-center gap-2 ${profile?.trust_score >= 80 ? 'text-green-500' : profile?.trust_score >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
                                 <Shield size={16} />
                                 <span className="text-xl font-bold">{profile?.trust_score ?? 100}</span>
                             </div>
                         </div>
-                        <div className="w-full bg-black/30 rounded-full h-1.5 mb-6">
+                        <div className="w-full bg-slate-200 rounded-full h-1.5 mb-6">
                             <div
                                 className={`h-full rounded-full ${profile?.trust_score >= 80 ? 'bg-green-500' : profile?.trust_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
                                 style={{ width: `${profile?.trust_score ?? 100}%` }}
                             ></div>
                         </div>
 
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-white">Role</span>
-                            <span className="px-2 py-1 rounded bg-cyber-primary/10 text-cyber-primary text-xs font-bold uppercase">{profile?.role}</span>
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-cyber-border">
+                            <span className="text-cyber-text font-medium">Role</span>
+                            <span className="px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-xs font-bold uppercase border border-indigo-100">{profile?.role}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-white">Member Since</span>
-                            <span className="text-cyber-muted text-sm">{new Date(profile?.created_at).toLocaleDateString()}</span>
+                        <div className="flex items-center justify-between pt-2">
+                            <span className="text-cyber-text font-medium">Member Since</span>
+                            <span className="text-cyber-muted text-sm font-mono">{new Date(profile?.created_at).toLocaleDateString()}</span>
                         </div>
                     </div>
                 </div>

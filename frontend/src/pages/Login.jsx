@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
@@ -19,9 +19,9 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    // Basic email validation
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address');
+    // Basic validation
+    if (!email) {
+      setError('Please enter a valid email or username');
       setLoading(false);
       return;
     }
@@ -30,7 +30,7 @@ export default function Login() {
       const res = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier: email, password }),
       });
       const data = await res.json();
       if (res.ok && data.access_token) {
@@ -47,29 +47,28 @@ export default function Login() {
   };
 
 
-
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cyber-black">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cyber-background">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyber-primary/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-cyber-secondary/10 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-300/20 rounded-full blur-[120px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-300/20 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="w-full max-w-md relative z-10 p-4">
-        <div className="glass-panel p-8 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl">
+        <div className="glass-card p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20">
-              <div className="w-full h-full rounded-2xl bg-cyber-card flex items-center justify-center">
+            <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20 hover:scale-105 transition-transform">
+              <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center">
                 <Shield size={32} className="text-cyber-primary" />
               </div>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Welcome Back</h1>
+            </Link>
+            <h1 className="text-3xl font-bold text-cyber-text mb-2 tracking-tight">Welcome Back</h1>
             <p className="text-cyber-muted">Sign in to access your secure dashboard</p>
           </div>
 
           {error && (
-            <div className="p-4 mb-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
+            <div className="p-4 mb-6 bg-red-50 border border-red-100 text-red-500 rounded-lg text-sm flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
               {error}
             </div>
@@ -77,16 +76,16 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-cyber-muted ml-1">Email Address</label>
+              <label className="text-xs font-medium text-cyber-muted ml-1">Email or Username</label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
                 <input
-                  type="email"
-                  placeholder="name@company.com"
+                  type="text"
+                  placeholder="Username or name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                  className="glass-input pl-10"
                 />
               </div>
             </div>
@@ -101,7 +100,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-cyber-primary/50 focus:ring-1 focus:ring-cyber-primary/50 transition-all"
+                  className="glass-input pl-10"
                 />
               </div>
             </div>

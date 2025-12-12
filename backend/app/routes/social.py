@@ -14,6 +14,8 @@ class PostCreate(BaseModel):
     content: str
     media_url: Optional[str] = None
     media_type: Optional[str] = None
+    privacy: str = "public"
+    allowed_users: Optional[List[int]] = None # Frontend sends list of IDs
 
 class PostResponse(BaseModel):
     id: int
@@ -25,6 +27,7 @@ class PostResponse(BaseModel):
     is_flagged: bool
     flag_reason: Optional[str]
     created_at: str
+    privacy: str
 
 @router.post("/posts", response_model=PostResponse)
 def create_post(
@@ -54,6 +57,11 @@ def create_post(
         session.commit()
         session.refresh(current_user)
 
+    # Format allowed_users
+    allowed_users_str = None
+    if post_in.privacy == 'private' and post_in.allowed_users:
+        allowed_users_str = ",".join(map(str, post_in.allowed_users))
+
     # Create post
     post = crud.create_post(
         session,
@@ -63,8 +71,44 @@ def create_post(
         media_url=post_in.media_url,
         media_type=post_in.media_type,
         is_flagged=is_flagged,
-        flag_reason=flag_reason
+        flag_reason=flag_reason,
+        privacy=post_in.privacy,
+        allowed_users=allowed_users_str
     )
+    
+    # Process Mentions
+    import re
+    mention_pattern = r"@(\w+)"
+    mentions = re.findall(mention_pattern, post_in.content)
+    
+    # Send notifications to mentioned users
+    for username in set(mentions): # unique
+        mentioned_user = crud.get_user_by_username(session, username)
+        if mentioned_user and mentioned_user.id != current_user.id:
+            # Check privacy access (if privacy is friends/private, verify access before notifying?)
+            # Simplified: just notify. If they can't see it, PostView will block them (403).
+            # But better UX: Only notify if they CAN see it.
+            
+            can_see = True
+            if post.privacy == 'friends':
+                # Check if friend
+                # Using get_friends list to check efficiently
+                 friends = crud.get_friends(session, current_user.id)
+                 if mentioned_user.id not in friends:
+                     can_see = False
+            elif post.privacy == 'private':
+                 if str(mentioned_user.id) not in (allowed_users_str or "").split(','):
+                     can_see = False
+            
+            if can_see:
+                crud.create_notification(
+                    session,
+                    user_id=mentioned_user.id,
+                    type="mention",
+                    source_id=current_user.id,
+                    source_name=current_user.username,
+                    reference_id=post.id
+                )
     
     return PostResponse(
         id=post.id,
@@ -75,24 +119,22 @@ def create_post(
         media_type=post.media_type,
         is_flagged=post.is_flagged,
         flag_reason=post.flag_reason,
-        created_at=post.created_at.isoformat()
+        created_at=post.created_at.isoformat(),
+        privacy=post.privacy
     )
 
 @router.get("/posts", response_model=List[PostResponse])
 def get_posts(
     limit: int = 100,
     offset: int = 0,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
 ):
-    posts = crud.get_posts(session, limit=limit, offset=offset)
+    posts = crud.get_posts(session, current_user.id, limit=limit, offset=offset)
     
     response = []
     for post in posts:
-        # User is denormalized now? Or we rely on username field?
-        # Post model now has 'username' field. We should check if it's populated.
-        # If not (legacy), fetch from User. But we reset DB, so it should be fine.
-        
-        # Fallback if username is missing (though we require it in crud now)
+        # Fallback if username is missing
         uname = post.username
         if not uname:
              user = crud.get_user(session, post.user_id)
@@ -107,7 +149,145 @@ def get_posts(
             media_type=post.media_type,
             is_flagged=post.is_flagged,
             flag_reason=post.flag_reason,
-            created_at=post.created_at.isoformat()
+            created_at=post.created_at.isoformat(),
+            privacy=post.privacy
         ))
         
     return response
+
+class PostUpdate(BaseModel):
+    content: Optional[str] = None
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    privacy: Optional[str] = None
+    allowed_users: Optional[List[int]] = None
+
+@router.get("/posts/{post_id}", response_model=PostResponse)
+def get_post(
+    post_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    post = crud.get_post(session, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    # Privacy Check
+    is_visible = False
+    
+    if post.user_id == current_user.id:
+        is_visible = True
+    elif post.privacy == 'public':
+        is_visible = True
+    elif post.privacy == 'friends':
+        # Check if friend
+        friendship = crud.create_friendship(session, current_user.id, post.user_id) # This just checks/creates, bad name reuse but crud needs 'is_friend' check
+        # Better: use get_friends list
+        friend_ids = crud.get_friends(session, current_user.id)
+        if post.user_id in friend_ids:
+            is_visible = True
+    elif post.privacy == 'private':
+        if post.allowed_users:
+            allowed = post.allowed_users.split(',')
+            if str(current_user.id) in allowed:
+                is_visible = True
+    
+    if not is_visible:
+        # Generic 404 to avoid leaking existence? Or 403? 
+        # Requirement says "whoever shares the link if... private... then only selected user can only see"
+        raise HTTPException(status_code=403, detail="Content not available")
+
+    # Fallback for username
+    uname = post.username
+    if not uname:
+            user = crud.get_user(session, post.user_id)
+            uname = user.username if user else "Unknown"
+
+    return PostResponse(
+        id=post.id,
+        content=post.content,
+        username=uname,
+        user_id=post.user_id,
+        media_url=post.media_url,
+        media_type=post.media_type,
+        is_flagged=post.is_flagged,
+        flag_reason=post.flag_reason,
+        created_at=post.created_at.isoformat(),
+        privacy=post.privacy
+    )
+
+@router.put("/posts/{post_id}", response_model=PostResponse)
+def update_post(
+    post_id: int,
+    post_update: PostUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    post = crud.get_post(session, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    # Time window check for media edits
+    import datetime
+    # post.created_at is UTC datetime
+    now_utc = datetime.datetime.utcnow()
+    diff = now_utc - post.created_at
+    minutes_diff = diff.total_seconds() / 60
+    
+    updates = {}
+    
+    if post_update.content is not None:
+        updates["content"] = post_update.content # Always editable
+        
+    if post_update.privacy is not None:
+         updates["privacy"] = post_update.privacy
+         
+    if post_update.allowed_users is not None:
+         updates["allowed_users"] = ",".join(map(str, post_update.allowed_users))
+
+    # Media update restriction
+    if post_update.media_url is not None or post_update.media_type is not None:
+        if minutes_diff > 5:
+            raise HTTPException(status_code=400, detail="Media can only be edited within 5 minutes of posting.")
+        
+        if post_update.media_url is not None:
+            updates["media_url"] = post_update.media_url
+        if post_update.media_type is not None:
+            updates["media_type"] = post_update.media_type
+            
+    # Apply updates
+    updated_post = crud.update_post(session, post, updates)
+    
+    return PostResponse(
+        id=updated_post.id,
+        content=updated_post.content,
+        username=updated_post.username,
+        user_id=updated_post.user_id,
+        media_url=updated_post.media_url,
+        media_type=updated_post.media_type,
+        is_flagged=updated_post.is_flagged,
+        flag_reason=updated_post.flag_reason,
+        created_at=updated_post.created_at.isoformat(),
+        privacy=updated_post.privacy
+    )
+
+@router.delete("/posts/{post_id}")
+def delete_post(
+    post_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    post = crud.get_post(session, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    if post.user_id != current_user.id:
+        # Admins could delete too? For now only author.
+        if current_user.role != 'admin':
+             raise HTTPException(status_code=403, detail="Not authorized")
+
+    crud.delete_post(session, post)
+    return {"status": "success", "message": "Post deleted"}

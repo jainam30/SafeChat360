@@ -21,7 +21,7 @@ class RegisterRequest(BaseModel):
     role: Optional[str] = "user"
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    identifier: str
     password: str
 
 class TokenResponse(BaseModel):
@@ -63,9 +63,15 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
 @router.post("/login", response_model=TokenResponse)
 def login(req: LoginRequest, session: Session = Depends(get_session)):
     try:
-        user = crud.get_user_by_email(session, req.email)
+        # Try to find by email first
+        user = crud.get_user_by_email(session, req.identifier)
+        if not user:
+            # If not found by email, try username
+            user = crud.get_user_by_username(session, req.identifier)
+            
         if not user or not verify_password(req.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
+        
         token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
         return {"access_token": token}
     except HTTPException:

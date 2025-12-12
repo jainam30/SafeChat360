@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\JAINAM\OneDrive\Desktop\safechat360\backend\app\routes\friends.py", line 95, in search_users
+    statement = select(User).where(
+                ^^^^^^
+NameError: name 'select' is not defined. Did you forget to import 'select'?
