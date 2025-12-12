@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import GradientButton from '../components/GradientButton';
 import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
@@ -22,12 +23,15 @@ export default function Register() {
 
     // Validate Phone Number
     if (!phoneNumber.trim().startsWith('+') || phoneNumber.replace(/[^0-9]/g, '').length < 7) {
-      setError('Please enter a valid mobile number with country code (e.g. +91...)');
+      const msg = 'Please enter a valid mobile number with country code (e.g. +91...)';
+      setError(msg);
+      toast.error(msg);
       setLoading(false);
       return;
     }
 
     try {
+      console.log("Submitting registration...");
       const res = await fetch(getApiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,15 +43,29 @@ export default function Register() {
           full_name: fullName
         }),
       });
-      const data = await res.json();
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.error("JSON Parse Error:", jsonErr);
+        throw new Error("Invalid server response");
+      }
+
       if (res.ok) {
-        alert('Registration successful! Please login.');
-        navigate('/login');
+        toast.success('Registration successful! Please login.');
+        // Short delay to let toast show
+        setTimeout(() => navigate('/login'), 1500);
       } else {
-        setError(data.detail || 'Registration failed');
+        const msg = data.detail || 'Registration failed';
+        setError(msg);
+        toast.error(msg);
       }
     } catch (err) {
-      setError('Request failed: ' + err.message);
+      console.error("Registration Error:", err);
+      const msg = err.message || 'Request failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
