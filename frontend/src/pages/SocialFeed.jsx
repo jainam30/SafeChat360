@@ -119,8 +119,14 @@ const SocialFeed = () => {
             if (res.ok) {
                 setNewPost(''); setMediaFile(null); setMediaPreview(''); setMediaType(''); setPrivacy('public'); setSelectedUsers([]);
                 fetchPosts();
+            } else {
+                const data = await res.json();
+                alert(data.detail || "Failed to create post");
             }
-        } catch (err) { console.error(err); } finally { setSubmitting(false); }
+        } catch (err) {
+            console.error(err);
+            alert("An error occurred while creating the post.");
+        } finally { setSubmitting(false); }
     };
 
     // Action Handlers

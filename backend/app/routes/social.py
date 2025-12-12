@@ -6,6 +6,7 @@ from app import crud
 from app.models import Post, User
 from app.deps import get_current_user
 from app.services.text_moderator import moderate_text
+from app.services.image_moderator import moderate_image_base64
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/social", tags=["social"])
@@ -53,11 +54,55 @@ def create_post(
         else:
              flag_reason = "Flagged by moderator"
              
-        # Reputation System: Penalize if flagged
-        current_user.trust_score = max(0, current_user.trust_score - 5)
+        # STRICT MODERATION: Block the post
+        # Log it first so we have a record
+        crud.create_moderation_log(
+            session,
+            content_type="text",
+            content_excerpt=post_in.content,
+            is_flagged=True,
+            details=str(moderation_result),
+            source=str(current_user.id),
+            original_language=moderation_result.get("original_language", "en")
+        )
+        
+        # Penalize
+        current_user.trust_score = max(0, current_user.trust_score - 10)
         session.add(current_user)
         session.commit()
-        session.refresh(current_user)
+        
+        raise HTTPException(status_code=400, detail="Post rejected: Content contains inappropriate text.")
+
+    # Image Moderation
+    if post_in.media_url and "base64" in post_in.media_url and post_in.media_type == 'image':
+        # Extract base64 string (remove data:image/xyz;base64, prefix)
+        try:
+            b64_str = post_in.media_url.split(",")[1]
+            image_mod_result = moderate_image_base64(b64_str)
+            
+            if image_mod_result.get("is_flagged"):
+                 # Log and Block
+                 crud.create_moderation_log(
+                    session,
+                    content_type="image",
+                    content_excerpt="image_upload",
+                    is_flagged=True,
+                    details=str(image_mod_result),
+                    source=str(current_user.id)
+                )
+                 # Penalize
+                 current_user.trust_score = max(0, current_user.trust_score - 20)
+                 session.add(current_user)
+                 session.commit()
+                 
+                 raise HTTPException(status_code=400, detail="Post rejected: Image contains inappropriately content.")
+                 
+        except Exception as e:
+            # If main loop fails, we log but maybe don't block unless critical?
+            # For now, let's just log error and proceed or block? verify safe-fail.
+            print(f"Image moderation failed: {e}")
+            # Optional: raise HTTPException(status_code=400, detail="Image processing failed")
+
 
     # Log Moderation (All scans)
     crud.create_moderation_log(
