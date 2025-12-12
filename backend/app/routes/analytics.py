@@ -33,7 +33,8 @@ def get_stats(
             "total_scanned": total_logs,
             "flagged": flagged_logs,
             "safe": safe_logs,
-            "flag_rate": round((flagged_logs / total_logs * 100) if total_logs > 0 else 0, 2)
+            "flag_rate": round((flagged_logs / total_logs * 100) if total_logs > 0 else 0, 2),
+            "system_status": "Operational" if (flagged_logs / total_logs < 0.2 if total_logs > 0 else True) else "High Threat Activity"
         },
         "by_type": {
             "text": text_count,

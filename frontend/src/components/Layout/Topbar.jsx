@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Bell, Search, User, X, Check, UserPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import logoImg from '../../assets/safechat_logo.png'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 
@@ -31,9 +32,12 @@ export default function Topbar() {
   return (
     <header className="h-16 border-b border-cyber-border bg-white/70 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-bold text-cyber-primary header-glow">
-          SafeChat360
-        </h1>
+        <div className="flex items-center gap-2">
+          <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
+          <h1 className="text-xl font-bold text-cyber-primary header-glow">
+            SafeChat360
+          </h1>
+        </div>
         <div className="h-4 w-px bg-cyber-border hidden sm:block"></div>
         <div className="text-sm font-medium text-cyber-muted hidden sm:block">Dashboard</div>
       </div>
@@ -131,8 +135,12 @@ export default function Topbar() {
             {/* <div className="text-xs text-cyber-muted">Admin</div> */}
           </div>
           <Link to="/account" className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px] cursor-pointer hover:scale-105 transition-transform">
-            <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-              <User size={20} className="text-cyber-primary" />
+            <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden border border-cyber-border">
+              {user?.profile_photo ? (
+                <img src={user.profile_photo} alt={user.username} className="w-full h-full object-cover" />
+              ) : (
+                <User size={20} className="text-cyber-primary" />
+              )}
             </div>
           </Link>
           <button
@@ -143,6 +151,6 @@ export default function Topbar() {
           </button>
         </div>
       </div>
-    </header>
+    </header >
   )
 }

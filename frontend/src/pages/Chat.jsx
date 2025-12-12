@@ -3,7 +3,7 @@ import { formatTimeForUser } from '../utils/dateFormatter';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video, Sparkles } from 'lucide-react';
+import { Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video, Sparkles, Trash2, Undo2, MoreHorizontal, ArrowLeft } from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
 import CallModal from '../components/CallModal';
 
@@ -19,11 +19,15 @@ export default function Chat() {
     const [inputValue, setInputValue] = useState('');
     const [isConnected, setIsConnected] = useState(false);
     const [showGroupModal, setShowGroupModal] = useState(false);
+
     const [callData, setCallData] = useState(null);
+    const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
 
     const ws = useRef(null);
     const messagesEndRef = useRef(null);
     const activeChatRef = useRef(activeChat); // Ref for WS callback access
+
+    const [activeMessageMenu, setActiveMessageMenu] = useState(null); // ID of message with open menu
 
     // Keep ref in sync
     useEffect(() => {
@@ -149,6 +153,12 @@ export default function Chat() {
                 }
             }
 
+            if (message.type === 'message_update') {
+                // Update local message state
+                setMessages(prev => prev.map(m => m.id === message.id ? { ...m, ...message } : m));
+                return; // Don't add as new message
+            }
+
             if (isRelevant) {
                 setMessages(prev => [...prev, message]);
             } else {
@@ -238,12 +248,31 @@ export default function Chat() {
         setActiveChat({ type: 'group', id: newGroup.id, data: newGroup });
     };
 
+    const handleDeleteMessage = async (msgId, mode) => {
+        try {
+            await fetch(getApiUrl(`/api/chat/messages/${msgId}?mode=${mode}`), {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (mode === 'me') {
+                setMessages(prev => prev.filter(m => m.id !== msgId));
+            }
+        } catch (err) {
+            console.error("Delete failed", err);
+        }
+    };
+
+    // WS Listener update for message_update is handled in existing useEffect? 
+    // Need to verify standard WS message handler handles 'message_update' type?
+    // Let's modify the useEffect above or rely on standard handling if added.
+    // The previous useEffect handles incoming data. Let's check it.
+
     if (!user) return <div className="flex items-center justify-center h-full text-cyber-muted">Loading...</div>;
 
     return (
         <div className="flex h-[calc(100vh-140px)] max-w-6xl mx-auto gap-4">
             {/* Sidebar */}
-            <div className="w-1/3 glass-card rounded-xl flex flex-col overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50">
+            <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} w-full md:w-1/3 md:flex glass-card rounded-xl flex-col overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50`}>
                 <div className="p-4 border-b border-cyber-border bg-slate-50 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-cyber-text flex items-center gap-2">
                         <MessageSquare size={20} className="text-cyber-primary" />
@@ -261,7 +290,7 @@ export default function Chat() {
                 <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                     {/* Global Chat */}
                     <button
-                        onClick={() => setActiveChat({ type: 'global', id: null, data: null })}
+                        onClick={() => { setActiveChat({ type: 'global', id: null, data: null }); setMobileView('chat'); }}
                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'global'
                             ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
                             : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
@@ -284,7 +313,7 @@ export default function Chat() {
                                 {groups.map(g => (
                                     <button
                                         key={g.id}
-                                        onClick={() => setActiveChat({ type: 'group', id: g.id, data: g })}
+                                        onClick={() => { setActiveChat({ type: 'group', id: g.id, data: g }); setMobileView('chat'); }}
                                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'group' && activeChat.id === g.id
                                             ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
                                             : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
@@ -311,7 +340,7 @@ export default function Chat() {
                                 {friends.map(u => (
                                     <button
                                         key={u.id}
-                                        onClick={() => setActiveChat({ type: 'private', id: u.id, data: u })}
+                                        onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
                                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'private' && activeChat.id === u.id
                                             ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
                                             : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
@@ -343,7 +372,7 @@ export default function Chat() {
                             {users.filter(u => !friends.find(f => f.id === u.id)).map(u => (
                                 <button
                                     key={u.id}
-                                    onClick={() => setActiveChat({ type: 'private', id: u.id, data: u })}
+                                    onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
                                     className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'private' && activeChat.id === u.id
                                         ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
                                         : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
@@ -368,9 +397,17 @@ export default function Chat() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 flex flex-col glass-card rounded-xl overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50">
+            <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} w-full md:flex-1 md:flex flex-col glass-card rounded-xl overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50`}>
                 <div className="p-4 border-b border-cyber-border bg-slate-50 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-cyber-text flex items-center gap-2">
+                        {/* Mobile Back Button */}
+                        <button
+                            onClick={() => setMobileView('list')}
+                            className="md:hidden p-1 mr-1 hover:bg-slate-200 rounded-full text-cyber-muted transition-colors"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+
                         {activeChat.type === 'private' ? (
                             <Link to={`/profile/${activeChat.data.id}`} className="hover:text-cyber-primary transition-colors flex items-center gap-2 group">
                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
@@ -402,7 +439,10 @@ export default function Chat() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+                <div
+                    className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50"
+                    onClick={() => setActiveMessageMenu(null)}
+                >
                     {messages.length === 0 && (
                         <div className="text-center text-cyber-muted opacity-50 mt-10">
                             {activeChat.type === 'global' ? 'Welcome to Global Chat!' : 'No messages yet. Say hello!'}
@@ -410,15 +450,65 @@ export default function Chat() {
                     )}
                     {messages.map((msg, index) => {
                         const isMe = msg.sender_id === user?.id;
+                        // Find sender photo from Users list (if available) or Friends list
+                        const senderUser = !isMe ? (users.find(u => u.id === msg.sender_id) || friends.find(f => f.id === msg.sender_id)) : null;
+                        const senderPhoto = senderUser?.profile_photo;
+
                         // Filter out signaling
                         if (msg.type && msg.type !== 'message') return null;
 
+                        // Handle Unsent
+                        if (msg.is_unsent) {
+                            return (
+                                <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
+                                    <div className={`max-w-[70%] rounded-2xl p-4 shadow-sm border border-cyber-border italic text-cyber-muted opacity-70 bg-gray-50`}>
+                                        Message unsent
+                                    </div>
+                                </div>
+                            )
+                        }
+
                         return (
-                            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[70%] rounded-2xl p-4 shadow-sm ${isMe
+                            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
+                                {!isMe && (
+                                    <div className="w-8 h-8 rounded-full bg-slate-200 border border-cyber-border flex-shrink-0 overflow-hidden mb-1">
+                                        {senderPhoto ? <img src={senderPhoto} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-cyber-muted">{(msg.sender_username || "U")[0].toUpperCase()}</div>}
+                                    </div>
+                                )}
+                                <div className={`max-w-[70%] rounded-2xl p-4 shadow-sm relative group/msg ${isMe
                                     ? 'bg-cyber-primary text-white rounded-br-none shadow-cyber-primary/20'
                                     : 'bg-white text-cyber-text rounded-bl-none border border-cyber-border shadow-sm'
                                     }`}>
+
+                                    {/* Message Options Trigger (3 Dots) - MOVED INSIDE */}
+                                    <div className={`absolute top-2 ${isMe ? '-left-8' : '-right-8'} opacity-0 group-hover/msg:opacity-100 transition-opacity flex flex-col gap-1 ${activeMessageMenu === msg.id ? '!opacity-100' : ''}`}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === msg.id ? null : msg.id); }}
+                                            className="p-1.5 rounded-full text-slate-400 hover:text-cyber-primary hover:bg-slate-100/80 transition-all bg-white/50 backdrop-blur-sm shadow-sm border border-white/20"
+                                        >
+                                            <MoreHorizontal size={14} />
+                                        </button>
+
+                                        {/* Dropdown Menu */}
+                                        {activeMessageMenu === msg.id && (
+                                            <div className={`absolute top-8 ${isMe ? 'right-0' : 'left-0'} bg-white rounded-lg shadow-xl border border-gray-100 p-1 w-32 z-50 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200`}>
+                                                {isMe && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id, 'everyone'); setActiveMessageMenu(null); }}
+                                                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-500 rounded-md w-full text-left transition-colors font-medium"
+                                                    >
+                                                        <Undo2 size={12} /> Unsend
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id, 'me'); setActiveMessageMenu(null); }}
+                                                    className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-500 rounded-md w-full text-left transition-colors font-medium"
+                                                >
+                                                    <Trash2 size={12} /> Delete for me
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                     {!isMe && (
                                         <Link to={msg.sender_id ? `/profile/${msg.sender_id}` : '#'} className="text-xs font-bold text-cyber-primary mb-1 flex items-center gap-1 hover:underline">
                                             {msg.sender_username}

@@ -308,7 +308,7 @@ const SocialFeed = () => {
                                 <video src={mediaPreview} className="h-32 rounded-lg border border-cyber-border shadow-md" controls />
                             )}
                             <button
-                                onClick={() => { setMediaFile(null); setMediaPreview(''); }}
+                                onClick={() => { setMediaFile(null); setMediaPreview(''); setMediaType(''); }}
                                 className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white hover:bg-red-600 shadow-md"
                             >
                                 <AlertTriangle size={12} />
@@ -421,8 +421,14 @@ const SocialFeed = () => {
 
                         <div className="flex items-center gap-3 mb-4 relative">
                             <Link to={`/profile/${post.user_id}`} className="flex items-center gap-3 group/author">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-white font-bold group-hover/author:scale-105 transition-transform shadow-sm">
-                                    {(post.username || "U").charAt(0).toUpperCase()}
+                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text overflow-hidden group-hover/author:scale-105 transition-transform shadow-sm border border-cyber-border">
+                                    {post.author_photo ? (
+                                        <img src={post.author_photo} alt={post.username} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                                            {(post.username || "U").charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <div className="text-cyber-text font-bold group-hover/author:text-cyber-primary transition-colors">{post.username || "Unknown"}</div>

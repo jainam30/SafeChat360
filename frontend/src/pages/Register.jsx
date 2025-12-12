@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
+import logoImg from '../assets/safechat_logo.png';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -63,9 +64,7 @@ export default function Register() {
         <div className="glass-card p-8 shadow-2xl">
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20 hover:scale-105 transition-transform">
-              <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center">
-                <Shield size={32} className="text-cyber-primary" />
-              </div>
+              <img src={logoImg} alt="SafeChat360" className="w-full h-full rounded-2xl object-cover" />
             </Link>
             <h1 className="text-3xl font-bold text-cyber-text mb-2 tracking-tight">Create Account</h1>
             <p className="text-cyber-muted">Join the secure communication platform</p>

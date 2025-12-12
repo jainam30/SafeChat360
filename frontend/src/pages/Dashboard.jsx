@@ -55,9 +55,9 @@ const Dashboard = () => {
               <Activity size={48} className="text-cyber-primary" />
             </div>
             <h3 className="text-cyber-muted text-sm font-medium uppercase tracking-wider mb-1">System Status</h3>
-            <div className="text-2xl font-bold text-cyber-primary flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyber-primary animate-pulse"></span>
-              Operational
+            <div className={`text-2xl font-bold flex items-center gap-2 ${analyticsData?.overview?.system_status === 'Operational' ? 'text-green-500' : 'text-red-500'}`}>
+              <span className={`w-2 h-2 rounded-full animate-pulse ${analyticsData?.overview?.system_status === 'Operational' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              {analyticsData?.overview?.system_status || 'Checking...'}
             </div>
           </div>
 

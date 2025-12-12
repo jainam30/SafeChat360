@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from sqlmodel import Session, select
-from app.models import User, ModerationLog, Post
+from app.models import User, ModerationLog, Post, Notification
 from typing import Optional, Dict, Any, List
 import json
 
@@ -180,10 +180,27 @@ def create_notification(session: Session, user_id: int, type: str, source_id: in
         source_name=source_name,
         reference_id=reference_id
     )
-    session.add(notif)
+def create_moderation_log(
+    session: Session,
+    content_type: str,
+    content_excerpt: str = None,
+    is_flagged: bool = False,
+    details: str = None,
+    source: str = None, # user_id
+    original_language: str = "en"
+):
+    log = ModerationLog(
+        content_type=content_type,
+        content_excerpt=content_excerpt[:100] if content_excerpt else None, # Truncate excerpt
+        is_flagged=is_flagged,
+        details=details,
+        source=str(source) if source else None,
+        original_language=original_language,
+        review_status="pending" if is_flagged else "approved"
+    )
+    session.add(log)
     session.commit()
-    session.refresh(notif)
-    return notif
+    return log
 
 def get_notifications(session: Session, user_id: int, limit: int = 50) -> List[Notification]:
     from app.models import Notification
@@ -228,3 +245,29 @@ def get_friends(session: Session, user_id: int) -> List[int]:
         else:
             friend_ids.append(f.user_id)
     return friend_ids
+
+# --- User Sessions ---
+
+def create_user_session(session: Session, user_id: int, device_id: str) -> None:
+    from app.models import UserSession
+    user_session = UserSession(user_id=user_id, device_id=device_id)
+    session.add(user_session)
+    session.commit()
+    session.refresh(user_session)
+    return user_session
+
+def get_active_sessions_count(session: Session, user_id: int) -> int:
+    from app.models import UserSession
+    # Simple active count
+    statement = select(UserSession).where(UserSession.user_id == user_id, UserSession.is_active == True)
+    results = session.exec(statement).all()
+    return len(results)
+
+def deactivate_sessions(session: Session, user_id: int):
+    from app.models import UserSession
+    statement = select(UserSession).where(UserSession.user_id == user_id, UserSession.is_active == True)
+    sessions = session.exec(statement).all()
+    for s in sessions:
+        s.is_active = False
+        session.add(s)
+    session.commit()

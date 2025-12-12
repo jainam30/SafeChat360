@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import logoImg from '../assets/safechat_logo.png';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState('');
@@ -29,9 +30,7 @@ export default function ForgotPassword() {
                 <div className="glass-panel p-8 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl">
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20">
-                            <div className="w-full h-full rounded-2xl bg-cyber-card flex items-center justify-center">
-                                <Shield size={32} className="text-cyber-primary" />
-                            </div>
+                            <img src={logoImg} alt="SafeChat360" className="w-full h-full rounded-2xl object-cover" />
                         </div>
                         <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Reset Password</h1>
                         <p className="text-cyber-muted">Enter your email to receive reset instructions</p>

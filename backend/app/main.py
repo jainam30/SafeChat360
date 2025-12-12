@@ -7,6 +7,10 @@ from sqlmodel import SQLModel
 import app.models  # Register models
 import uvicorn
 import os
+from app.firebase_setup import init_firebase
+
+# Initialize Firebase Admin
+init_firebase()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,6 +25,14 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="SafeChat360 Backend", lifespan=lifespan)
+
+# Security: Rate Limiting
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS setup
 origins = [

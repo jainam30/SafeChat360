@@ -16,13 +16,20 @@ const items = [
 ]
 
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { friendRequests } = useNotifications() || { friendRequests: 0 }; // Handle context missing if accessed outside provider (shouldn't happen)
 
+  // Mobile: if mobileOpen is true, we force show (translate-x-0). 
+  // Desktop: we obey isCollapsed.
+  // We use `md:` prefix to apply desktop styles separately.
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} border-r border-cyber-border bg-white/70 backdrop-blur-xl flex flex-col relative z-20 transition-all duration-300 ease-in-out shadow-sm`}>
-      <div className="h-16 flex items-center justify-center border-b border-cyber-border mb-2">
+    <aside className={`
+        fixed inset-y-0 left-0 z-30 bg-white/90 backdrop-blur-xl border-r border-cyber-border shadow-2xl transition-transform duration-300 ease-in-out
+        ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} 
+        md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'} md:shadow-sm md:bg-white/70
+    `}>
+      <div className="h-16 hidden md:flex items-center justify-center border-b border-cyber-border mb-2">
         <SidebarSwitch checked={isCollapsed} onChange={() => setIsCollapsed(!isCollapsed)} />
       </div>
 

@@ -14,6 +14,14 @@ class User(SQLModel, table=True):
     trust_score: int = Field(default=100)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class UserSession(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    device_id: str
+    last_active: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = True
+
 class Post(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     content: str
@@ -58,6 +66,8 @@ class Message(SQLModel, table=True):
     receiver_id: Optional[int] = None # None = Global (if group_id also None)
     group_id: Optional[int] = None # NEW: For Group Chats
     content: str
+    is_unsent: bool = False
+    deleted_by_ids: Optional[str] = None # Comma separated list of user_ids
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Group(SQLModel, table=True):

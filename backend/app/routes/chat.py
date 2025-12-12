@@ -111,7 +111,17 @@ def get_chat_history(
         statement = select(Message).where(Message.receiver_id == None).order_by(Message.created_at.desc()).limit(50)
         
     results = session.exec(statement).all() 
-    return results[::-1] # Reverse for chronological
+    
+    # Filter out "Deleted for Me"
+    filtered_results = []
+    user_id_str = str(current_user.id)
+    for msg in results:
+        deleted_ids = (msg.deleted_by_ids or "").split(",")
+        if user_id_str not in deleted_ids:
+            # Handle "Unsent" display logic in frontend, pass raw here
+            filtered_results.append(msg)
+            
+    return filtered_results[::-1] # Reverse for chronological
 
 @router.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = None):
@@ -143,9 +153,24 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
             # STRICT MODERATION CHECK (Blocking)
             # ------------------------------------------------------------------
             
-            # 1. Text Moderation
+             # 1. Text Moderation
             if content and not content.startswith(('data:image', 'data:video', 'data:audio')):
                  mod_result = moderate_text(content)
+                 
+                 # Log it
+                 from app.db import engine
+                 from app import crud
+                 with Session(engine) as log_session:
+                     crud.create_moderation_log(
+                         log_session,
+                         content_type="text",
+                         content_excerpt=content,
+                         is_flagged=mod_result.get("is_flagged"),
+                         details=str(mod_result),
+                         source=str(user_id),
+                         original_language=mod_result.get("original_language", "en")
+                     )
+
                  if mod_result.get("is_flagged"):
                      reason = "Content Policy Violation"
                      if mod_result.get("flags"):
@@ -166,6 +191,20 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
                  try:
                      header, b64data = content.split(',', 1)
                      img_mod_result = moderate_image_base64(b64data)
+                     
+                     # Log it
+                     from app.db import engine
+                     from app import crud
+                     with Session(engine) as log_session:
+                         crud.create_moderation_log(
+                             log_session,
+                             content_type="image",
+                             content_excerpt="[Image]",
+                             is_flagged=img_mod_result.get("is_flagged"),
+                             details=str(img_mod_result),
+                             source=str(user_id)
+                         )
+
                      if img_mod_result.get("is_flagged"):
                          reason = "NSFW/Inappropriate Image detected"
                          if img_mod_result.get("flags"):
@@ -245,6 +284,54 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
+
+@router.delete("/messages/{message_id}")
+async def delete_message(
+    message_id: int, 
+    mode: str = Query(..., regex="^(me|everyone)$"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    message = session.get(Message, message_id)
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    if mode == "everyone":
+        # UNSEND
+        if message.sender_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Can only unsend your own messages")
+        
+        message.is_unsent = True
+        message.content = "Message unsent" # Optional redundancy
+        session.add(message)
+        session.commit()
+        
+        # Broadcast Update via WS
+        await manager.broadcast(
+            json.dumps({
+                "type": "message_update",
+                "id": message.id,
+                "is_unsent": True,
+                "content": "Message unsent"
+            }),
+            receiver_id=message.receiver_id,
+            sender_id=message.sender_id,
+            # If group, fetch members? optimize later. For now, broadcast to relevant IDs if possible or just rely on client refresh
+            # Simpler: If global/group, broadcast broadly
+        )
+        
+    elif mode == "me":
+        # DELETE FOR ME
+        current_deleted = (message.deleted_by_ids or "").split(",")
+        if str(current_user.id) not in current_deleted:
+             if message.deleted_by_ids:
+                 message.deleted_by_ids += f",{current_user.id}"
+             else:
+                 message.deleted_by_ids = str(current_user.id)
+             session.add(message)
+             session.commit()
+
+    return {"status": "success"}
 
 class AssistRequest(BaseModel):
     text: str

@@ -27,7 +27,9 @@ class PostResponse(BaseModel):
     is_flagged: bool
     flag_reason: Optional[str]
     created_at: str
+    created_at: str
     privacy: str
+    author_photo: Optional[str] = None
 
 @router.post("/posts", response_model=PostResponse)
 def create_post(
@@ -56,6 +58,17 @@ def create_post(
         session.add(current_user)
         session.commit()
         session.refresh(current_user)
+
+    # Log Moderation (All scans)
+    crud.create_moderation_log(
+        session,
+        content_type="text",
+        content_excerpt=post_in.content,
+        is_flagged=is_flagged,
+        details=str(moderation_result),
+        source=str(current_user.id),
+        original_language=moderation_result.get("original_language", "en")
+    )
 
     # Format allowed_users
     allowed_users_str = None
@@ -120,7 +133,8 @@ def create_post(
         is_flagged=post.is_flagged,
         flag_reason=post.flag_reason,
         created_at=post.created_at.isoformat(),
-        privacy=post.privacy
+        privacy=post.privacy,
+        author_photo=current_user.profile_photo
     )
 
 @router.get("/posts", response_model=List[PostResponse])
@@ -133,12 +147,22 @@ def get_posts(
     posts = crud.get_posts(session, current_user.id, limit=limit, offset=offset)
     
     response = []
+    
+    # Optimize: Collect user IDs and batch fetch logic could go here, but simple loop for now
     for post in posts:
         # Fallback if username is missing
         uname = post.username
-        if not uname:
-             user = crud.get_user(session, post.user_id)
-             uname = user.username if user else "Unknown"
+        u_photo = None
+        
+        # We need to fetch the user to get the latest profile photo anyway, as it might have changed
+        # Optimization: Local cache or eager load in CRUD?
+        # For now, fetching user per post. In prod, use JOIN.
+        user = crud.get_user(session, post.user_id)
+        if user:
+             uname = user.username
+             u_photo = user.profile_photo
+        else:
+             uname = "Unknown"
 
         response.append(PostResponse(
             id=post.id,
@@ -150,7 +174,8 @@ def get_posts(
             is_flagged=post.is_flagged,
             flag_reason=post.flag_reason,
             created_at=post.created_at.isoformat(),
-            privacy=post.privacy
+            privacy=post.privacy,
+            author_photo=u_photo
         ))
         
     return response
@@ -203,6 +228,10 @@ def get_post(
             user = crud.get_user(session, post.user_id)
             uname = user.username if user else "Unknown"
 
+    # Fetch user for photo
+    user = crud.get_user(session, post.user_id)
+    u_photo = user.profile_photo if user else None
+    
     return PostResponse(
         id=post.id,
         content=post.content,
@@ -213,7 +242,8 @@ def get_post(
         is_flagged=post.is_flagged,
         flag_reason=post.flag_reason,
         created_at=post.created_at.isoformat(),
-        privacy=post.privacy
+        privacy=post.privacy,
+        author_photo=u_photo
     )
 
 @router.put("/posts/{post_id}", response_model=PostResponse)
@@ -271,7 +301,8 @@ def update_post(
         is_flagged=updated_post.is_flagged,
         flag_reason=updated_post.flag_reason,
         created_at=updated_post.created_at.isoformat(),
-        privacy=updated_post.privacy
+        privacy=updated_post.privacy,
+        author_photo=current_user.profile_photo
     )
 
 @router.delete("/posts/{post_id}")
