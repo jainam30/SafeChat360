@@ -36,14 +36,15 @@ export default function Login() {
         body: JSON.stringify({ identifier: email, password, device_id: navigator.userAgent }),
       });
 
+      // Read text first to safely handle both JSON and HTML/Text errors
+      const rawText = await res.text();
       let data;
       try {
-        data = await res.json();
+        data = JSON.parse(rawText);
       } catch (jsonErr) {
         console.error("JSON Parse Error:", jsonErr);
-        const rawText = await res.text(); // Try to read text
         console.error("Raw Response:", rawText);
-        throw new Error("Server returned an invalid response (500). Please check console.");
+        throw new Error("Server returned an invalid response. Check console for details.");
       }
 
       if (res.ok && data.access_token) {
