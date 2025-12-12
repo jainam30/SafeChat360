@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import GradientButton from '../components/GradientButton';
 import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
+import { auth } from '../firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import logoImg from '../assets/safechat_logo.png';
 
 export default function Register() {
@@ -32,6 +34,23 @@ export default function Register() {
 
     try {
       console.log("Submitting registration...");
+
+      // 1. Create User in Firebase
+      let firebaseUser;
+      let token;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        firebaseUser = userCredential.user;
+        token = await firebaseUser.getIdToken();
+      } catch (firebaseErr) {
+        console.error("Firebase Registration Error:", firebaseErr);
+        if (firebaseErr.code === 'auth/email-already-in-use') {
+          throw new Error("Email is already registered (Firebase).");
+        }
+        throw new Error("Security check failed: " + firebaseErr.message);
+      }
+
+      // 2. Register in Backend
       const res = await fetch(getApiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,7 +59,8 @@ export default function Register() {
           username,
           phone_number: phoneNumber,
           password,
-          full_name: fullName
+          full_name: fullName,
+          firebase_token: token // Send token to backend
         }),
       });
 

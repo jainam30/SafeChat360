@@ -6,7 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env if present
 
 # DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
-DATABASE_URL = "sqlite:///./safechat.db" # Forced for local dev due to connection issues
+# For Vercel: Use /tmp for SQLite if no DATABASE_URL is set (prevents Read-Only error), 
+# OR prefer the actual environment variable.
+if os.environ.get("VERCEL"):
+    DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:////tmp/safechat.db")
+else:
+    DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
 
 # Fix for Supabase/Heroku using deprecated 'postgres://' scheme
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
