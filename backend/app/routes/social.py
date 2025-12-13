@@ -41,7 +41,11 @@ def create_post(
     # Moderate the content
     from app.models import BlockedTerm
     from sqlmodel import select
-    blocked_terms = session.exec(select(BlockedTerm.term)).all()
+    try:
+        blocked_terms = session.exec(select(BlockedTerm.term)).all()
+    except Exception:
+        # Table might not exist yet or DB error
+        blocked_terms = []
     
     moderation_result = moderate_text(post_in.content, additional_keywords=blocked_terms)
     is_flagged = moderation_result.get("is_flagged", False)
@@ -159,14 +163,17 @@ def create_post(
                      can_see = False
             
             if can_see:
-                crud.create_notification(
-                    session,
-                    user_id=mentioned_user.id,
-                    type="mention",
-                    source_id=current_user.id,
-                    source_name=current_user.username,
-                    reference_id=post.id
-                )
+                try:
+                    crud.create_notification(
+                        session,
+                        user_id=mentioned_user.id,
+                        type="mention",
+                        source_id=current_user.id,
+                        source_name=current_user.username,
+                        reference_id=post.id
+                    )
+                except Exception as e:
+                    print(f"Failed to create mention notification: {e}")
     
     return PostResponse(
         id=post.id,
