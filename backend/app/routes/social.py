@@ -177,6 +177,7 @@ def create_post(
     except HTTPException as ie:
         raise ie
     except Exception as e:
+        error_msg = str(e).lower()
         # JIT Recovery for Vercel (Ephemeral DB lost tables) OR Schema Mismatch
         if "no such table" in error_msg:
              # ... (Keep existing code for table creation) ...
