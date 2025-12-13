@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StoryViewer from '../components/StoryViewer';
+import StoryEditor from '../components/StoryEditor';
 
 const Dashboard = () => {
   const { user, token } = useAuth();
@@ -128,18 +129,21 @@ const Dashboard = () => {
     }
   };
 
-  const createStory = async () => {
+  const createStory = async (extraData = {}) => {
     if (!storyMedia) return;
 
     try {
+      const payload = {
+        media_url: storyMedia,
+        media_type: storyType,
+        privacy: 'public', // Default public for stories for now
+        ...extraData // music_url, overlays
+      };
+
       const res = await fetch(getApiUrl('/api/social/stories'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          media_url: storyMedia,
-          media_type: storyType,
-          privacy: 'public' // Default public for stories for now
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setShowStoryModal(false);
@@ -372,17 +376,37 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+          </div>
+        </div >
       )}
 
-      {/* Story Viewer Overlay */}
-      {viewingStory && (
-        <StoryViewer
-          story={viewingStory}
-          onClose={() => setViewingStory(null)}
-        />
-      )}
-
+{/* Story Editor Overlay (Replaces Modal Content or separate overlay) */ }
+{
+  showStoryModal && storyMedia && (
+    <div className="fixed inset-0 z-[60]">
+      <StoryEditor
+        mediaFile={storyMedia}
+        mediaType={storyType}
+        onClose={() => { setStoryMedia(''); setStoryType(''); }}
+        onPost={async (data) => {
+          await createStory(data);
+        }}
+      />
     </div>
+  )
+}
+
+{/* Story Viewer Overlay */ }
+{
+  viewingStory && (
+    <StoryViewer
+      story={viewingStory}
+      onClose={() => setViewingStory(null)}
+    />
+  )
+}
+
+    </div >
   );
 };
 

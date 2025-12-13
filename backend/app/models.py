@@ -103,3 +103,5 @@ class Story(SQLModel, table=True):
     privacy: str = "public" # public, friends
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime
+    music_url: Optional[str] = None
+    overlays: Optional[str] = None # JSON string for stickers/text

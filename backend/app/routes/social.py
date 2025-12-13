@@ -517,6 +517,8 @@ class StoryCreate(BaseModel):
     media_type: str = "image"
     content: Optional[str] = None
     privacy: str = "public"
+    music_url: Optional[str] = None
+    overlays: Optional[str] = None # JSON string list
 
 class StoryResponse(BaseModel):
     id: int
@@ -528,6 +530,8 @@ class StoryResponse(BaseModel):
     created_at: str
     expires_at: str
     author_photo: Optional[str] = None
+    music_url: Optional[str] = None
+    overlays: Optional[str] = None
 
 @router.post("/stories", response_model=StoryResponse)
 def create_story(
@@ -556,7 +560,9 @@ def create_story(
         content=story_in.content,
         privacy=story_in.privacy,
         created_at=now,
-        expires_at=expires
+        expires_at=expires,
+        music_url=story_in.music_url,
+        overlays=story_in.overlays
     )
     session.add(story)
     session.commit()
@@ -571,7 +577,9 @@ def create_story(
         content=story.content,
         created_at=story.created_at.isoformat(),
         expires_at=story.expires_at.isoformat(),
-        author_photo=current_user.profile_photo
+        author_photo=current_user.profile_photo,
+        music_url=story.music_url,
+        overlays=story.overlays
     )
 
 @router.get("/stories", response_model=List[StoryResponse])
@@ -652,7 +660,9 @@ def get_stories(
             content=s.content,
             created_at=s.created_at.isoformat(),
             expires_at=s.expires_at.isoformat(),
-            author_photo=u_photo
+            author_photo=u_photo,
+            music_url=s.music_url,
+            overlays=s.overlays
         ))
         
     return response
