@@ -90,15 +90,12 @@ export default function Chat() {
 
     // WebSocket Connection
     useEffect(() => {
-        if (!user || !token) return;
+        if (!user?.id || !token) return;
 
-        let wsUrl = getApiUrl(`/api/chat/ws/${user.id}?token=${token}`);
-        if (wsUrl.startsWith('/')) {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            wsUrl = `${protocol}//${window.location.host}${wsUrl}`;
-        } else {
-            wsUrl = wsUrl.replace("http://", "ws://").replace("https://", "wss://");
-        }
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/chat/ws/${user.id}?token=${token}`;
+
+        console.log("Connecting to WebSocket:", wsUrl);
 
         if (ws.current) ws.current.close();
 
@@ -199,17 +196,16 @@ export default function Chat() {
                 if (res.ok) {
                     const freshMsgs = await res.json();
 
-                    // Merge logic: simpler is to just replace if length differs significantly or check last ID
-                    // For simplicity in this demo, strict replacement to ensure sync
-                    // BUT to avoid flicker, maybe check if last message ID is different?
-                    setMessages(prev => {
-                        const lastPrev = prev[prev.length - 1];
-                        const lastNew = freshMsgs[freshMsgs.length - 1];
-                        if (!lastPrev || !lastNew || lastPrev.id !== lastNew.id || prev.length !== freshMsgs.length) {
-                            return freshMsgs;
-                        }
-                        return prev;
-                    });
+                    if (Array.isArray(freshMsgs)) {
+                        setMessages(prev => {
+                            const lastPrev = prev[prev.length - 1];
+                            const lastNew = freshMsgs[freshMsgs.length - 1];
+                            if (!lastPrev || !lastNew || lastPrev.id !== lastNew.id || prev.length !== freshMsgs.length) {
+                                return freshMsgs;
+                            }
+                            return prev;
+                        });
+                    }
                 }
             } catch (e) { console.error("Poll err", e); }
         };
