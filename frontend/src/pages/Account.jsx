@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, Camera, Save, Lock, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import ImageCropper from '../components/ImageCropper';
 
 const AVATARS = [
     "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
@@ -35,6 +36,10 @@ export default function Account() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+    // Cropper State
+    const [showCropper, setShowCropper] = useState(false);
+    const [tempImage, setTempImage] = useState(null);
 
     useEffect(() => {
         fetchProfile();
@@ -206,6 +211,19 @@ export default function Account() {
                             </div>
                         )}
 
+                        {showCropper && tempImage && (
+                            <ImageCropper
+                                imageSrc={tempImage}
+                                aspect={1}
+                                onCancel={() => { setShowCropper(false); setTempImage(null); }}
+                                onCropComplete={(croppedImg) => {
+                                    setSelectedAvatar(croppedImg);
+                                    setShowCropper(false);
+                                    setTempImage(null);
+                                }}
+                            />
+                        )}
+
                         <form onSubmit={handleUpdateProfile} className="space-y-6">
                             {/* Avatar Selection */}
                             <div className="mb-8 p-4 bg-slate-50 rounded-xl border border-cyber-border">
@@ -236,7 +254,8 @@ export default function Account() {
                                                 if (file) {
                                                     const reader = new FileReader();
                                                     reader.onloadend = () => {
-                                                        setSelectedAvatar(reader.result);
+                                                        setTempImage(reader.result);
+                                                        setShowCropper(true);
                                                     };
                                                     reader.readAsDataURL(file);
                                                 }

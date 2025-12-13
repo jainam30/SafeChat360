@@ -3,7 +3,11 @@ import { formatTimeForUser } from '../utils/dateFormatter';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video, Sparkles, Trash2, Undo2, MoreHorizontal, ArrowLeft } from 'lucide-react';
+import {
+    Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video,
+    Sparkles, Trash2, Undo2, MoreHorizontal, ArrowLeft, Image as ImageIcon,
+    Smile, Heart, Info
+} from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
 import CallModal from '../components/CallModal';
 
@@ -11,7 +15,7 @@ export default function Chat() {
     const { user, token } = useAuth();
 
     // State
-    const [activeChat, setActiveChat] = useState({ type: 'global', id: null, data: null }); // type: 'global' | 'private' | 'group'
+    const [activeChat, setActiveChat] = useState({ type: 'global', id: null, data: null });
     const [users, setUsers] = useState([]);
     const [friends, setFriends] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -25,9 +29,9 @@ export default function Chat() {
 
     const ws = useRef(null);
     const messagesEndRef = useRef(null);
-    const activeChatRef = useRef(activeChat); // Ref for WS callback access
+    const activeChatRef = useRef(activeChat);
 
-    const [activeMessageMenu, setActiveMessageMenu] = useState(null); // ID of message with open menu
+    const [activeMessageMenu, setActiveMessageMenu] = useState(null);
 
     // Keep ref in sync
     useEffect(() => {
@@ -41,8 +45,6 @@ export default function Chat() {
         const fetchData = async () => {
             try {
                 const headers = { 'Authorization': `Bearer ${token}` };
-
-                // Users & Friends
                 const [uRes, fRes, gRes] = await Promise.all([
                     fetch(getApiUrl('/api/chat/users'), { headers }),
                     fetch(getApiUrl('/api/friends/'), { headers }),
@@ -60,11 +62,11 @@ export default function Chat() {
         fetchData();
     }, [token]);
 
-    // Fetch History when Active Chat changes
+    // Fetch History
     useEffect(() => {
         const fetchHistory = async () => {
             if (!token) return;
-            setMessages([]); // Clear previous
+            setMessages([]);
 
             try {
                 let url = '/api/chat/history';
@@ -88,43 +90,7 @@ export default function Chat() {
         fetchHistory();
     }, [activeChat, token]);
 
-    // WebSocket Connection
-    // WebSocket Connection (DISABLED FOR VERCEL SERVERLESS STABILITY)
-    // Vercel serverless functions cannot maintain persistent WS connections.
-    // We rely 100% on the HTTP Polling effect below for message sync.
-    /*
-    useEffect(() => {
-        if (!user?.id || !token) return;
-
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/api/chat/ws/${user.id}?token=${token}`;
-
-        console.log("Connecting to WebSocket:", wsUrl);
-
-        if (ws.current) ws.current.close();
-
-        const socket = new WebSocket(wsUrl);
-        ws.current = socket;
-
-        socket.onopen = () => {
-             console.log("WebSocket Connected!");
-             setIsConnected(true);
-        };
-        socket.onclose = (event) => {
-             console.log("WebSocket Closed:", event.code, event.reason);
-             setIsConnected(false);
-        };
-        socket.onerror = (error) => {
-             console.error("WebSocket Error:", error);
-        };
-        socket.onmessage = (event) => {
-             // ...
-        }
-        return () => socket.close();
-    }, [user.id, token]);
-    */
-
-    // Mock Connected State for UI to look good
+    // Mock Connected State
     useEffect(() => {
         setIsConnected(true);
     }, []);
@@ -135,7 +101,7 @@ export default function Chat() {
     }, [messages]);
 
 
-    // Polling for robust message sync (Vercel Serverless Support)
+    // Polling
     useEffect(() => {
         if (!token) return;
 
@@ -150,15 +116,11 @@ export default function Chat() {
                     url += `?group_id=${activeChat.id}`;
                 }
 
-                // We want to fetch LATEST messages. 
-                // Ideally we'd use 'after_id' param but history endpoint just returns last 50.
-                // Re-fetching history is inefficient but robust for this demo.
                 const res = await fetch(getApiUrl(url), {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
                     const freshMsgs = await res.json();
-
                     if (Array.isArray(freshMsgs)) {
                         setMessages(prev => {
                             const lastPrev = prev[prev.length - 1];
@@ -173,7 +135,7 @@ export default function Chat() {
             } catch (e) { console.error("Poll err", e); }
         };
 
-        const intervalId = setInterval(pollMessages, 3000); // Poll every 3s
+        const intervalId = setInterval(pollMessages, 3000);
         return () => clearInterval(intervalId);
     }, [activeChat, token]);
 
@@ -188,7 +150,6 @@ export default function Chat() {
     const sendMessage = async () => {
         if (!inputValue.trim()) return;
 
-        // 1. HTTP BEST EFFORT SUBMISSION (Works on Serverless)
         try {
             const body = {
                 content: inputValue,
@@ -211,9 +172,7 @@ export default function Chat() {
                 return;
             }
 
-            // Msg sent success
             const sentMsg = await res.json();
-            // Optimistically add to UI if WS didn't already
             setMessages(prev => {
                 if (prev.find(m => m.id === sentMsg.id)) return prev;
                 return [...prev, sentMsg];
@@ -222,7 +181,6 @@ export default function Chat() {
 
         } catch (err) {
             console.error("HTTP Send failed", err);
-            // Fallback? No, HTTP is the fallback.
             alert("Connection error. Please try again.");
         }
     };
@@ -277,262 +235,195 @@ export default function Chat() {
         }
     };
 
-    // WS Listener update for message_update is handled in existing useEffect? 
-    // Need to verify standard WS message handler handles 'message_update' type?
-    // Let's modify the useEffect above or rely on standard handling if added.
-    // The previous useEffect handles incoming data. Let's check it.
-
-    if (!user) return <div className="flex items-center justify-center h-full text-cyber-muted">Loading...</div>;
+    if (!user) return <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>;
 
     return (
-        <div className="flex h-[calc(100vh-140px)] max-w-6xl mx-auto gap-4">
-            {/* Sidebar */}
-            <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} w-full md:w-1/3 md:flex glass-card rounded-xl flex-col overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50`}>
-                <div className="p-4 border-b border-cyber-border bg-slate-50 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-cyber-text flex items-center gap-2">
-                        <MessageSquare size={20} className="text-cyber-primary" />
-                        Chats
-                    </h2>
-                    <button
-                        onClick={() => setShowGroupModal(true)}
-                        className="p-1 hover:bg-white rounded-full text-cyber-primary transition-colors shadow-sm"
-                        title="Create Group"
-                    >
-                        <Plus size={20} />
+        <div className="flex h-[calc(100vh-100px)] max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm my-4">
+            {/* LEFT SIDEBAR (Chat List) */}
+            <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} w-full md:w-[350px] flex-col border-r border-gray-200 bg-white`}>
+
+                {/* Header */}
+                <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5">
+                    <div className="font-bold text-xl flex items-center gap-2">
+                        {user.username} <span className="text-xs text-gray-400 font-normal">▼</span>
+                    </div>
+                    <button onClick={() => setShowGroupModal(true)} className="text-gray-900">
+                        <Plus size={24} strokeWidth={1.5} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                    {/* Global Chat */}
-                    <button
+                {/* Chat List Scrollable */}
+                <div className="flex-1 overflow-y-auto">
+                    {/* Global Chat Item */}
+                    <div
                         onClick={() => { setActiveChat({ type: 'global', id: null, data: null }); setMobileView('chat'); }}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'global'
-                            ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
-                            : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
-                            }`}
+                        className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'global' ? 'bg-gray-50' : ''}`}
                     >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeChat.type === 'global' ? 'bg-cyber-primary text-white' : 'bg-slate-100 text-cyber-muted'}`}>
-                            <Hash size={20} />
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-white">
+                            <Hash size={24} />
                         </div>
-                        <div>
-                            <div className={`font-bold ${activeChat.type === 'global' ? 'text-cyber-primary' : 'text-cyber-text'}`}>Global Chat</div>
-                            <div className="text-xs opacity-60">Public Channel</div>
-                        </div>
-                    </button>
-
-                    {/* Groups */}
-                    {groups.length > 0 && (
-                        <div className="mt-4">
-                            <div className="px-2 mb-2 text-xs font-bold text-cyber-muted uppercase tracking-wider">Groups</div>
-                            <div className="space-y-1">
-                                {groups.map(g => (
-                                    <button
-                                        key={g.id}
-                                        onClick={() => { setActiveChat({ type: 'group', id: g.id, data: g }); setMobileView('chat'); }}
-                                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'group' && activeChat.id === g.id
-                                            ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
-                                            : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
-                                            }`}
-                                    >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeChat.type === 'group' && activeChat.id === g.id ? 'bg-cyber-primary text-white' : 'bg-slate-100 text-cyber-muted'}`}>
-                                            <Users size={16} />
-                                        </div>
-                                        <div>
-                                            <div className={`font-bold ${activeChat.type === 'group' && activeChat.id === g.id ? 'text-cyber-primary' : 'text-cyber-text'}`}>{g.name}</div>
-                                            <div className="text-xs opacity-60">{g.member_count} members</div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Friends */}
-                    {friends.length > 0 && (
-                        <div className="mt-4">
-                            <div className="px-2 mb-2 text-xs font-bold text-cyber-muted uppercase tracking-wider">Friends</div>
-                            <div className="space-y-1">
-                                {friends.map(u => (
-                                    <button
-                                        key={u.id}
-                                        onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
-                                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'private' && activeChat.id === u.id
-                                            ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
-                                            : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
-                                            }`}
-                                    >
-                                        <div className={`w-10 h-10 rounded-full border border-cyber-border flex items-center justify-center overflow-hidden ${activeChat.type === 'private' && activeChat.id === u.id ? 'ring-2 ring-cyber-primary ring-offset-2' : 'bg-slate-100'}`}>
-                                            {u.profile_photo ? (
-                                                <img src={u.profile_photo} alt={u.username} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span className="text-cyber-primary font-bold">{(u.username || "U").charAt(0).toUpperCase()}</span>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className={`font-bold ${activeChat.type === 'private' && activeChat.id === u.id ? 'text-cyber-primary' : 'text-cyber-text'}`}>{u.username}</div>
-                                            <div className="text-xs opacity-60 text-green-600 flex items-center gap-1 font-medium">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
-                                            </div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Suggestions (Other Users) */}
-                    <div className="mt-4">
-                        <div className="px-2 mb-2 text-xs font-bold text-cyber-muted uppercase tracking-wider">Suggestions</div>
-                        <div className="space-y-1">
-                            {users.filter(u => !friends.find(f => f.id === u.id)).map(u => (
-                                <button
-                                    key={u.id}
-                                    onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
-                                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${activeChat.type === 'private' && activeChat.id === u.id
-                                        ? 'bg-white border border-cyber-primary/30 shadow-md ring-1 ring-cyber-primary/20'
-                                        : 'text-cyber-muted hover:bg-white/60 hover:text-cyber-text'
-                                        }`}
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-cyber-border flex items-center justify-center overflow-hidden opacity-70">
-                                        {u.profile_photo ? (
-                                            <img src={u.profile_photo} alt={u.username} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <UserIcon size={20} className="text-cyber-muted" />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-cyber-text">{u.username}</div>
-                                        <div className="text-xs opacity-40">User</div>
-                                    </div>
-                                </button>
-                            ))}
+                        <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">Global Chat</div>
+                            <div className="text-xs text-gray-500 truncate">Public community channel</div>
                         </div>
                     </div>
+
+                    <div className="px-5 py-2 text-xs font-bold text-gray-400 mt-2">Messages</div>
+
+                    {/* Groups */}
+                    {groups.map(g => (
+                        <div
+                            key={g.id}
+                            onClick={() => { setActiveChat({ type: 'group', id: g.id, data: g }); setMobileView('chat'); }}
+                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'group' && activeChat.id === g.id ? 'bg-gray-50' : ''}`}
+                        >
+                            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <Users size={24} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-900">{g.name}</div>
+                                <div className="text-xs text-gray-500 truncate">{g.member_count} members</div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Friends/DMs */}
+                    {friends.map(u => (
+                        <div
+                            key={u.id}
+                            onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
+                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-gray-50' : ''}`}
+                        >
+                            <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100">
+                                <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-900">{u.username}</div>
+                                <div className="text-xs text-gray-500 truncate flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-green-500"></span> Active now
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Suggestions */}
+                    <div className="px-5 py-2 text-xs font-bold text-gray-400 mt-4">Suggestions</div>
+                    {users.filter(u => !friends.find(f => f.id === u.id)).map(u => (
+                        <div
+                            key={u.id}
+                            onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
+                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-gray-50' : ''}`}
+                        >
+                            <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 opacity-60">
+                                <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-900">{u.username}</div>
+                                <div className="text-xs text-gray-400">Suggested for you</div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Chat Area */}
-            <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} w-full md:flex-1 md:flex flex-col glass-card rounded-xl overflow-hidden bg-white/70 backdrop-blur-xl shadow-lg border border-white/50`}>
-                <div className="p-4 border-b border-cyber-border bg-slate-50 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-cyber-text flex items-center gap-2">
-                        {/* Mobile Back Button */}
-                        <button
-                            onClick={() => setMobileView('list')}
-                            className="md:hidden p-1 mr-1 hover:bg-slate-200 rounded-full text-cyber-muted transition-colors"
-                        >
-                            <ArrowLeft size={20} />
-                        </button>
+            {/* RIGHT SIDE (Chat Window) */}
+            <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} flex-1 flex flex-col bg-white`}>
+                {/* Chat Header */}
+                <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setMobileView('list')} className="md:hidden text-gray-900 mr-2"><ArrowLeft size={24} /></button>
 
                         {activeChat.type === 'private' ? (
-                            <Link to={`/profile/${activeChat.data.id}`} className="hover:text-cyber-primary transition-colors flex items-center gap-2 group">
-                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                @{activeChat.data.username}
-                            </Link>
+                            <>
+                                <div className="w-8 h-8 rounded-full overflow-hidden">
+                                    <img src={activeChat.data.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data.username}`} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-gray-900">{activeChat.data.username}</div>
+                                    <div className="text-xs text-gray-500">Active now</div>
+                                </div>
+                            </>
                         ) : activeChat.type === 'group' ? (
-                            <span className="flex items-center gap-2">
-                                <Users size={20} className="text-cyber-primary" />
-                                {activeChat.data.name}
-                            </span>
+                            <>
+                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Users size={16} /></div>
+                                <div className="text-sm font-bold text-gray-900">{activeChat.data.name}</div>
+                            </>
                         ) : (
-                            <span className="flex items-center gap-2">
-                                <Hash size={20} className="text-cyber-primary" />
-                                Global Chat <span className={`text-xs px-2 py-0.5 rounded-full ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isConnected ? 'Connected' : 'Offline'}</span>
-                            </span>
+                            <>
+                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><Hash size={16} /></div>
+                                <div>
+                                    <div className="text-sm font-bold text-gray-900">Global Chat</div>
+                                    <div className="text-xs text-gray-500">Public</div>
+                                </div>
+                            </>
                         )}
-                    </h2>
-                    <div className="flex items-center gap-4">
-                        {activeChat.type === 'private' && (
-                            <div className="flex gap-2">
-                                <button onClick={() => startCall(false)} className="p-2 hover:bg-white rounded-full text-cyber-muted hover:text-cyber-primary transition-colors shadow-sm" title="Voice Call">
-                                    <Phone size={20} />
-                                </button>
-                                <button onClick={() => startCall(true)} className="p-2 hover:bg-white rounded-full text-cyber-muted hover:text-cyber-primary transition-colors shadow-sm" title="Video Call">
-                                    <Video size={20} />
-                                </button>
-                            </div>
-                        )}
+                    </div>
+
+                    <div className="flex items-center gap-4 text-gray-900">
+                        <Phone size={24} strokeWidth={1.5} className="cursor-pointer hover:opacity-70" onClick={() => startCall(false)} />
+                        <Video size={24} strokeWidth={1.5} className="cursor-pointer hover:opacity-70" onClick={() => startCall(true)} />
+                        <Info size={24} strokeWidth={1.5} className="cursor-pointer hover:opacity-70" />
                     </div>
                 </div>
 
-                <div
-                    className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50"
-                    onClick={() => setActiveMessageMenu(null)}
-                >
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-1" onClick={() => setActiveMessageMenu(null)}>
                     {messages.length === 0 && (
-                        <div className="text-center text-cyber-muted opacity-50 mt-10">
-                            {activeChat.type === 'global' ? 'Welcome to Global Chat!' : 'No messages yet. Say hello!'}
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                            <div className="w-20 h-20 rounded-full border-2 border-gray-200 flex items-center justify-center">
+                                {activeChat.type === 'global' ? <Hash size={40} /> : <UserIcon size={40} />}
+                            </div>
+                            <p>Say hello!</p>
                         </div>
                     )}
+
                     {messages.map((msg, index) => {
                         const isMe = msg.sender_id === user?.id;
-                        // Find sender photo from Users list (if available) or Friends list
+                        const showAvatar = !isMe && (index === messages.length - 1 || messages[index + 1]?.sender_id !== msg.sender_id);
                         const senderUser = !isMe ? (users.find(u => u.id === msg.sender_id) || friends.find(f => f.id === msg.sender_id)) : null;
-                        const senderPhoto = senderUser?.profile_photo;
 
-                        // Filter out signaling
+                        // Message grouping logic for spacing/border-radius can be added here
+
                         if (msg.type && msg.type !== 'message') return null;
 
-                        // Handle Unsent
-                        if (msg.is_unsent) {
-                            return (
-                                <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
-                                    <div className={`max-w-[70%] rounded-2xl p-4 shadow-sm border border-cyber-border italic text-cyber-muted opacity-70 bg-gray-50`}>
-                                        Message unsent
-                                    </div>
-                                </div>
-                            )
-                        }
-
                         return (
-                            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
+                            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group mb-1 relative`}>
                                 {!isMe && (
-                                    <div className="w-8 h-8 rounded-full bg-slate-200 border border-cyber-border flex-shrink-0 overflow-hidden mb-1">
-                                        {senderPhoto ? <img src={senderPhoto} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-cyber-muted">{(msg.sender_username || "U")[0].toUpperCase()}</div>}
+                                    <div className="w-7 h-7 flex-shrink-0 mr-2 flex items-end">
+                                        {showAvatar ? (
+                                            <img
+                                                src={senderUser?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender_username}`}
+                                                className="w-7 h-7 rounded-full object-cover"
+                                            />
+                                        ) : <div className="w-7" />}
                                     </div>
                                 )}
-                                <div className={`max-w-[70%] rounded-2xl p-4 shadow-sm relative group/msg ${isMe
-                                    ? 'bg-cyber-primary text-white rounded-br-none shadow-cyber-primary/20'
-                                    : 'bg-white text-cyber-text rounded-bl-none border border-cyber-border shadow-sm'
-                                    }`}>
 
-                                    {/* Message Options Trigger (3 Dots) - MOVED INSIDE */}
-                                    <div className={`absolute top-2 ${isMe ? '-left-8' : '-right-8'} opacity-0 group-hover/msg:opacity-100 transition-opacity flex flex-col gap-1 ${activeMessageMenu === msg.id ? '!opacity-100' : ''}`}>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === msg.id ? null : msg.id); }}
-                                            className="p-1.5 rounded-full text-slate-400 hover:text-cyber-primary hover:bg-slate-100/80 transition-all bg-white/50 backdrop-blur-sm shadow-sm border border-white/20"
-                                        >
-                                            <MoreHorizontal size={14} />
-                                        </button>
+                                <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative ${isMe
+                                    ? 'bg-blue-500 text-white rounded-br-md from-purple-500 to-blue-500 bg-gradient-to-br'
+                                    : 'bg-gray-100 text-gray-900 rounded-bl-md'}`}>
 
-                                        {/* Dropdown Menu */}
-                                        {activeMessageMenu === msg.id && (
-                                            <div className={`absolute top-8 ${isMe ? 'right-0' : 'left-0'} bg-white rounded-lg shadow-xl border border-gray-100 p-1 w-32 z-50 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200`}>
-                                                {isMe && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id, 'everyone'); setActiveMessageMenu(null); }}
-                                                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-500 rounded-md w-full text-left transition-colors font-medium"
-                                                    >
-                                                        <Undo2 size={12} /> Unsend
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id, 'me'); setActiveMessageMenu(null); }}
-                                                    className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-500 rounded-md w-full text-left transition-colors font-medium"
-                                                >
-                                                    <Trash2 size={12} /> Delete for me
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {!isMe && (
-                                        <Link to={msg.sender_id ? `/profile/${msg.sender_id}` : '#'} className="text-xs font-bold text-cyber-primary mb-1 flex items-center gap-1 hover:underline">
-                                            {msg.sender_username}
-                                        </Link>
+                                    {/* Sender Name in Group/Global */}
+                                    {!isMe && activeChat.type !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== msg.sender_id) && (
+                                        <div className="text-xs text-gray-500 mb-1 ml-1">{msg.sender_username}</div>
                                     )}
-                                    <div className="break-words leading-relaxed">{msg.content}</div>
-                                    <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-white/70' : 'text-cyber-muted'}`}>
-                                        {formatTimeForUser(msg.created_at, user?.phone_number)}
+
+                                    {msg.content}
+
+                                    {/* Hover Options */}
+                                    <div className={`absolute top-1/2 -translate-y-1/2 ${isMe ? '-left-10' : '-right-10'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-2`}>
+                                        <button onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === msg.id ? null : msg.id); }} className="text-gray-400 hover:text-gray-600">
+                                            <MoreHorizontal size={16} />
+                                        </button>
                                     </div>
+
+                                    {/* Context Menu */}
+                                    {activeMessageMenu === msg.id && (
+                                        <div className="absolute top-full mt-2 z-50 bg-white shadow-lg rounded-lg border border-gray-100 p-1 min-w-[120px]">
+                                            {isMe && <button onClick={() => handleDeleteMessage(msg.id, 'everyone')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-red-50 text-red-500 rounded">Unsend</button>}
+                                            <button onClick={() => handleDeleteMessage(msg.id, 'me')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 text-gray-700 rounded">Delete for me</button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -540,33 +431,38 @@ export default function Chat() {
                     <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-4 bg-white border-t border-cyber-border flex gap-2">
-                    <input
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={`Message ${activeChat.type === 'global' ? 'Global' : activeChat.type === 'private' ? activeChat.data.username : activeChat.data.name}...`}
-                        className="glass-input flex-1 bg-slate-50 border-cyber-border focus:bg-white transition-all shadow-inner"
-                    />
-                    <button
-                        onClick={handleAiAssist}
-                        disabled={!inputValue.trim() || isAiLoading}
-                        className={`p-3 rounded-xl transition-all shadow-sm flex items-center justify-center border ${inputValue.trim() && !isAiLoading
-                            ? 'bg-purple-600 text-white border-transparent hover:bg-purple-700 shadow-md hover:scale-105 active:scale-95'
-                            : 'bg-white text-purple-400 border-purple-200 opacity-60 cursor-not-allowed'
-                            }`}
-                        title="AI Smart Assist (Rewrite)"
-                    >
-                        <Sparkles size={20} className={isAiLoading ? "animate-spin" : ""} />
-                    </button>
-                    <button
-                        onClick={sendMessage}
-                        disabled={!isConnected}
-                        className="glass-button-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-12 h-12 p-0 shadow-md"
-                    >
-                        <Send size={20} />
-                    </button>
+                {/* Input Area */}
+                <div className="p-4 px-5">
+                    <div className="flex items-center gap-2 bg-white rounded-full border border-gray-300 px-2 py-1.5 focus-within:border-gray-400 transition-colors">
+                        <div className="flex items-center gap-1 ml-2">
+                            <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full"><Smile size={24} strokeWidth={1.5} /></button>
+                        </div>
+                        <input
+                            type="text"
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Message..."
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-gray-500 h-10"
+                        />
+                        <div className="flex items-center gap-2 mr-2">
+                            {inputValue.trim() ? (
+                                <button onClick={sendMessage} className="text-blue-500 font-semibold text-sm hover:text-blue-700">Send</button>
+                            ) : (
+                                <>
+                                    <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full"><ImageIcon size={24} strokeWidth={1.5} /></button>
+                                    <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full"><Heart size={24} strokeWidth={1.5} /></button>
+                                </>
+                            )}
+
+                            {/* AI Assist Button (Hidden/Optional) */}
+                            {inputValue.trim() && (
+                                <button onClick={handleAiAssist} className="p-2 text-purple-500 hover:bg-purple-50 rounded-full" title="AI Assist">
+                                    <Sparkles size={20} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -582,7 +478,7 @@ export default function Chat() {
                 <CallModal
                     isIncoming={callData.isIncoming}
                     caller={callData.caller}
-                    targetUser={activeChat.data} // only valid if outgoing
+                    targetUser={activeChat.data}
                     socket={ws.current}
                     onClose={() => setCallData(null)}
                     user={user}
