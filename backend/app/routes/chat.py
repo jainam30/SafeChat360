@@ -333,8 +333,83 @@ async def delete_message(
 
     return {"status": "success"}
 
-class AssistRequest(BaseModel):
-    text: str
+
+class SendMessageRequest(BaseModel):
+    content: str
+    receiver_id: Optional[int] = None
+    group_id: Optional[int] = None
+
+@router.post("/send")
+async def send_message_http(
+    req: SendMessageRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    HTTP Fallback for sending messages (Serverless compatible)
+    """
+    # 1. Moderation Check (Text Only for now via HTTP)
+    mod_result = moderate_text(req.content)
+    
+    # Log Moderation
+    from app.db import engine
+    with Session(engine) as log_session:
+        from app import crud
+        crud.create_moderation_log(
+            log_session,
+            content_type="text",
+            content_excerpt=req.content,
+            is_flagged=mod_result.get("is_flagged"),
+            details=str(mod_result),
+            source=str(current_user.id),
+            original_language=mod_result.get("original_language", "en")
+        )
+
+    if mod_result.get("is_flagged"):
+        reason = "Content Policy Violation"
+        if mod_result.get("flags"):
+             reason = f"Blocked: {mod_result['flags'][0].get('label', 'Inappropriate Content')}"
+        raise HTTPException(status_code=400, detail=f"Message blocked: {reason}")
+
+    # 2. Save Message
+    from app.models import GroupMember, Message
+    msg = Message(
+        sender_id=current_user.id,
+        sender_username=current_user.username,
+        receiver_id=req.receiver_id,
+        group_id=req.group_id,
+        content=req.content,
+        created_at=datetime.utcnow()
+    )
+    session.add(msg)
+    session.commit()
+    session.refresh(msg)
+
+    # 3. Best-effort Realtime Notification
+    response_json = json.dumps({
+        "type": "message",
+        "id": msg.id,
+        "sender_id": msg.sender_id,
+        "sender_username": msg.sender_username,
+        "receiver_id": msg.receiver_id,
+        "group_id": msg.group_id,
+        "content": msg.content,
+        "created_at": msg.created_at.isoformat()
+    })
+
+    group_members = None
+    if req.group_id:
+         members = session.exec(select(GroupMember).where(GroupMember.group_id == req.group_id)).all()
+         group_members = [m.user_id for m in members]
+
+    await manager.broadcast(
+        response_json,
+        receiver_id=req.receiver_id,
+        sender_id=msg.sender_id,
+        group_members=group_members
+    )
+
+    return msg
 
 @router.post("/assist")
 def ai_assist(request: AssistRequest):
@@ -343,3 +418,4 @@ def ai_assist(request: AssistRequest):
     """
     improved = improve_text(request.text)
     return {"improved_text": improved}
+

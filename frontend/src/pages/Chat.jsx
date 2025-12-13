@@ -174,6 +174,50 @@ export default function Chat() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+
+    // Polling for robust message sync (Vercel Serverless Support)
+    useEffect(() => {
+        if (!token) return;
+
+        const pollMessages = async () => {
+            if (!activeChat.id && activeChat.type !== 'global') return;
+
+            try {
+                let url = '/api/chat/history';
+                if (activeChat.type === 'private') {
+                    url += `?other_user_id=${activeChat.id}`;
+                } else if (activeChat.type === 'group') {
+                    url += `?group_id=${activeChat.id}`;
+                }
+
+                // We want to fetch LATEST messages. 
+                // Ideally we'd use 'after_id' param but history endpoint just returns last 50.
+                // Re-fetching history is inefficient but robust for this demo.
+                const res = await fetch(getApiUrl(url), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const freshMsgs = await res.json();
+
+                    // Merge logic: simpler is to just replace if length differs significantly or check last ID
+                    // For simplicity in this demo, strict replacement to ensure sync
+                    // BUT to avoid flicker, maybe check if last message ID is different?
+                    setMessages(prev => {
+                        const lastPrev = prev[prev.length - 1];
+                        const lastNew = freshMsgs[freshMsgs.length - 1];
+                        if (!lastPrev || !lastNew || lastPrev.id !== lastNew.id || prev.length !== freshMsgs.length) {
+                            return freshMsgs;
+                        }
+                        return prev;
+                    });
+                }
+            } catch (e) { console.error("Poll err", e); }
+        };
+
+        const intervalId = setInterval(pollMessages, 3000); // Poll every 3s
+        return () => clearInterval(intervalId);
+    }, [activeChat, token]);
+
     const startCall = (isVideo) => {
         if (activeChat.type !== 'private') return;
         setCallData({
@@ -182,33 +226,45 @@ export default function Chat() {
         });
     };
 
-    const sendMessage = () => {
-        console.log("Attempting to send message...", { inputValue, wsCurrent: !!ws.current, isConnected });
-        if (!inputValue.trim()) {
-            console.log("Message empty, aborting.");
-            return;
-        }
-        if (!ws.current) {
-            console.log("WebSocket not initialized, aborting.");
-            return;
-        }
+    const sendMessage = async () => {
+        if (!inputValue.trim()) return;
 
-        const messageData = {
-            sender_id: user.id,
-            sender_username: user.username,
-            content: inputValue,
-            receiver_id: activeChat.type === 'private' ? activeChat.id : null,
-            group_id: activeChat.type === 'group' ? activeChat.id : null
-        };
-
-        console.log("Sending message data:", messageData);
-
+        // 1. HTTP BEST EFFORT SUBMISSION (Works on Serverless)
         try {
-            ws.current.send(JSON.stringify(messageData));
-            console.log("Message sent to WebSocket.");
+            const body = {
+                content: inputValue,
+                receiver_id: activeChat.type === 'private' ? activeChat.id : null,
+                group_id: activeChat.type === 'group' ? activeChat.id : null
+            };
+
+            const res = await fetch(getApiUrl('/api/chat/send'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.detail || "Failed to send message");
+                return;
+            }
+
+            // Msg sent success
+            const sentMsg = await res.json();
+            // Optimistically add to UI if WS didn't already
+            setMessages(prev => {
+                if (prev.find(m => m.id === sentMsg.id)) return prev;
+                return [...prev, sentMsg];
+            });
             setInputValue('');
-        } catch (error) {
-            console.error("Error sending message via WebSocket:", error);
+
+        } catch (err) {
+            console.error("HTTP Send failed", err);
+            // Fallback? No, HTTP is the fallback.
+            alert("Connection error. Please try again.");
         }
     };
 
