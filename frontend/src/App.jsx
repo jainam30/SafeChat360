@@ -61,6 +61,8 @@ export default function App() {
               <Route path="/profile/:userId" element={<ProtectedRoute><Layout><UserProfile /></Layout></ProtectedRoute>} />
               <Route path="/account" element={<ProtectedRoute><Layout><Account /></Layout></ProtectedRoute>} />
               <Route path="/friends" element={<ProtectedRoute><Layout><Friends /></Layout></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+              <Route path="/review-queue" element={<ProtectedRoute><Layout><ReviewQueue /></Layout></ProtectedRoute>} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
