@@ -61,3 +61,26 @@ def firebase_check():
         status["error"] = "FIREBASE_SERVICE_ACCOUNT_JSON not found in environment"
         
     return status
+
+# Alias to handle potential path stripping
+@app.get("/debug/firebase")
+def firebase_check_alias():
+    return firebase_check()
+
+@app.get("/firebase")
+def firebase_check_alias_2():
+    return firebase_check()
+
+# CATCH-ALL TO DEBUG PATH ISSUES
+@app.get("/{path_name:path}")
+def catch_all(path_name: str):
+    return {
+        "status": "not_found_caught",
+        "message": f"Route not found in debug.py. You requested: {path_name}",
+        "available_routes": [
+            "/api/debug", 
+            "/api/debug/firebase", 
+            "/debug/firebase", 
+            "/firebase"
+        ]
+    }
