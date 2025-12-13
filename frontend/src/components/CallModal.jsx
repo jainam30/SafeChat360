@@ -150,28 +150,39 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
     const acceptCall = async () => {
         // Start media first
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); // Default to video for now
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: isVideo,
+                audio: true
+            });
             setLocalStream(stream);
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
             setStatus('connecting');
 
-            // Notify caller
-            socket.send(JSON.stringify({
-                type: 'call-response',
-                response: 'accept',
-                receiver_id: caller.id
-            }));
-
             // Initialize PC
             const pc = createPeerConnection();
 
-            // We need to fetch the Offer that was sent. 
-            // In this simple implementation, we assume props passed the offer or we wait for it.
-            // Actually, `Chat.jsx` likely received the 'offer' and triggered the modal. 
-            // We should pass the offer data as a prop `offerData`.
+            // Set Remote Description (The Offer)
+            if (offerData && offerData.sdp) {
+                await pc.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
+
+                // Create Answer
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                // Send Answer
+                socket.send(JSON.stringify({
+                    type: 'answer',
+                    sdp: answer,
+                    sender_id: user.id,
+                    receiver_id: caller.id
+                }));
+            } else {
+                console.error("No offer data found");
+            }
+
         } catch (e) {
-            console.error(e);
+            console.error("Accept call failed", e);
         }
     };
 

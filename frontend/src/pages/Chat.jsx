@@ -134,8 +134,14 @@ export default function Chat() {
                 // Handle Signals (Call)
                 if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
                     // Handled by CallModal if active, or triggers modal
-                    if (data.type === 'call-request') {
-                        setCallData({ isIncoming: true, caller: data.caller, isVideo: data.isVideo, offerData: data });
+                    if (data.type === 'offer') {
+                        // Incoming Call!
+                        setCallData({
+                            isIncoming: true,
+                            caller: { id: data.sender_id, username: data.sender_username || "Unknown" },
+                            isVideo: data.isVideo,
+                            offerData: data
+                        });
                     }
                     return;
                 }
