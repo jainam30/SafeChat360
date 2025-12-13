@@ -1,6 +1,6 @@
 try:
     import cv2
-except ImportError:
+except Exception:
     cv2 = None
 import os
 import tempfile

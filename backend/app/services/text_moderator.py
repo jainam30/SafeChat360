@@ -10,7 +10,7 @@ _model = None
 
 try:
     from deep_translator import GoogleTranslator
-except ImportError:
+except Exception:
     GoogleTranslator = None
 
 # List of inappropriate keywords/patterns
