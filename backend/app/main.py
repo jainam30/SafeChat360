@@ -68,6 +68,14 @@ app.include_router(chat.router)
 app.include_router(friends.router)
 app.include_router(groups.router)
 app.include_router(notifications.router)
+from app.routes import upload
+app.include_router(upload.router)
+
+from fastapi.staticfiles import StaticFiles
+# Mount uploads directory to serve files
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def read_root():
