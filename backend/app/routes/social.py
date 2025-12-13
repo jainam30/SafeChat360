@@ -238,20 +238,21 @@ def create_post(
                 with engine.connect() as conn:
                     # Try adding the most likely missing columns. 
                     # Ignore errors if they already exist (brute force migration)
+                    # Try adding the most likely missing columns. 
+                    # Ignore errors if they already exist (brute force migration)
                     migration_steps = [
-                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS media_url VARCHAR",
-                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS media_type VARCHAR",
-                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS privacy VARCHAR DEFAULT 'public'",
-                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS allowed_users VARCHAR",
-                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS is_flagged BOOLEAN DEFAULT FALSE",
-                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS flag_reason VARCHAR"
+                        "ALTER TABLE post ADD COLUMN media_url VARCHAR",
+                        "ALTER TABLE post ADD COLUMN media_type VARCHAR",
+                        "ALTER TABLE post ADD COLUMN privacy VARCHAR DEFAULT 'public'",
+                        "ALTER TABLE post ADD COLUMN allowed_users VARCHAR",
+                        "ALTER TABLE post ADD COLUMN is_flagged BOOLEAN DEFAULT FALSE",
+                        "ALTER TABLE post ADD COLUMN flag_reason VARCHAR"
                     ]
                     
                     for step in migration_steps:
                         try:
-                            # Postgres supports IF NOT EXISTS for ADD COLUMN in recent versions, 
-                            # but purely safe way is catch duplicate error if not. 
-                            # We will try the IF NOT EXISTS syntax first which is safer.
+                            # Standard syntax supported by both Postgres and SQLite.
+                            # We catch the error if column already exists.
                             conn.execute(text(step))
                             conn.commit()
                         except Exception as mod_e:
