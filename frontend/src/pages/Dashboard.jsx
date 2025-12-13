@@ -287,16 +287,27 @@ const Dashboard = () => {
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-4">
-                      <button className="text-gray-800 hover:text-red-500 transition-colors"><Heart size={24} /></button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await fetch(getApiUrl(`/api/social/posts/${post.id}/like`), { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+                            // Optimistic update
+                            setPosts(posts.map(p => p.id === post.id ? { ...p, likes_count: (p.likes_count || 0) + (p.has_liked ? -1 : 1), has_liked: !p.has_liked } : p));
+                          } catch (e) { console.error(e); }
+                        }}
+                        className={`${post.has_liked ? 'text-red-500' : 'text-gray-800 hover:text-red-500'} transition-colors`}
+                      >
+                        <Heart size={24} fill={post.has_liked ? "currentColor" : "none"} />
+                      </button>
                       <button className="text-gray-800 hover:text-gray-600 transition-colors"><MessageCircle size={24} /></button>
                       <button className="text-gray-800 hover:text-gray-600 transition-colors"><Send size={24} /></button>
                     </div>
                     <button className="text-gray-800 hover:text-gray-600"><Bookmark size={24} /></button>
                   </div>
 
-                  {/* Likes Count (Mock) */}
+                  {/* Likes Count */}
                   <div className="text-sm font-semibold text-gray-900 mb-1">
-                    {Math.floor(Math.random() * 100) + 1} likes
+                    {post.likes_count || 0} likes
                   </div>
 
                   {/* Caption */}
