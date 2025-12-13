@@ -77,7 +77,19 @@ def register(request: Request, req: RegisterRequest, session: Session = Depends(
             full_name=req.full_name, 
             role=req.role or "user"
         )
-        return {"status": "success", "data": {"id": user.id, "email": user.email, "role": user.role}}
+        # AUTO-LOGIN: Create session and return token immediately
+        crud.create_user_session(session, user.id, "unknown_device_register")
+        token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
+        
+        return {
+            "status": "success", 
+            "data": {
+                "id": user.id, 
+                "email": user.email, 
+                "role": user.role,
+                "access_token": token # NEW: Auto-login token
+            }
+        }
     except HTTPException:
         raise
     except Exception as e:
