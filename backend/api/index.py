@@ -19,6 +19,23 @@ if os.path.exists(backend_dir) and backend_dir not in sys.path:
 
 try:
     from app.main import app
-except ImportError:
-    # Fallback: maybe we are INSIDE backend?
-    from main import app
+except Exception as e:
+    # SAFETY NET: If app fails to load (ImportError, Startup Error, etc.),
+    # Create a dummy app that returns the error detail so we can see it in browser/frontend.
+    import traceback
+    from fastapi import FastAPI, Response
+    
+    error_msg = traceback.format_exc()
+    print(f"CRITICAL STARTUP ERROR: {error_msg}")
+    
+    app = FastAPI()
+    
+    @app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
+    async def catch_all(path_name: str):
+        return {
+            "status": "startup_error", 
+            "detail": f"Backend failed to start. Traceback: {error_msg}",
+            "sys_path": sys.path,
+            "cwd": os.getcwd(),
+            "file": __file__
+        }
