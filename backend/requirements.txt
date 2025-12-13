@@ -14,3 +14,4 @@ email-validator
 # opencv-python-headless
 firebase-admin
 slowapi
+deep-translator

@@ -8,7 +8,10 @@ except Exception:
 
 _model = None
 
-from deep_translator import GoogleTranslator
+try:
+    from deep_translator import GoogleTranslator
+except ImportError:
+    GoogleTranslator = None
 
 # List of inappropriate keywords/patterns
 BLOCKED_KEYWORDS = {
@@ -27,6 +30,9 @@ def _translate_to_english(text: str) -> dict:
         # Detect is not strictly needed if we just translate to 'en', google handles it.
         # But to know if we translated, we check input vs output or use explicit detection (which requires key or lib)
         # GoogleTranslator(source='auto', target='en') works well.
+        if GoogleTranslator is None:
+             return {"text": text, "original_language": "unknown"}
+
         translator = GoogleTranslator(source='auto', target='en')
         translated = translator.translate(text)
         
