@@ -43,14 +43,19 @@ const Dashboard = () => {
         fetch(getApiUrl('/api/social/stories'), { headers })
       ]);
 
-      if (postsRes.ok) setPosts(await postsRes.json());
+      if (postsRes.ok) {
+        const postsData = await postsRes.json();
+        setPosts(Array.isArray(postsData) ? postsData : []);
+      }
+
       if (storiesRes.ok) {
-        const allStories = await storiesRes.json();
-        // Group stories by User? For simple UI: just list them
-        setStories(allStories);
+        const storiesData = await storiesRes.json();
+        setStories(Array.isArray(storiesData) ? storiesData : []);
       }
     } catch (e) {
       console.error("Fetch failed", e);
+      setPosts([]);
+      setStories([]);
     } finally {
       setLoading(false);
     }

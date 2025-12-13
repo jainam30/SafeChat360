@@ -157,6 +157,11 @@ export default function Login() {
       } else {
         // CATCH ALL OTHER ERRORS (500, 400, 422, etc)
         console.error("Login Failed with Status:", res.status, data);
+
+        if (res.status === 200 && !data.access_token) {
+          console.error("CRITICAL: Login 200 OK but NO TOKEN. Response:", data);
+        }
+
         const msg = data.detail || 'Login failed';
         setErrorDetail(`Server Error (${res.status}): ${msg}`); // Show in Red Box
         toast.error("Login failed. Check the error box.");
