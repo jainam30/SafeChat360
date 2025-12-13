@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env if present
+load_dotenv(override=True)  # Load environment variables from .env if present, overriding system env
 
 # DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
 # For Vercel: Use /tmp for SQLite if no DATABASE_URL is set (prevents Read-Only error), 

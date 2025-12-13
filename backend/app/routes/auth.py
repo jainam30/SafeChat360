@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from sqlmodel import Session
@@ -109,7 +110,10 @@ def login(request: Request, req: LoginRequest, session: Session = Depends(get_se
     except Exception as e:
         logger.error(f"Login error: {str(e)}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Login failed: {str(e)}"}
+        )
 
 @router.post("/verify-identity", response_model=TokenResponse)
 @limiter.limit("5/minute")
