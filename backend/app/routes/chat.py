@@ -282,8 +282,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
 
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, user_id)
+
 
 @router.delete("/messages/{message_id}")
 async def delete_message(
@@ -409,7 +408,9 @@ async def send_message_http(
         group_members=group_members
     )
 
-    return msg
+
+class AssistRequest(BaseModel):
+    text: str
 
 @router.post("/assist")
 def ai_assist(request: AssistRequest):
