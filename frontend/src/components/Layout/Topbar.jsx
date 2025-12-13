@@ -136,11 +136,15 @@ export default function Topbar() {
           </div>
           <Link to="/account" className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px] cursor-pointer hover:scale-105 transition-transform">
             <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden border border-cyber-border">
-              {user?.profile_photo ? (
-                <img src={user.profile_photo} alt={user.username} className="w-full h-full object-cover" />
-              ) : (
-                <User size={20} className="text-cyber-primary" />
-              )}
+              <img
+                src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`}
+                alt={user?.username}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`;
+                }}
+              />
             </div>
           </Link>
           <button
