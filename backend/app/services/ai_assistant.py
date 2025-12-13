@@ -1,10 +1,17 @@
 import os
-import google.generativeai as genai
+
+# Graceful fallback if library is missing
+try:
+    import google.generativeai as genai
+    HAS_GEMINI = True
+except ImportError:
+    genai = None
+    HAS_GEMINI = False
 
 # Configure API Key (Try to get from environment)
 API_KEY = os.getenv("GEMINI_API_KEY")
 
-if API_KEY:
+if HAS_GEMINI and API_KEY:
     genai.configure(api_key=API_KEY)
 
 def improve_text(text: str) -> str:
@@ -13,6 +20,10 @@ def improve_text(text: str) -> str:
     """
     if not text or len(text) < 2:
         return text
+
+    if not HAS_GEMINI:
+        print("AI Assistant: google-generativeai library not installed.")
+        return text + " [AI Error: Server missing dependencies]"
 
     if not API_KEY:
         # Fallback if no key provided
