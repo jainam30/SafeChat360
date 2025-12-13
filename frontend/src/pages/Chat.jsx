@@ -238,9 +238,9 @@ export default function Chat() {
     if (!user) return <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>;
 
     return (
-        <div className="flex h-[calc(100vh-100px)] max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm my-4">
+        <div className="flex h-[calc(100vh-100px)] w-full mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm my-4 lg:rounded-none lg:my-0 lg:border-x-0 lg:border-t-0">
             {/* LEFT SIDEBAR (Chat List) */}
-            <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} w-full md:w-[350px] flex-col border-r border-gray-200 bg-white`}>
+            <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-gray-200 bg-white`}>
 
                 {/* Header */}
                 <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5">
