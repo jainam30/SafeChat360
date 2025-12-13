@@ -47,7 +47,7 @@ export default function UserProfile() {
             });
             if (res.ok) {
                 const friends = await res.json();
-                if (friends.find(f => f.id === targetId)) {
+                if (Array.isArray(friends) && friends.find(f => f.id === targetId)) {
                     setFriendStatus('accepted');
                     return;
                 }
@@ -58,7 +58,7 @@ export default function UserProfile() {
             });
             if (reqRes.ok) {
                 const requests = await reqRes.json();
-                if (requests.find(r => r.requester_id === targetId)) {
+                if (Array.isArray(requests) && requests.find(r => r.requester_id === targetId)) {
                     setFriendStatus('incoming_request');
                     return;
                 }

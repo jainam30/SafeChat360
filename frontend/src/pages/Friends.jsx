@@ -24,9 +24,13 @@ export default function Friends() {
             const res = await fetch(getApiUrl('/api/friends/'), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (res.ok) setFriends(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                setFriends(Array.isArray(data) ? data : []);
+            }
         } catch (e) {
             console.error(e);
+            setFriends([]);
         } finally {
             setLoading(false);
         }
@@ -38,9 +42,13 @@ export default function Friends() {
             const res = await fetch(getApiUrl('/api/friends/requests'), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (res.ok) setRequests(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                setRequests(Array.isArray(data) ? data : []);
+            }
         } catch (e) {
             console.error(e);
+            setRequests([]);
         } finally {
             setLoading(false);
         }

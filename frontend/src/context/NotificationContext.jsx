@@ -25,17 +25,19 @@ export const NotificationProvider = ({ children }) => {
             });
             if (resReq.ok) {
                 const data = await resReq.json();
-                setFriendRequests(data.length);
-                const requestNotifs = data.map(req => ({
-                    id: `req-${req.id}`,
-                    type: 'friend_request',
-                    requester_name: req.requester_name,
-                    requester_id: req.requester_id,
-                    requester_photo: req.requester_photo,
-                    created_at: req.created_at,
-                    data: req
-                }));
-                newNotifications.push(...requestNotifs);
+                if (Array.isArray(data)) {
+                    setFriendRequests(data.length);
+                    const requestNotifs = data.map(req => ({
+                        id: `req-${req.id}`,
+                        type: 'friend_request',
+                        requester_name: req.requester_name,
+                        requester_id: req.requester_id,
+                        requester_photo: req.requester_photo,
+                        created_at: req.created_at,
+                        data: req
+                    }));
+                    newNotifications.push(...requestNotifs);
+                }
             }
 
             // 2. Fetch System Notifications (Mentions, etc.)
@@ -45,27 +47,24 @@ export const NotificationProvider = ({ children }) => {
 
             if (resNotif.ok) {
                 const data = await resNotif.json();
-                // We show unread ones prominently or all?
-                // Let's filter unread for badge counts, but show all in list
-                const unreadCount = data.filter(n => !n.is_read).length;
-                // Currently context has 'unreadMessages' but not general 'unreadNotifications' count exposed separate from friendRequests.
-                // We'll just add to notifications list.
+                if (Array.isArray(data)) {
+                    // We show unread ones prominently or all?
+                    // Let's filter unread for badge counts, but show all in list
+                    const unreadCount = data.filter(n => !n.is_read).length;
+                    setUnreadMessages(prev => Math.max(prev, unreadCount)); // Merge logic? Or just replace?
 
-                // Map to uniform format if needed or just use as is.
-                // Our frontend notification component (Bell dropdown) needs to be checked on how it renders.
-                // Assuming it iterates 'notifications' array.
+                    const systemNotifs = data.map(n => ({
+                        id: n.id,
+                        type: n.type,
+                        requester_name: n.source_name, // Map source_name to requester_name for UI consistency if used
+                        requester_id: n.source_id,
+                        created_at: n.created_at,
+                        is_read: n.is_read,
+                        reference_id: n.reference_id
+                    }));
 
-                const systemNotifs = data.map(n => ({
-                    id: n.id,
-                    type: n.type,
-                    requester_name: n.source_name, // Map source_name to requester_name for UI consistency if used
-                    requester_id: n.source_id,
-                    created_at: n.created_at,
-                    is_read: n.is_read,
-                    reference_id: n.reference_id
-                }));
-
-                newNotifications.push(...systemNotifs);
+                    newNotifications.push(...systemNotifs);
+                }
             }
 
             // Sort by date desc
