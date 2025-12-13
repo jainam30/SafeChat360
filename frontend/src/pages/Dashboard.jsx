@@ -7,6 +7,7 @@ import {
   Send, Globe, Users, Plus, X, Heart, MessageCircle, MoreHorizontal
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import StoryViewer from '../components/StoryViewer';
 
 const Dashboard = () => {
   const { user, token } = useAuth();
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [storyMedia, setStoryMedia] = useState('');
   const [storyType, setStoryType] = useState('image');
+  const [viewingStory, setViewingStory] = useState(null);
 
   // Initial Fetch
   useEffect(() => {
@@ -169,7 +171,11 @@ const Dashboard = () => {
 
           {/* Story List */}
           {stories.map(story => (
-            <div key={story.id} className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer relative group">
+            <div
+              key={story.id}
+              onClick={() => setViewingStory(story)}
+              className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer relative group"
+            >
               {/* Simplified Viewer: Just shows image in small circle for now, real implementation needs overlay */}
               <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600">
                 <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white">
@@ -366,6 +372,14 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Story Viewer Overlay */}
+      {viewingStory && (
+        <StoryViewer
+          story={viewingStory}
+          onClose={() => setViewingStory(null)}
+        />
       )}
 
     </div>

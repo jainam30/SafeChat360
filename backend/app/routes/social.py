@@ -319,20 +319,40 @@ def get_posts(
              print(f"CRUD get_posts failed: {e}")
              return []
         
+        # Performance Optimization: Batch fetch users
+        user_ids = {post.user_id for post in posts}
+        # Add mentions if needed? No, just authors for now.
+        
+        users_map = {}
+        try:
+            users = crud.get_users_by_ids(session, list(user_ids))
+            users_map = {user.id: user for user in users}
+        except Exception as e:
+            print(f"Batch user fetch failed: {e}")
+            # Fallback to individual fetch or empty map (will show "Unknown")
+        
         response = []
         for post in posts:
             try:
                 uname = post.username
                 u_photo = None
                 
-                # Fetch user safely
-                try:
-                    user = crud.get_user(session, post.user_id)
-                    if user:
-                         uname = user.username
-                         u_photo = user.profile_photo
-                except:
-                    pass # Ignore user fetch error
+                # Fetch user from map
+                user = users_map.get(post.user_id)
+                if user:
+                     uname = user.username
+                     u_photo = user.profile_photo
+                
+                # Fallback if not in map (shouldn't happen if key consistency exists)
+                if not user and post.user_id not in users_map:
+                     # Only fetch if absolutely necessary and not in batch (orphan data?)
+                     try:
+                        user = crud.get_user(session, post.user_id)
+                        if user:
+                            uname = user.username
+                            u_photo = user.profile_photo
+                     except:
+                        pass
 
                 response.append(PostResponse(
                     id=post.id,

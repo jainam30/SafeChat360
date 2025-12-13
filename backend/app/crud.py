@@ -18,6 +18,12 @@ def get_user_by_phone(session: Session, phone: str) -> Optional[User]:
 def get_user(session: Session, user_id: int) -> Optional[User]:
     return session.get(User, user_id)
 
+def get_users_by_ids(session: Session, user_ids: List[int]) -> List[User]:
+    if not user_ids:
+        return []
+    statement = select(User).where(User.id.in_(user_ids))
+    return session.exec(statement).all()
+
 def create_user(session: Session, email: str, username: str, hashed_password: str, phone_number: str = None, full_name: str = None, role: str = "user") -> User:
     user = User(
         email=email,
