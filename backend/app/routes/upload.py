@@ -8,9 +8,22 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 # Ensure upload directory exists
-UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+import tempfile
+
+# Ensure upload directory exists (Robust for Vercel)
+try:
+    UPLOAD_DIR = "uploads"
+    if not os.path.exists(UPLOAD_DIR):
+        os.makedirs(UPLOAD_DIR)
+except OSError:
+    # Read-only filesystem (Vercel)
+    UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "safechat_uploads")
+    if not os.path.exists(UPLOAD_DIR):
+        try:
+            os.makedirs(UPLOAD_DIR)
+        except:
+             pass 
+    print(f"WARNING: Using temporary directory for uploads: {UPLOAD_DIR}")
 
 @router.post("")
 async def upload_file(file: UploadFile = File(...)):

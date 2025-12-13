@@ -72,10 +72,15 @@ from app.routes import upload
 app.include_router(upload.router)
 
 from fastapi.staticfiles import StaticFiles
-# Mount uploads directory to serve files
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Mount uploads directory to serve files (Robust for Vercel)
+try:
+    if not os.path.exists("uploads"):
+        os.makedirs("uploads")
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+except Exception as e:
+    print(f"WARNING: Could not mount /uploads (Read-only filesystem?): {e}")
+    # We might be on Vercel. We can try mounting /tmp or just skip serving static files
+    # For now, we just don't crash.
 
 @app.get("/")
 def read_root():
