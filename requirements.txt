@@ -9,6 +9,7 @@ python-multipart
 sqlmodel
 psycopg2-binary
 passlib[bcrypt]
+bcrypt==3.2.2
 python-jose[cryptography]
 email-validator
 # opencv-python-headless
