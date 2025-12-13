@@ -128,7 +128,8 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
         init_firebase()
         
         # User is challenged (e.g. device limit), so they provide firebase token (via re-auth)
-        decoded_token = auth.verify_id_token(req.firebase_token)
+        # Allow 60 seconds clock skew to tolerate server time drift
+        decoded_token = auth.verify_id_token(req.firebase_token, clock_skew_seconds=60)
         email = decoded_token.get('email')
         
         user = crud.get_user_by_email(session, email)
@@ -170,5 +171,7 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
         raise
     except Exception as e:
         logger.error(f"Verification error: {str(e)}")
-        # DEBUG: Expose the error to the frontend to debug Vercel issues
-        raise HTTPException(status_code=401, detail=f"Identity verification failed: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        # DEBUG: Expose the FULL error to the frontend to debug Vercel issues
+        raise HTTPException(status_code=401, detail=f"Identity verification failed: {str(e)} | Type: {type(e).__name__} | TB: {tb[:200]}")
