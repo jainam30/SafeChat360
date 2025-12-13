@@ -124,8 +124,30 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
         email = decoded_token.get('email')
         
         user = crud.get_user_by_email(session, email)
+        
+        # JIT PROVISIONING: If user exists in Firebase but not in DB (e.g. Vercel Ephemeral DB), create them!
         if not user:
-             raise HTTPException(status_code=404, detail="User not found")
+             logger.info(f"JIT Provisioning: Creating user for {email}")
+             username = email.split('@')[0]
+             # Handle potential username collision by appending random digits if needed
+             if crud.get_user_by_username(session, username):
+                 import random
+                 username = f"{username}{random.randint(100, 999)}"
+                 
+             # Create dummy password (user should use Forgot Password to set it if they want local login)
+             # or better, valid password reset flow handles it.
+             # We just need them to exist to login.
+             hashed = get_password_hash("firebase_oauth_user_placeholder")
+             
+             user = crud.create_user(
+                session, 
+                email=email, 
+                username=username,
+                phone_number="", # Unknown
+                hashed_password=hashed, 
+                full_name=decoded_token.get('name', username), 
+                role="user"
+             )
 
         # If verified successfully, we can reset sessions or just allow this one.
         # Strategy: Deactivate old sessions to allow this new one
@@ -136,6 +158,8 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
 
         token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role})
         return {"access_token": token}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Verification error: {str(e)}")
         raise HTTPException(status_code=401, detail="Identity verification failed")
