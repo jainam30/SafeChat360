@@ -177,8 +177,16 @@ def create_post(
     except HTTPException as ie:
         raise ie
     except Exception as e:
+        # CRITICAL: Rollback immediately to clear aborted transaction state
+        try:
+             session.rollback()
+        except:
+             pass
+             
         error_msg = str(e).lower()
-        # JIT Recovery for Vercel (Ephemeral DB lost tables) OR Schema Mismatch
+        print(f"Primary create_post failed: {e}")
+
+        # JIT Recovery for Vercel (Ephemeral DB lost tables)
         if "no such table" in error_msg:
              # ... (Keep existing code for table creation) ...
             try:
@@ -201,6 +209,7 @@ def create_post(
                     privacy=post_in.privacy,
                     allowed_users=allowed_users_str
                 )
+                
                 return PostResponse(
                     id=post.id,
                     content=post.content,
@@ -218,7 +227,8 @@ def create_post(
                 pass
 
         # JIT Migration for Outdated Schema (Postgres/UndefinedColumn)
-        if "undefinedcolumn" in error_msg or "column" in error_msg and "does not exist" in error_msg:
+        # Broad check: 'undefinedcolumn' is postgres specific, 'no such column' is sqlite
+        if "undefinedcolumn" in error_msg or "column" in error_msg and "does not exist" in error_msg or "no such column" in error_msg:
             try:
                 print("Detected outdated schema. Attempting Auto-Migration...")
                 from sqlmodel import text
@@ -240,7 +250,11 @@ def create_post(
                         session.commit()
                     except Exception as mod_e:
                         print(f"Migration step failed (might already exist): {mod_e}")
-                        session.rollback()
+                        # If a step fails, we MUST rollback to continue to next step
+                        try:
+                            session.rollback()
+                        except:
+                            pass
 
                 # Retry Creation after patching
                 print("Retrying create_post after Auto-Migration...")
