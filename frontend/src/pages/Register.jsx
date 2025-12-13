@@ -47,9 +47,9 @@ export default function Register() {
       } catch (firebaseErr) {
         console.error("Firebase Registration Error:", firebaseErr);
         if (firebaseErr.code === 'auth/email-already-in-use') {
-          // If email exists, maybe they just need to JIT provision?
-          toast.error("Email already registered in Firebase. Try logging in.");
-          throw new Error("Email already registered.");
+          toast.success("Account already exists! Redirecting to Login...");
+          setTimeout(() => navigate('/login'), 2000);
+          return; // Stop execution, treated as "handled"
         }
         throw new Error("Security check failed: " + firebaseErr.message);
       }
