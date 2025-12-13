@@ -157,12 +157,15 @@ from app.models import Friendship
 def create_friendship(session: Session, user_id: int, friend_id: int) -> Friendship:
     # Check if exists
     statement = select(Friendship).where(
-        or_(
-            and_(Friendship.user_id == user_id, Friendship.friend_id == friend_id),
-            and_(Friendship.user_id == friend_id, Friendship.friend_id == user_id)
-        )
+        (Friendship.user_id == user_id) | (Friendship.friend_id == user_id)
     )
-    existing = session.exec(statement).first()
+    potential_matches = session.exec(statement).all()
+    existing = None
+    for f in potential_matches:
+        if (f.user_id == user_id and f.friend_id == friend_id) or \
+           (f.user_id == friend_id and f.friend_id == user_id):
+            existing = f
+            break
     if existing:
         return existing
     
@@ -242,21 +245,25 @@ def update_friendship_status(session: Session, friendship_id: int, status: str) 
     return friendship
 
 def get_friends(session: Session, user_id: int) -> List[int]:
-    # Get IDs of accepted friends
-    statement = select(Friendship).where(
-         and_(
-             or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
-             Friendship.status == "accepted"
-         )
-    )
-    friendships = session.exec(statement).all()
-    friend_ids = []
-    for f in friendships:
-        if f.user_id == user_id:
-            friend_ids.append(f.friend_id)
-        else:
-            friend_ids.append(f.user_id)
-    return friend_ids
+    # Get all friendships involving user
+    # Simplified query to avoid or_/and_ complexity issues
+    try:
+        statement = select(Friendship).where(
+            (Friendship.user_id == user_id) | (Friendship.friend_id == user_id)
+        )
+        friendships = session.exec(statement).all()
+        
+        friend_ids = []
+        for f in friendships:
+            if f.status == "accepted":
+                if f.user_id == user_id:
+                    friend_ids.append(f.friend_id)
+                else:
+                    friend_ids.append(f.user_id)
+        return friend_ids
+    except Exception as e:
+        print(f"Error in get_friends: {e}")
+        return []
 
 # --- User Sessions ---
 

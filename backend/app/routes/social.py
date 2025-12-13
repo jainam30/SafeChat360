@@ -38,156 +38,148 @@ def create_post(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    # Moderate the content
-    from app.models import BlockedTerm
-    from sqlmodel import select
     try:
-        blocked_terms = session.exec(select(BlockedTerm.term)).all()
-    except Exception:
-        # Table might not exist yet or DB error
-        blocked_terms = []
-    
-    moderation_result = moderate_text(post_in.content, additional_keywords=blocked_terms)
-    is_flagged = moderation_result.get("is_flagged", False)
-    flag_reason = None
-    
-    if is_flagged:
-        flags = moderation_result.get("flags", [])
-        if flags:
-             flag_reason = f"{flags[0].get('label')} ({flags[0].get('score')})"
-        else:
-             flag_reason = "Flagged by moderator"
-             
-        # STRICT MODERATION: Block the post
-        # Log it first so we have a record
+        # Moderate the content
+        from app.models import BlockedTerm
+        from sqlmodel import select
+        try:
+            blocked_terms = session.exec(select(BlockedTerm.term)).all()
+        except Exception:
+            blocked_terms = []
+        
+        moderation_result = moderate_text(post_in.content, additional_keywords=blocked_terms)
+        is_flagged = moderation_result.get("is_flagged", False)
+        flag_reason = None
+        
+        if is_flagged:
+            flags = moderation_result.get("flags", [])
+            if flags:
+                 flag_reason = f"{flags[0].get('label')} ({flags[0].get('score')})"
+            else:
+                 flag_reason = "Flagged by moderator"
+                 
+            # STRICT MODERATION: Block the post
+            crud.create_moderation_log(
+                session,
+                content_type="text",
+                content_excerpt=post_in.content,
+                is_flagged=True,
+                details=str(moderation_result),
+                source=str(current_user.id),
+                original_language=moderation_result.get("original_language", "en")
+            )
+            
+            # Penalize
+            current_user.trust_score = max(0, current_user.trust_score - 10)
+            session.add(current_user)
+            session.commit()
+            
+            raise HTTPException(status_code=400, detail="Post rejected: Content contains inappropriate text.")
+
+        # Image Moderation
+        if post_in.media_url and "base64" in post_in.media_url and post_in.media_type == 'image':
+            try:
+                b64_str = post_in.media_url.split(",")[1]
+                image_mod_result = moderate_image_base64(b64_str)
+                
+                if image_mod_result.get("is_flagged"):
+                     crud.create_moderation_log(
+                        session,
+                        content_type="image",
+                        content_excerpt="image_upload",
+                        is_flagged=True,
+                        details=str(image_mod_result),
+                        source=str(current_user.id)
+                    )
+                     # Penalize
+                     current_user.trust_score = max(0, current_user.trust_score - 20)
+                     session.add(current_user)
+                     session.commit()
+                     
+                     raise HTTPException(status_code=400, detail="Post rejected: Image contains inappropriately content.")
+            except Exception as e:
+                print(f"Image moderation failed: {e}")
+
+        # Log Moderation (All scans)
         crud.create_moderation_log(
             session,
             content_type="text",
             content_excerpt=post_in.content,
-            is_flagged=True,
+            is_flagged=is_flagged,
             details=str(moderation_result),
             source=str(current_user.id),
             original_language=moderation_result.get("original_language", "en")
         )
+
+        # Format allowed_users
+        allowed_users_str = None
+        if post_in.privacy == 'private' and post_in.allowed_users:
+            allowed_users_str = ",".join(map(str, post_in.allowed_users))
+
+        # Create post
+        post = crud.create_post(
+            session,
+            content=post_in.content,
+            user_id=current_user.id,
+            username=current_user.username,
+            media_url=post_in.media_url,
+            media_type=post_in.media_type,
+            is_flagged=is_flagged,
+            flag_reason=flag_reason,
+            privacy=post_in.privacy,
+            allowed_users=allowed_users_str
+        )
         
-        # Penalize
-        current_user.trust_score = max(0, current_user.trust_score - 10)
-        session.add(current_user)
-        session.commit()
+        # Process Mentions
+        import re
+        mention_pattern = r"@(\w+)"
+        mentions = re.findall(mention_pattern, post_in.content)
         
-        raise HTTPException(status_code=400, detail="Post rejected: Content contains inappropriate text.")
-
-    # Image Moderation
-    if post_in.media_url and "base64" in post_in.media_url and post_in.media_type == 'image':
-        # Extract base64 string (remove data:image/xyz;base64, prefix)
-        try:
-            b64_str = post_in.media_url.split(",")[1]
-            image_mod_result = moderate_image_base64(b64_str)
-            
-            if image_mod_result.get("is_flagged"):
-                 # Log and Block
-                 crud.create_moderation_log(
-                    session,
-                    content_type="image",
-                    content_excerpt="image_upload",
-                    is_flagged=True,
-                    details=str(image_mod_result),
-                    source=str(current_user.id)
-                )
-                 # Penalize
-                 current_user.trust_score = max(0, current_user.trust_score - 20)
-                 session.add(current_user)
-                 session.commit()
-                 
-                 raise HTTPException(status_code=400, detail="Post rejected: Image contains inappropriately content.")
-                 
-        except Exception as e:
-            # If main loop fails, we log but maybe don't block unless critical?
-            # For now, let's just log error and proceed or block? verify safe-fail.
-            print(f"Image moderation failed: {e}")
-            # Optional: raise HTTPException(status_code=400, detail="Image processing failed")
-
-
-    # Log Moderation (All scans)
-    crud.create_moderation_log(
-        session,
-        content_type="text",
-        content_excerpt=post_in.content,
-        is_flagged=is_flagged,
-        details=str(moderation_result),
-        source=str(current_user.id),
-        original_language=moderation_result.get("original_language", "en")
-    )
-
-    # Format allowed_users
-    allowed_users_str = None
-    if post_in.privacy == 'private' and post_in.allowed_users:
-        allowed_users_str = ",".join(map(str, post_in.allowed_users))
-
-    # Create post
-    post = crud.create_post(
-        session,
-        content=post_in.content,
-        user_id=current_user.id,
-        username=current_user.username,
-        media_url=post_in.media_url,
-        media_type=post_in.media_type,
-        is_flagged=is_flagged,
-        flag_reason=flag_reason,
-        privacy=post_in.privacy,
-        allowed_users=allowed_users_str
-    )
-    
-    # Process Mentions
-    import re
-    mention_pattern = r"@(\w+)"
-    mentions = re.findall(mention_pattern, post_in.content)
-    
-    # Send notifications to mentioned users
-    for username in set(mentions): # unique
-        mentioned_user = crud.get_user_by_username(session, username)
-        if mentioned_user and mentioned_user.id != current_user.id:
-            # Check privacy access (if privacy is friends/private, verify access before notifying?)
-            # Simplified: just notify. If they can't see it, PostView will block them (403).
-            # But better UX: Only notify if they CAN see it.
-            
-            can_see = True
-            if post.privacy == 'friends':
-                # Check if friend
-                # Using get_friends list to check efficiently
-                 friends = crud.get_friends(session, current_user.id)
-                 if mentioned_user.id not in friends:
-                     can_see = False
-            elif post.privacy == 'private':
-                 if str(mentioned_user.id) not in (allowed_users_str or "").split(','):
-                     can_see = False
-            
-            if can_see:
-                try:
-                    crud.create_notification(
-                        session,
-                        user_id=mentioned_user.id,
-                        type="mention",
-                        source_id=current_user.id,
-                        source_name=current_user.username,
-                        reference_id=post.id
-                    )
-                except Exception as e:
-                    print(f"Failed to create mention notification: {e}")
-    
-    return PostResponse(
-        id=post.id,
-        content=post.content,
-        username=post.username,
-        user_id=post.user_id,
-        media_url=post.media_url,
-        media_type=post.media_type,
-        is_flagged=post.is_flagged,
-        flag_reason=post.flag_reason,
-        created_at=post.created_at.isoformat(),
-        privacy=post.privacy,
-        author_photo=current_user.profile_photo
-    )
+        # Send notifications
+        for username in set(mentions): 
+            mentioned_user = crud.get_user_by_username(session, username)
+            if mentioned_user and mentioned_user.id != current_user.id:
+                can_see = True
+                if post.privacy == 'friends':
+                     friends = crud.get_friends(session, current_user.id)
+                     if mentioned_user.id not in friends:
+                         can_see = False
+                elif post.privacy == 'private':
+                     if str(mentioned_user.id) not in (allowed_users_str or "").split(','):
+                         can_see = False
+                
+                if can_see:
+                    try:
+                        crud.create_notification(
+                            session,
+                            user_id=mentioned_user.id,
+                            type="mention",
+                            source_id=current_user.id,
+                            source_name=current_user.username,
+                            reference_id=post.id
+                        )
+                    except Exception:
+                        pass
+        
+        return PostResponse(
+            id=post.id,
+            content=post.content,
+            username=post.username,
+            user_id=post.user_id,
+            media_url=post.media_url,
+            media_type=post.media_type,
+            is_flagged=post.is_flagged,
+            flag_reason=post.flag_reason,
+            created_at=post.created_at.isoformat(),
+            privacy=post.privacy,
+            author_photo=current_user.profile_photo
+        )
+    except HTTPException as ie:
+        raise ie
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Debug Error: {str(e)}")
 
 @router.get("/posts", response_model=List[PostResponse])
 def get_posts(
@@ -196,41 +188,41 @@ def get_posts(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    posts = crud.get_posts(session, current_user.id, limit=limit, offset=offset)
-    
-    response = []
-    
-    # Optimize: Collect user IDs and batch fetch logic could go here, but simple loop for now
-    for post in posts:
-        # Fallback if username is missing
-        uname = post.username
-        u_photo = None
+    try:
+        posts = crud.get_posts(session, current_user.id, limit=limit, offset=offset)
         
-        # We need to fetch the user to get the latest profile photo anyway, as it might have changed
-        # Optimization: Local cache or eager load in CRUD?
-        # For now, fetching user per post. In prod, use JOIN.
-        user = crud.get_user(session, post.user_id)
-        if user:
-             uname = user.username
-             u_photo = user.profile_photo
-        else:
-             uname = "Unknown"
+        response = []
+        for post in posts:
+            uname = post.username
+            u_photo = None
+            
+            user = crud.get_user(session, post.user_id)
+            if user:
+                 uname = user.username
+                 u_photo = user.profile_photo
+            else:
+                 uname = "Unknown"
 
-        response.append(PostResponse(
-            id=post.id,
-            content=post.content,
-            username=uname,
-            user_id=post.user_id,
-            media_url=post.media_url,
-            media_type=post.media_type,
-            is_flagged=post.is_flagged,
-            flag_reason=post.flag_reason,
-            created_at=post.created_at.isoformat(),
-            privacy=post.privacy,
-            author_photo=u_photo
-        ))
-        
-    return response
+            response.append(PostResponse(
+                id=post.id,
+                content=post.content,
+                username=uname,
+                user_id=post.user_id,
+                media_url=post.media_url,
+                media_type=post.media_type,
+                is_flagged=post.is_flagged,
+                flag_reason=post.flag_reason,
+                created_at=post.created_at.isoformat(),
+                privacy=post.privacy,
+                author_photo=u_photo
+            ))
+            
+        return response
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Debug Error in get_posts: {str(e)}")
+
 
 class PostUpdate(BaseModel):
     content: Optional[str] = None
