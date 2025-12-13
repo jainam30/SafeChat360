@@ -92,3 +92,14 @@ class Notification(SQLModel, table=True):
     reference_id: Optional[int] = None # Post ID, etc.
     is_read: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Story(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    username: str
+    media_url: str
+    media_type: str = "image" # image, video
+    content: Optional[str] = None # Caption
+    privacy: str = "public" # public, friends
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime

@@ -350,20 +350,133 @@ def update_post(
         author_photo=current_user.profile_photo
     )
 
-@router.delete("/posts/{post_id}")
-def delete_post(
-    post_id: int,
+    crud.delete_post(session, post)
+    return {"status": "success", "message": "Post deleted"}
+
+# ----------------------------------------------------------------------------
+# STORIES ENDPOINTS
+# ----------------------------------------------------------------------------
+
+class StoryCreate(BaseModel):
+    media_url: str
+    media_type: str = "image"
+    content: Optional[str] = None
+    privacy: str = "public"
+
+class StoryResponse(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    media_url: str
+    media_type: str
+    content: Optional[str]
+    created_at: str
+    expires_at: str
+    author_photo: Optional[str] = None
+
+@router.post("/stories", response_model=StoryResponse)
+def create_story(
+    story_in: StoryCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # Basic moderation on caption if present
+    if story_in.content:
+         mod_res = moderate_text(story_in.content)
+         if mod_res.get("is_flagged"):
+             raise HTTPException(status_code=400, detail="Story caption contains inappropriate content.")
+
+    # Calculate expiration (24h)
+    import datetime
+    now = datetime.datetime.utcnow()
+    expires = now + datetime.timedelta(hours=24)
+    
+    from app.models import Story
+    
+    story = Story(
+        user_id=current_user.id,
+        username=current_user.username,
+        media_url=story_in.media_url,
+        media_type=story_in.media_type,
+        content=story_in.content,
+        privacy=story_in.privacy,
+        created_at=now,
+        expires_at=expires
+    )
+    session.add(story)
+    session.commit()
+    session.refresh(story)
+    
+    return StoryResponse(
+        id=story.id,
+        user_id=story.user_id,
+        username=story.username,
+        media_url=story.media_url,
+        media_type=story.media_type,
+        content=story.content,
+        created_at=story.created_at.isoformat(),
+        expires_at=story.expires_at.isoformat(),
+        author_photo=current_user.profile_photo
+    )
+
+@router.get("/stories", response_model=List[StoryResponse])
+def get_stories(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    post = crud.get_post(session, post_id)
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+    """
+    Get active stories for feed (Self + Friends + Public?)
+    For now: All Public or Friends' stories that haven't expired.
+    """
+    from app.models import Story
+    import datetime
+    now = datetime.datetime.utcnow()
+    
+    # Clean up expired (Optional: could serve as cron, but lazy delete here is fine)
+    # session.exec(delete(Story).where(Story.expires_at < now)) # explicit delete or just filter
+    
+    # 1. Get Friend IDs
+    friend_ids = crud.get_friends(session, current_user.id)
+    friend_ids.append(current_user.id) # Include self
+    
+    from sqlmodel import or_, select
+    
+    # Logic:
+    # 1. (Privacy=Public AND Expires > Now)
+    # OR
+    # 2. (Privacy=Friends AND UserId IN Friends AND Expires > Now)
+    # OR
+    # 3. (UserId == Self AND Expires > Now) (Covered by #2 list)
+    
+    statement = select(Story).where(
+        and_(
+            Story.expires_at > now,
+            or_(
+                Story.privacy == 'public',
+                and_(Story.privacy == 'friends', Story.user_id.in_(friend_ids)),
+                Story.user_id == current_user.id
+            )
+        )
+    ).order_by(Story.created_at.desc())
+    
+    stories = session.exec(statement).all()
+    
+    response = []
+    for s in stories:
+        # Fetch author photo
+        user = crud.get_user(session, s.user_id)
+        u_photo = user.profile_photo if user else None
         
-    if post.user_id != current_user.id:
-        # Admins could delete too? For now only author.
-        if current_user.role != 'admin':
-             raise HTTPException(status_code=403, detail="Not authorized")
-
-    crud.delete_post(session, post)
-    return {"status": "success", "message": "Post deleted"}
+        response.append(StoryResponse(
+            id=s.id,
+            user_id=s.user_id,
+            username=s.username,
+            media_url=s.media_url,
+            media_type=s.media_type,
+            content=s.content,
+            created_at=s.created_at.isoformat(),
+            expires_at=s.expires_at.isoformat(),
+            author_photo=u_photo
+        ))
+        
+    return response
