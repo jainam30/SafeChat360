@@ -240,7 +240,7 @@ export default function Chat() {
     return (
         <div className="flex h-[calc(100vh-100px)] w-full mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm my-4 lg:rounded-none lg:my-0 lg:border-x-0 lg:border-t-0">
             {/* LEFT SIDEBAR (Chat List) */}
-            <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-gray-200 bg-white`}>
+            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-gray-200 bg-white`}>
 
                 {/* Header */}
                 <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5">
@@ -327,7 +327,7 @@ export default function Chat() {
             </div>
 
             {/* RIGHT SIDE (Chat Window) */}
-            <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} flex-1 flex flex-col bg-white`}>
+            <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col bg-white`}>
                 {/* Chat Header */}
                 <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
                     <div className="flex items-center gap-3">

@@ -34,26 +34,38 @@ const Dashboard = () => {
     fetchResults();
   }, [token]);
 
+  /* Update fetch to be robust */
   const fetchResults = async () => {
     try {
       setLoading(true);
-      const [postsRes, storiesRes, usersRes] = await Promise.all([
+      const results = await Promise.allSettled([
         fetch(getApiUrl('/api/social/posts'), { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(getApiUrl('/api/social/stories'), { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(getApiUrl('/api/chat/users'), { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      if (postsRes.ok) setPosts(await postsRes.json());
-      if (storiesRes.ok) setStories(await storiesRes.json());
-      if (usersRes.ok) setUsers(await usersRes.json());
+      const [postsRes, storiesRes, usersRes] = results;
+
+      if (postsRes.status === 'fulfilled' && postsRes.value.ok) {
+        setPosts(await postsRes.value.json());
+      }
+      if (storiesRes.status === 'fulfilled' && storiesRes.value.ok) {
+        setStories(await storiesRes.value.json());
+      }
+      if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
+        setUsers(await usersRes.value.json());
+      }
     } catch (e) {
-      console.error(e);
+      console.error("Dashboard fetch error", e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleFileUpload = async (e, isStory = false) => {
+    /* Import compressor dynamically */
+    const { compressImage } = await import('../utils/imageCompressor');
+
     const file = e.target.files[0];
     if (!file) return;
 
@@ -62,8 +74,24 @@ const Dashboard = () => {
       return;
     }
 
+    /* Compress Image if needed */
+    let finalFile = file;
+    if (file.type.startsWith('image/')) {
+      try {
+        const compressedDataUrl = await compressImage(file);
+        // Convert back to File if needed for FormData upload, OR just send base64 if api supports it.
+        // The current /api/upload expects a file in FormData.
+        // We need to convert DataURL -> Blob -> File.
+        const res = await fetch(compressedDataUrl);
+        const blob = await res.blob();
+        finalFile = new File([blob], file.name, { type: 'image/jpeg' });
+      } catch (err) {
+        console.error("Compression failed, using original", err);
+      }
+    }
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', finalFile);
 
     try {
       const res = await fetch(getApiUrl('/api/upload'), {

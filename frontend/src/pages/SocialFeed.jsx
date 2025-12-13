@@ -71,13 +71,41 @@ const SocialFeed = () => {
         }
     };
 
-    const handleFileChange = (e) => {
+    /* Import compressor at top of file needed, but let's do inline import or assume globally imported? No I must add import to top. will do in separate op if needed, but replace_file_content doesn't easily allow top insert when editing middle. I will add import in a separate call or use dynamic import? Dynamic import is safe. */
+
+    const handleFileChange = async (e) => {
         // ... existing logic ...
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 2 * 1024 * 1024) { alert("File is too large (max 2MB)"); return; }
+        if (file.size > 50 * 1024 * 1024) { alert("File too large (max 50MB)"); return; } // Increased limit
         const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
         if (!type) { alert("Only images and videos are supported"); return; }
+
+        let fileToUse = file;
+
+        // Compress if image
+        if (type === 'image') {
+            try {
+                // Dynamically import to avoid top-level complexity with multi-edit tools
+                const { compressImage } = await import('../utils/imageCompressor');
+                const compressedDataUrl = await compressImage(file);
+
+                // For SocialFeed, we setPreview as DataURL directly. 
+                // We keep mediaFile as the Blob/File for consistency if we wanted to upload via FormData,
+                // BUT SocialFeed uses JSON body with base64 string for posts (legacy way)!
+                // So here, we actually WANT the base64 string to be the main thing.
+
+                setMediaPreview(compressedDataUrl);
+                setMediaFile(file); // Keep original? No, we likely won't upload it separately in SocialFeed. content is sent as base64.
+                // Wait: handlePost uses mediaPreview (base64) directly.
+                // const payload = { ... media_url: mediaPreview ... }
+                // So compressing here and setting mediaPreview is ALL we need to do!
+                return;
+            } catch (e) {
+                console.error("Compression error", e);
+            }
+        }
+
         setMediaFile(file);
         setMediaType(type);
         const reader = new FileReader();
