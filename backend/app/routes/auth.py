@@ -9,6 +9,7 @@ from app.auth_utils import get_password_hash, verify_password, create_access_tok
 import traceback
 import logging
 from firebase_admin import auth
+from app.firebase_setup import init_firebase # Import init function
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,9 @@ from app.limiter import limiter
 @limiter.limit("5/minute")
 def register(request: Request, req: RegisterRequest, session: Session = Depends(get_session)):
     try:
+        # Ensure Firebase is initialized
+        init_firebase()
+        
         # 1. Verify Firebase Token
         try:
             decoded_token = auth.verify_id_token(req.firebase_token)
@@ -117,8 +121,12 @@ def login(request: Request, req: LoginRequest, session: Session = Depends(get_se
 
 @router.post("/verify-identity", response_model=TokenResponse)
 @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 def verify_identity(request: Request, req: VerifyRequest, session: Session = Depends(get_session)):
     try:
+        # Ensure Firebase is initialized (Lazy Init for Serverless robustness)
+        init_firebase()
+        
         # User is challenged (e.g. device limit), so they provide firebase token (via re-auth)
         decoded_token = auth.verify_id_token(req.firebase_token)
         email = decoded_token.get('email')
