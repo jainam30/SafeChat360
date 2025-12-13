@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { auth } from '../firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import toast from 'react-hot-toast';
 import logoImg from '../assets/safechat_logo.png';
 
 export default function ForgotPassword() {
@@ -8,14 +11,25 @@ export default function ForgotPassword() {
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        // Mock API call
-        setTimeout(() => {
+
+        try {
+            await sendPasswordResetEmail(auth, email);
             setSubmitted(true);
+            toast.success('Password reset email sent!');
+        } catch (error) {
+            console.error("Reset Password Error:", error);
+            if (error.code === 'auth/user-not-found') {
+                // For security, don't reveal if user exists, or maybe just show generic error
+                toast.error('If that email exists, we sent a link.');
+            } else {
+                toast.error(error.message || 'Failed to send reset email');
+            }
+        } finally {
             setLoading(false);
-        }, 1500);
+        }
     };
 
     return (
