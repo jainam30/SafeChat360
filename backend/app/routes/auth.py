@@ -162,4 +162,5 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
         raise
     except Exception as e:
         logger.error(f"Verification error: {str(e)}")
-        raise HTTPException(status_code=401, detail="Identity verification failed")
+        # DEBUG: Expose the error to the frontend to debug Vercel issues
+        raise HTTPException(status_code=401, detail=f"Identity verification failed: {str(e)}")
