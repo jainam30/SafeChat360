@@ -105,3 +105,17 @@ class Story(SQLModel, table=True):
     expires_at: datetime
     music_url: Optional[str] = None
     overlays: Optional[str] = None # JSON string for stickers/text
+
+class Like(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    post_id: int = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Comment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    content: str
+    user_id: int = Field(index=True)
+    username: str
+    post_id: int = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

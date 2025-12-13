@@ -152,9 +152,44 @@ def update_post(session: Session, post: Post, updates: Dict[str, Any]) -> Post:
     session.refresh(post)
     return post
 
-def delete_post(session: Session, post: Post):
     session.delete(post)
     session.commit()
+
+def create_like(session: Session, user_id: int, post_id: int) -> bool:
+    from app.models import Like
+    # Check if already liked
+    existing = session.exec(select(Like).where(Like.user_id == user_id, Like.post_id == post_id)).first()
+    if existing:
+        # Toggle: Unlike
+        session.delete(existing)
+        session.commit()
+        return False
+    else:
+        # Like
+        like = Like(user_id=user_id, post_id=post_id)
+        session.add(like)
+        session.commit()
+        return True
+
+def get_likes_count(session: Session, post_id: int) -> int:
+    from app.models import Like
+    return len(session.exec(select(Like).where(Like.post_id == post_id)).all())
+
+def has_user_liked(session: Session, user_id: int, post_id: int) -> bool:
+    from app.models import Like
+    return session.exec(select(Like).where(Like.user_id == user_id, Like.post_id == post_id)).first() is not None
+
+def create_comment(session: Session, content: str, user_id: int, username: str, post_id: int):
+    from app.models import Comment
+    comment = Comment(content=content, user_id=user_id, username=username, post_id=post_id)
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+    return comment
+
+def get_comments(session: Session, post_id: int) -> List[Any]:
+    from app.models import Comment
+    return session.exec(select(Comment).where(Comment.post_id == post_id).order_by(Comment.created_at.asc())).all()
 
 # --- Friendship ---
 

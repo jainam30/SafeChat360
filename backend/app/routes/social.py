@@ -31,6 +31,19 @@ class PostResponse(BaseModel):
     created_at: str
     privacy: str
     author_photo: Optional[str] = None
+    likes_count: int = 0
+    comments_count: int = 0
+    has_liked: bool = False
+
+class CommentCreate(BaseModel):
+    content: str
+
+class CommentResponse(BaseModel):
+    id: int
+    content: str
+    username: str
+    user_id: int
+    created_at: str
 
 @router.post("/posts", response_model=PostResponse)
 def create_post(
@@ -354,6 +367,11 @@ def get_posts(
                      except:
                         pass
 
+                # Get counts
+                likes = crud.get_likes_count(session, post.id)
+                comments = crud.get_comments_count(session, post.id) if hasattr(crud, 'get_comments_count') else len(crud.get_comments(session, post.id))
+                has_liked = crud.has_user_liked(session, current_user.id, post.id)
+
                 response.append(PostResponse(
                     id=post.id,
                     content=post.content,
@@ -365,7 +383,10 @@ def get_posts(
                     flag_reason=post.flag_reason,
                     created_at=post.created_at.isoformat(),
                     privacy=post.privacy,
-                    author_photo=u_photo
+                    author_photo=u_photo,
+                    likes_count=likes,
+                    comments_count=comments,
+                    has_liked=has_liked
                 ))
             except Exception as e:
                 print(f"Post serialization failed: {e}")
@@ -507,6 +528,90 @@ def update_post(
 
     crud.delete_post(session, post)
     return {"status": "success", "message": "Post deleted"}
+
+@router.post("/posts/{post_id}/like")
+def like_post(
+    post_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    post = crud.get_post(session, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    is_liked = crud.create_like(session, current_user.id, post_id)
+    
+    # Notify if liked (not unliked) and not self
+    if is_liked and post.user_id != current_user.id:
+        try:
+            crud.create_notification(
+                session, 
+                user_id=post.user_id, 
+                type="like", 
+                source_id=current_user.id, 
+                source_name=current_user.username, 
+                reference_id=post.id
+            )
+        except: 
+            pass
+            
+    return {"status": "liked" if is_liked else "unliked"}
+
+@router.post("/posts/{post_id}/comments", response_model=CommentResponse)
+def add_comment(
+    post_id: int,
+    comment_in: CommentCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    post = crud.get_post(session, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    # Moderation
+    mod_res = moderate_text(comment_in.content)
+    if mod_res.get("is_flagged"):
+        raise HTTPException(status_code=400, detail="Comment blocked: inappropriate content.")
+        
+    comment = crud.create_comment(session, comment_in.content, current_user.id, current_user.username, post_id)
+    
+    # Notify author
+    if post.user_id != current_user.id:
+        try:
+            crud.create_notification(
+                session, 
+                user_id=post.user_id, 
+                type="comment", 
+                source_id=current_user.id, 
+                source_name=current_user.username, 
+                reference_id=post.id
+            )
+        except: 
+            pass
+
+    return CommentResponse(
+        id=comment.id,
+        content=comment.content,
+        username=comment.username,
+        user_id=comment.user_id,
+        created_at=comment.created_at.isoformat()
+    )
+
+@router.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
+def get_comments(
+    post_id: int,
+    session: Session = Depends(get_session)
+):
+    comments = crud.get_comments(session, post_id)
+    return [
+        CommentResponse(
+            id=c.id,
+            content=c.content,
+            username=c.username,
+            user_id=c.user_id,
+            created_at=c.created_at.isoformat()
+        ) for c in comments
+    ]
 
 # ----------------------------------------------------------------------------
 # STORIES ENDPOINTS

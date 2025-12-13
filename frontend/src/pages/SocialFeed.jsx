@@ -241,6 +241,76 @@ const SocialFeed = () => {
         else { setSelectedUsers([...selectedUsers, userId]); }
     };
 
+    const handleLike = async (post) => {
+        // Optimistic UI update
+        const originalPosts = [...posts];
+        setPosts(posts.map(p => {
+            if (p.id === post.id) {
+                return {
+                    ...p,
+                    has_liked: !p.has_liked,
+                    likes_count: p.has_liked ? p.likes_count - 1 : p.likes_count + 1
+                };
+            }
+            return p;
+        }));
+
+        try {
+            await fetch(getApiUrl(`/api/social/posts/${post.id}/like`), {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            // No need to re-fetch if optimistic worked, but maybe sync? strictly optimistic is fine for likes
+        } catch (e) {
+            console.error(e);
+            setPosts(originalPosts); // Revert
+        }
+    };
+
+    const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+    const [comments, setComments] = useState({}); // Map post_id -> comments array
+    const [newComment, setNewComment] = useState('');
+
+    const toggleComments = async (postId) => {
+        if (activeCommentPostId === postId) {
+            setActiveCommentPostId(null);
+            return;
+        }
+        setActiveCommentPostId(postId);
+        if (!comments[postId]) {
+            // Fetch comments
+            try {
+                const res = await fetch(getApiUrl(`/api/social/posts/${postId}/comments`), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setComments(prev => ({ ...prev, [postId]: data }));
+                }
+            } catch (e) { console.error(e); }
+        }
+    };
+
+    const submitComment = async (postId) => {
+        if (!newComment.trim()) return;
+        try {
+            const res = await fetch(getApiUrl(`/api/social/posts/${postId}/comments`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ content: newComment })
+            });
+            if (res.ok) {
+                const comment = await res.json();
+                setComments(prev => ({
+                    ...prev,
+                    [postId]: [...(prev[postId] || []), comment]
+                }));
+                setPosts(posts.map(p => p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p));
+                setNewComment('');
+            }
+        } catch (e) { console.error(e); }
+    };
+
     return (
         <div className="max-w-3xl mx-auto pb-10 relative">
             {/* Edit Modal */}
@@ -537,16 +607,62 @@ const SocialFeed = () => {
                         )}
 
                         <div className="mt-4 pt-4 border-t border-cyber-border flex items-center gap-6">
-                            <button className="flex items-center gap-2 text-cyber-muted hover:text-red-500 transition-colors text-sm font-medium group/btn">
-                                <Heart size={18} className="group-hover/btn:scale-110 transition-transform" /> Like
+                            <button
+                                onClick={() => handleLike(post)}
+                                className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn ${post.has_liked ? 'text-red-500' : 'text-cyber-muted hover:text-red-500'}`}
+                            >
+                                <Heart size={18} className={`group-hover/btn:scale-110 transition-transform ${post.has_liked ? 'fill-current' : ''}`} />
+                                {post.likes_count > 0 ? post.likes_count : 'Like'}
                             </button>
-                            <button className="flex items-center gap-2 text-cyber-muted hover:text-blue-500 transition-colors text-sm font-medium group/btn">
-                                <MessageCircle size={18} className="group-hover/btn:scale-110 transition-transform" /> Comment
+                            <button
+                                onClick={() => toggleComments(post.id)}
+                                className="flex items-center gap-2 text-cyber-muted hover:text-blue-500 transition-colors text-sm font-medium group/btn"
+                            >
+                                <MessageCircle size={18} className="group-hover/btn:scale-110 transition-transform" />
+                                {post.comments_count > 0 ? post.comments_count : ''} Comment
                             </button>
                             <button className="flex items-center gap-2 text-cyber-muted hover:text-green-500 transition-colors text-sm font-medium group/btn ml-auto">
                                 <Share2 size={18} className="group-hover/btn:scale-110 transition-transform" /> Share
                             </button>
                         </div>
+
+                        {/* Comments Section */}
+                        {activeCommentPostId === post.id && (
+                            <div className="mt-4 pt-4 border-t border-slate-100 animate-fade-in-up">
+                                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+                                    {(comments[post.id] || []).map(comment => (
+                                        <div key={comment.id} className="flex gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text shrink-0">
+                                                {comment.username.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="bg-slate-50 rounded-2xl rounded-tl-none p-3 text-sm flex-1">
+                                                <div className="font-bold text-xs text-cyber-text mb-1">{comment.username}</div>
+                                                <div className="text-gray-700">{comment.content}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!comments[post.id] || comments[post.id].length === 0) && (
+                                        <p className="text-center text-xs text-cyber-muted italic">No comments yet.</p>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Write a comment..."
+                                        className="flex-1 bg-slate-50 border border-cyber-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-cyber-primary"
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && submitComment(post.id)}
+                                    />
+                                    <button
+                                        onClick={() => submitComment(post.id)}
+                                        className="bg-cyber-primary text-white p-2 rounded-full hover:bg-cyber-primary_hover transition-colors shadow-sm"
+                                    >
+                                        <Send size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
 
