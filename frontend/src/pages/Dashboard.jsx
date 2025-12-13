@@ -341,73 +341,49 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Story Upload Modal */}
-      {showStoryModal && (
+      {/* Story Upload Modal (Select File) */}
+      {showStoryModal && !storyMedia && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="glass-card bg-white w-full max-w-md p-6 rounded-2xl relative">
             <button onClick={() => setShowStoryModal(false)} className="absolute top-4 right-4 text-cyber-muted hover:text-cyber-text"><X size={24} /></button>
             <h2 className="text-xl font-bold mb-4">Create Story</h2>
 
             <div className="border-2 border-dashed border-cyber-border rounded-xl h-64 flex flex-col items-center justify-center bg-slate-50 mb-4 overflow-hidden relative">
-              {!storyMedia ? (
-                <>
-                  <ImageIcon size={48} className="text-cyber-muted opacity-50 mb-2" />
-                  <button onClick={() => document.getElementById('story-file').click()} className="text-cyber-primary font-medium hover:underline">
-                    Upload Photo or Video
-                  </button>
-                  <div className="text-xs text-cyber-muted mt-2">Max 5MB</div>
-                  <input id="story-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, true)} accept="image/*,video/*" />
-                </>
-              ) : (
-                <>
-                  {storyType === 'image' && <img src={storyMedia} className="w-full h-full object-contain" />}
-                  {storyType === 'video' && <video src={storyMedia} controls className="w-full h-full object-contain" />}
-                  <button onClick={() => setStoryMedia('')} className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full"><X size={16} /></button>
-                </>
-              )}
+              <ImageIcon size={48} className="text-cyber-muted opacity-50 mb-2" />
+              <button onClick={() => document.getElementById('story-file').click()} className="text-cyber-primary font-medium hover:underline">
+                Upload Photo or Video
+              </button>
+              <div className="text-xs text-cyber-muted mt-2">Max 5MB</div>
+              <input id="story-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, true)} accept="image/*,video/*" />
             </div>
-
-            <button
-              onClick={createStory}
-              disabled={!storyMedia}
-              className="w-full py-3 bg-cyber-primary hover:bg-cyber-secondary text-white rounded-xl font-bold transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Share to Story
-            </button>
           </div>
         </div>
-          </div>
-        </div >
       )}
 
-{/* Story Editor Overlay (Replaces Modal Content or separate overlay) */ }
-{
-  showStoryModal && storyMedia && (
-    <div className="fixed inset-0 z-[60]">
-      <StoryEditor
-        mediaFile={storyMedia}
-        mediaType={storyType}
-        onClose={() => { setStoryMedia(''); setStoryType(''); }}
-        onPost={async (data) => {
-          await createStory(data);
-        }}
-      />
+      {/* Story Editor Overlay (Editing) */}
+      {showStoryModal && storyMedia && (
+        <div className="fixed inset-0 z-[60]">
+          <StoryEditor
+            mediaFile={storyMedia}
+            mediaType={storyType}
+            onClose={() => { setStoryMedia(''); setStoryType(''); setShowStoryModal(false); }}
+            onPost={async (data) => {
+              await createStory(data);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Story Viewer Overlay (Viewing) */}
+      {viewingStory && (
+        <StoryViewer
+          story={viewingStory}
+          onClose={() => setViewingStory(null)}
+        />
+      )}
     </div>
-  )
-}
-
-{/* Story Viewer Overlay */ }
-{
-  viewingStory && (
-    <StoryViewer
-      story={viewingStory}
-      onClose={() => setViewingStory(null)}
-    />
-  )
-}
-
-    </div >
   );
 };
 
 export default Dashboard;
+```
