@@ -12,6 +12,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // NEW STATE
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export default function Login() {
       const res = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: email, password, device_id: navigator.userAgent }),
+        body: JSON.stringify({ identifier: email.trim(), password, device_id: navigator.userAgent }),
       });
 
       const rawText = await res.text();
@@ -79,7 +80,7 @@ export default function Login() {
         console.log("Backend login failed. Trying Firebase fallback...");
         try {
           // Try logging in with Firebase directly (in case password was reset there)
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
           const token = await userCredential.user.getIdToken();
 
           // If Firebase login works, authenticat via verify-identity
@@ -214,13 +215,20 @@ export default function Login() {
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="glass-input pl-10"
+                  className="glass-input pl-10 pr-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-cyber-muted hover:text-cyber-primary transition-colors"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
               </div>
             </div>
 
