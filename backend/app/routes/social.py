@@ -616,11 +616,32 @@ def get_stories(
     
     stories = session.exec(statement).all()
     
+    # Performance Optimization: Batch fetch users
+    user_ids = {s.user_id for s in stories}
+    users_map = {}
+    
+    try:
+        users = crud.get_users_by_ids(session, list(user_ids))
+        users_map = {user.id: user for user in users}
+    except Exception as e:
+        print(f"Batch user fetch (stories) failed: {e}")
+    
     response = []
     for s in stories:
         # Fetch author photo
-        user = crud.get_user(session, s.user_id)
-        u_photo = user.profile_photo if user else None
+        # OPTIMIZED: Use map
+        user = users_map.get(s.user_id)
+        u_photo = None
+        
+        if user:
+             u_photo = user.profile_photo
+        else:
+             # Fallback
+             try:
+                 user = crud.get_user(session, s.user_id)
+                 u_photo = user.profile_photo if user else None
+             except:
+                 pass
         
         response.append(StoryResponse(
             id=s.id,
