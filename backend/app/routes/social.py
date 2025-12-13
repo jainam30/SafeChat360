@@ -439,7 +439,7 @@ def get_stories(
     friend_ids = crud.get_friends(session, current_user.id)
     friend_ids.append(current_user.id) # Include self
     
-    from sqlmodel import or_, select
+    from sqlmodel import or_, select, and_
     
     # Logic:
     # 1. (Privacy=Public AND Expires > Now)

@@ -1,5 +1,4 @@
-from sqlmodel import Session, select
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_, and_
 from app.models import User, ModerationLog, Post, Notification
 from typing import Optional, Dict, Any, List
 import json
@@ -158,8 +157,10 @@ from app.models import Friendship
 def create_friendship(session: Session, user_id: int, friend_id: int) -> Friendship:
     # Check if exists
     statement = select(Friendship).where(
-        ((Friendship.user_id == user_id) & (Friendship.friend_id == friend_id)) |
-        ((Friendship.user_id == friend_id) & (Friendship.friend_id == user_id))
+        or_(
+            and_(Friendship.user_id == user_id, Friendship.friend_id == friend_id),
+            and_(Friendship.user_id == friend_id, Friendship.friend_id == user_id)
+        )
     )
     existing = session.exec(statement).first()
     if existing:
@@ -168,6 +169,8 @@ def create_friendship(session: Session, user_id: int, friend_id: int) -> Friends
     friendship = Friendship(user_id=user_id, friend_id=friend_id, status="pending")
     session.add(friendship)
     session.commit()
+    session.refresh(friendship)
+    return friendship
 
 # --- Notifications ---
 
@@ -180,6 +183,11 @@ def create_notification(session: Session, user_id: int, type: str, source_id: in
         source_name=source_name,
         reference_id=reference_id
     )
+    session.add(notif)
+    session.commit()
+    session.refresh(notif)
+    return notif
+
 def create_moderation_log(
     session: Session,
     content_type: str,
@@ -200,6 +208,7 @@ def create_moderation_log(
     )
     session.add(log)
     session.commit()
+    session.refresh(log)
     return log
 
 def get_notifications(session: Session, user_id: int, limit: int = 50) -> List[Notification]:
@@ -214,8 +223,9 @@ def mark_notification_read(session: Session, notification_id: int):
         notif.is_read = True
         session.add(notif)
         session.commit()
-    session.refresh(friendship)
-    return friendship
+        session.refresh(notif)
+        return notif
+    return None
 
 def get_friendship_requests(session: Session, user_id: int) -> List[Friendship]:
     # Requests where I am the friend_id and status is pending
@@ -234,8 +244,10 @@ def update_friendship_status(session: Session, friendship_id: int, status: str) 
 def get_friends(session: Session, user_id: int) -> List[int]:
     # Get IDs of accepted friends
     statement = select(Friendship).where(
-         ((Friendship.user_id == user_id) | (Friendship.friend_id == user_id)) & 
-         (Friendship.status == "accepted")
+         and_(
+             or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
+             Friendship.status == "accepted"
+         )
     )
     friendships = session.exec(statement).all()
     friend_ids = []
