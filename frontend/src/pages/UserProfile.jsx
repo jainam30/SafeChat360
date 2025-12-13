@@ -109,13 +109,15 @@ export default function UserProfile() {
                     {/* Avatar */}
                     <div className="flex-shrink-0">
                         <div className="w-32 h-32 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
-                            {profile.profile_photo ? (
-                                <img src={profile.profile_photo} alt={profile.username} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-4xl font-bold text-white">
-                                    {profile.username.charAt(0).toUpperCase()}
-                                </div>
-                            )}
+                            <img
+                                src={profile.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
+                                alt={profile.username}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`;
+                                }}
+                            />
                         </div>
                     </div>
 

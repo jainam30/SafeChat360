@@ -213,7 +213,15 @@ export default function Account() {
                                 <div className="flex items-center gap-6">
                                     <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-input').click()}>
                                         <div className="w-24 h-24 rounded-full bg-white border-2 border-cyber-primary/30 overflow-hidden shadow-sm">
-                                            <img src={selectedAvatar} alt="Profile" className="w-full h-full object-cover" />
+                                            <img
+                                                src={selectedAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username || 'User'}`}
+                                                alt="Profile"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username || 'User'}`;
+                                                }}
+                                            />
                                         </div>
                                         <div className="absolute -bottom-1 -right-1 bg-cyber-primary text-white p-1.5 rounded-full shadow-md transition-transform hover:scale-110">
                                             <Camera size={14} />
