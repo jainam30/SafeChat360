@@ -49,11 +49,13 @@ def firebase_check():
                     firebase_admin.initialize_app(cred)
                     status["app_initialized"] = True
                     status["app_name"] = "[NEWLY INITIALIZED]"
+                    status["project_id"] = cred_dict.get("project_id") # EXPOSE ID
                 except Exception as e:
                     status["error"] = f"Init Failed: {str(e)}"
             else:
                 status["app_initialized"] = True
                 status["app_name"] = firebase_admin.get_app().name
+                status["project_id"] = firebase_admin.get_app().options.get('projectId') or cred_dict.get("project_id") # EXPOSE ID
                 
         except json.JSONDecodeError as e:
             status["error"] = f"JSON Decode Error: {str(e)}"

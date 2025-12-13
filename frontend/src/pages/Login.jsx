@@ -110,6 +110,8 @@ export default function Login() {
             } else {
               toast.dismiss('verify');
               console.error("Verification Failed Details:", verifyData); // DEBUG LOG
+              // FORCE USER TO SEE ERROR
+              alert(`Login Error: ${verifyData.detail}\n\nPlease take a screenshot of this and send it to support.`);
               toast.error(verifyData.detail || 'Identity verification failed.');
             }
 
