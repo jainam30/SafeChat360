@@ -155,7 +155,11 @@ export default function Login() {
           toast('Login cancelled.');
         }
       } else {
-        toast.error(data.detail || 'Login failed');
+        // CATCH ALL OTHER ERRORS (500, 400, 422, etc)
+        console.error("Login Failed with Status:", res.status, data);
+        const msg = data.detail || 'Login failed';
+        setErrorDetail(`Server Error (${res.status}): ${msg}`); // Show in Red Box
+        toast.error("Login failed. Check the error box.");
       }
 
     } catch (err) {

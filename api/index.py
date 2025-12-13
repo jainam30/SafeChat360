@@ -1,5 +1,9 @@
 import sys
 import os
+import certifi
+
+# FORCE SSL CERTIFICATE PATH (Fixes Vercel/Firebase SSL Errors)
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 # Robust path handling for Vercel
 current_dir = os.path.dirname(os.path.abspath(__file__))
