@@ -98,8 +98,9 @@ export default function Login() {
           } else {
             // Show error for primary fallback too
             console.error("Verification Failed Details (Fallback):", verifyData);
-            setErrorDetail(verifyData.detail || 'Identity verification failed.');
-            toast.error("Login verification failed. See details below.");
+            console.error("CRITICAL ERROR MESSAGE:", verifyData.detail); // PRINT STRING FOR USER TO SEE
+            setErrorDetail(verifyData.detail || JSON.stringify(verifyData));
+            toast.error("Login verification failed. Check the RED BOX.");
           }
         } catch (fbError) {
           console.error("Firebase fallback failed:", fbError);
