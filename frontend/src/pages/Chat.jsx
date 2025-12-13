@@ -90,10 +90,93 @@ export default function Chat() {
         fetchHistory();
     }, [activeChat, token]);
 
-    // Mock Connected State
+    // WebSocket Connection
     useEffect(() => {
-        setIsConnected(true);
-    }, []);
+        if (!user || ws.current) return;
+
+        // Determine WS Protocol
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Get Host (handle logic if API_URL is set or relative)
+        let wsUrl = '';
+        const apiUrl = getApiUrl('');
+        if (apiUrl.startsWith('http')) {
+            wsUrl = apiUrl.replace('http', 'ws');
+        } else {
+            // Relative, use window.location.host
+            wsUrl = `${protocol}//${window.location.hostname}:8000`; // Default dev port if not set
+            // Better: Use the target from getApiUrl if it was absolute, else guess. 
+            // Since getApiUrl calls import.meta.env.VITE_API_URL, let's use that.
+            const envUrl = import.meta.env.VITE_API_URL;
+            if (envUrl) {
+                wsUrl = envUrl.replace('http', 'ws');
+            } else {
+                // Proxy / Localhost fallback
+                wsUrl = `${protocol}//localhost:8000`;
+            }
+        }
+
+        // Final Path
+        wsUrl = `${wsUrl}/api/chat/ws/${user.id}`;
+
+        console.log("Connecting to WS:", wsUrl);
+        const socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+            console.log("WS Connected");
+            setIsConnected(true);
+            ws.current = socket;
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                // Handle Signals (Call)
+                if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
+                    // Handled by CallModal if active, or triggers modal
+                    if (data.type === 'call-request') {
+                        setCallData({ isIncoming: true, caller: data.caller, isVideo: data.isVideo, offerData: data });
+                    }
+                    return;
+                }
+
+                // Handle Chat Messages
+                if (data.type === 'message' || !data.type) { // Default to message
+                    setMessages(prev => {
+                        // Avoid duplicates
+                        if (prev.find(m => m.id === data.id)) return prev;
+                        // Filter by active chat
+                        const isRelevant =
+                            (activeChat.type === 'global' && !data.receiver_id && !data.group_id) ||
+                            (activeChat.type === 'private' && (data.sender_id === activeChat.id || data.receiver_id === activeChat.id)) ||
+                            (activeChat.type === 'group' && data.group_id === activeChat.id);
+
+                        if (isRelevant) {
+                            return [...prev, data];
+                        }
+                        return prev;
+                    });
+                }
+            } catch (e) {
+                console.error("WS Parse error", e);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("WS Disconnected");
+            setIsConnected(false);
+            ws.current = null;
+            // Optional: Reconnect logic could go here
+        };
+
+        return () => {
+            if (ws.current) {
+                ws.current.close();
+                ws.current = null;
+            }
+        };
+    }, [user, activeChat]); // Re-connect if user changes. ActiveChat dependency might not be needed if filtering is done in onmessage, but good for cleanup. Actually cleaner to connect ONCE per user session.
+    // Let's remove activeChat from dependency to verify stable connection. Filtering happens in handler.
 
     // Auto-scroll
     useEffect(() => {
