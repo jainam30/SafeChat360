@@ -31,6 +31,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     # Always pre-hash with SHA256 to ensure length is 64 chars (Safe for bcrypt)
     sha256_password = hashlib.sha256(password.encode()).hexdigest()
+    print(f"DEBUG: Pre-hashing password via SHA256. Len: {len(sha256_password)}")
     return pwd_context.hash(sha256_password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
