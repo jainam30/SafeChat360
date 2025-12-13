@@ -36,15 +36,12 @@ export default function Login() {
         body: JSON.stringify({ identifier: email, password, device_id: navigator.userAgent }),
       });
 
-      // Read text first to safely handle both JSON and HTML/Text errors
       const rawText = await res.text();
       let data;
       try {
         data = JSON.parse(rawText);
       } catch (jsonErr) {
-        console.error("JSON Parse Error:", jsonErr);
-        console.error("Raw Response:", rawText);
-        throw new Error("Server returned an invalid response. Check console for details.");
+        throw new Error("Server returned an invalid response.");
       }
 
       if (res.ok && data.access_token) {
@@ -52,6 +49,34 @@ export default function Login() {
         login(data.access_token);
         navigate('/dashboard');
         return;
+      }
+
+      // HANDLE 401 INVALID CREDENTIALS (POSSIBLE SYNC ISSUE)
+      if (res.status === 401) {
+        console.log("Backend login failed. Trying Firebase fallback...");
+        try {
+          // Try logging in with Firebase directly (in case password was reset there)
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const token = await userCredential.user.getIdToken();
+
+          // If Firebase login works, authenticat via verify-identity
+          const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
+          });
+
+          const verifyData = await verifyRes.json();
+          if (verifyRes.ok && verifyData.access_token) {
+            toast.success("Login successful (synced)!");
+            login(verifyData.access_token);
+            navigate('/dashboard');
+            return;
+          }
+        } catch (fbError) {
+          console.error("Firebase fallback failed:", fbError);
+          // If Firebase also fails, it's a genuine wrong password
+        }
       }
 
       // 2. Handle Device Limit / Verification Needed
