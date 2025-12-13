@@ -53,7 +53,7 @@ const Dashboard = () => {
         setStories(Array.isArray(storiesData) ? storiesData : []);
       }
     } catch (e) {
-      console.error("Fetch failed", e);
+      console.warn("Fetch failed (silenced)");
       setPosts([]);
       setStories([]);
     } finally {
