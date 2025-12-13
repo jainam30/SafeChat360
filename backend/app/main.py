@@ -10,7 +10,7 @@ import os
 from app.firebase_setup import init_firebase
 
 # Initialize Firebase Admin
-init_firebase()
+# init_firebase() moved to lifespan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +19,11 @@ async def lifespan(app: FastAPI):
         print("Creating database tables...")
         SQLModel.metadata.create_all(engine)
         print("Tables created.")
+        
+        # Initialize Firebase
+        print("Initializing Firebase...")
+        init_firebase()
+        print("Firebase initialized.")
     except Exception as e:
         print(f"Error creating database tables: {e}")
         # Continue anyway so the app starts and can return JSON errors
