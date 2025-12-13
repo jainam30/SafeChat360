@@ -177,6 +177,51 @@ def create_post(
     except HTTPException as ie:
         raise ie
     except Exception as e:
+        error_msg = str(e).lower()
+        print(f"Primary create_post failed: {e}")
+        
+        # JIT Recovery for Vercel (Ephemeral DB lost tables)
+        if "no such table" in error_msg:
+            try:
+                print("Attempting JIT Table Creation...")
+                from sqlmodel import SQLModel
+                from app.db import engine
+                SQLModel.metadata.create_all(engine)
+                
+                # Retry Creation
+                print("Retrying create_post...")
+                post = crud.create_post(
+                    session,
+                    content=post_in.content,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    media_url=post_in.media_url,
+                    media_type=post_in.media_type,
+                    is_flagged=is_flagged,
+                    flag_reason=flag_reason,
+                    privacy=post_in.privacy,
+                    allowed_users=allowed_users_str
+                )
+                
+                # If successful, assume notifications might fail but that's ok to skip on retry
+                return PostResponse(
+                    id=post.id,
+                    content=post.content,
+                    username=post.username,
+                    user_id=post.user_id,
+                    media_url=post.media_url,
+                    media_type=post.media_type,
+                    is_flagged=post.is_flagged,
+                    flag_reason=post.flag_reason,
+                    created_at=post.created_at.isoformat(),
+                    privacy=post.privacy,
+                    author_photo=current_user.profile_photo
+                )
+            except Exception as retry_e:
+                print(f"Retry failed: {retry_e}")
+                # Fall through to error
+                pass
+                
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Debug Error: {str(e)}")
