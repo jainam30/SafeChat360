@@ -80,52 +80,18 @@ export const NotificationProvider = ({ children }) => {
         if (token && user) {
             checkNotifications();
 
+            // POLL for notifications instead of WebSocket (Vercel Compatibility)
+            const interval = setInterval(() => {
+                checkNotifications();
+            }, 10000); // 10 seconds poll
+
+            return () => clearInterval(interval);
+
+            /* WS DISABLED
             // Connect WebSocket for Real-time Notifications
             let wsUrl = getApiUrl(`/api/chat/ws/${user.id}?token=${token}`);
-            if (wsUrl.startsWith('/')) {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                wsUrl = `${protocol}//${window.location.host}${wsUrl}`;
-            } else {
-                wsUrl = wsUrl.replace("http://", "ws://").replace("https://", "wss://");
-            }
-
-            const socket = new WebSocket(wsUrl);
-            ws.current = socket;
-
-            socket.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-
-                if (message.type === 'notification') {
-                    // Handle Notification
-                    if (message.event === 'friend_request') {
-                        // Add to local state immediately
-                        setNotifications(prev => [
-                            {
-                                id: Date.now(), // Temp ID until refresh
-                                type: 'friend_request',
-                                requester_name: message.sender_username,
-                                requester_id: message.sender_id,
-                                created_at: new Date().toISOString()
-                            },
-                            ...prev
-                        ]);
-
-                        toast.success(`You have a new friend request from ${message.sender_username}!`, {
-                            duration: 5000,
-                            icon: '👋'
-                        });
-                    } else if (message.event === 'friend_accepted') {
-                        toast.success(`${message.sender_username} accepted your friend request!`, {
-                            duration: 5000,
-                            icon: '✅'
-                        });
-                    }
-                }
-            };
-
-            return () => {
-                socket.close();
-            };
+             // ...
+            */
         }
     }, [token, user]);
 
