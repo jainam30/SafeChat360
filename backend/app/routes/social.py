@@ -230,34 +230,44 @@ def create_post(
         # Broad check: 'undefinedcolumn' is postgres specific, 'no such column' is sqlite
         if "undefinedcolumn" in error_msg or "column" in error_msg and "does not exist" in error_msg or "no such column" in error_msg:
             try:
-                print("Detected outdated schema. Attempting Auto-Migration...")
+                print("Detected outdated schema. Attempting Auto-Migration via Engine...")
                 from sqlmodel import text
+                from app.db import engine
                 
-                # Try adding the most likely missing columns. 
-                # Ignore errors if they already exist (brute force migration)
-                migration_steps = [
-                    "ALTER TABLE post ADD COLUMN media_url VARCHAR",
-                    "ALTER TABLE post ADD COLUMN media_type VARCHAR",
-                    "ALTER TABLE post ADD COLUMN privacy VARCHAR DEFAULT 'public'",
-                    "ALTER TABLE post ADD COLUMN allowed_users VARCHAR",
-                    "ALTER TABLE post ADD COLUMN is_flagged BOOLEAN DEFAULT FALSE",
-                    "ALTER TABLE post ADD COLUMN flag_reason VARCHAR"
-                ]
-                
-                for step in migration_steps:
-                    try:
-                        session.exec(text(step))
-                        session.commit()
-                    except Exception as mod_e:
-                        print(f"Migration step failed (might already exist): {mod_e}")
-                        # If a step fails, we MUST rollback to continue to next step
+                # Use a fresh connection to bypass the broken session state
+                with engine.connect() as conn:
+                    # Try adding the most likely missing columns. 
+                    # Ignore errors if they already exist (brute force migration)
+                    migration_steps = [
+                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS media_url VARCHAR",
+                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS media_type VARCHAR",
+                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS privacy VARCHAR DEFAULT 'public'",
+                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS allowed_users VARCHAR",
+                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS is_flagged BOOLEAN DEFAULT FALSE",
+                        "ALTER TABLE post ADD COLUMN IF NOT EXISTS flag_reason VARCHAR"
+                    ]
+                    
+                    for step in migration_steps:
                         try:
-                            session.rollback()
-                        except:
-                            pass
+                            # Postgres supports IF NOT EXISTS for ADD COLUMN in recent versions, 
+                            # but purely safe way is catch duplicate error if not. 
+                            # We will try the IF NOT EXISTS syntax first which is safer.
+                            conn.execute(text(step))
+                            conn.commit()
+                        except Exception as mod_e:
+                            print(f"Migration step failed (might already exist or syntax invalid): {mod_e}")
+                            # Clean up this connection's transaction if checking failed
+                            try:
+                                conn.rollback()
+                            except:
+                                pass
 
-                # Retry Creation after patching
+                # Retry Creation after patching - Use the SESSION again as it should be rolled back at top
                 print("Retrying create_post after Auto-Migration...")
+                
+                # Refresh session transaction just in case
+                session.rollback()
+                
                 post = crud.create_post(
                     session,
                     content=post_in.content,
