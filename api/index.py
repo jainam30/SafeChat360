@@ -9,6 +9,11 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+# CRITICAL: Add 'backend' directory to sys.path so 'from app import ...' works inside main.py
+backend_dir = os.path.join(parent_dir, 'backend')
+if os.path.exists(backend_dir) and backend_dir not in sys.path:
+    sys.path.append(backend_dir)
+
 try:
     # Try importing from backend.app.main
     from backend.app.main import app
