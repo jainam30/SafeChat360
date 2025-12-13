@@ -99,6 +99,8 @@ export default function Login() {
             });
 
             const verifyData = await verifyRes.json();
+            console.log("VERIFY RESPONSE:", verifyData); // DEBUG LOG
+
             if (verifyRes.ok && verifyData.access_token) {
               toast.dismiss('verify');
               toast.success("Identity verified! Logging in...");
@@ -107,6 +109,7 @@ export default function Login() {
               return;
             } else {
               toast.dismiss('verify');
+              console.error("Verification Failed Details:", verifyData); // DEBUG LOG
               toast.error(verifyData.detail || 'Identity verification failed.');
             }
 
