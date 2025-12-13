@@ -17,12 +17,35 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const [errorDetail, setErrorDetail] = useState(null); // NEW STATE
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setErrorDetail(null); // Clear previous errors
 
     if (!email) {
+      // ...
+      {
+        error && (
+          <div className="p-4 mb-6 bg-red-50 border border-red-100 text-red-500 rounded-lg text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )
+      }
+
+      {
+        errorDetail && (
+          <div className="p-4 mb-6 bg-red-900/10 border border-red-500/50 text-red-600 rounded-lg text-sm whitespace-pre-wrap break-words">
+            <strong>LOGIN VERIFICATION FAILED:</strong><br />
+            {errorDetail}
+            <br /><br />
+            <span className="text-xs text-gray-500">Please take a screenshot of this error box.</span>
+          </div>
+        )
+      }
       toast.error('Please enter a valid email or username');
       setLoading(false);
       return;
@@ -72,10 +95,16 @@ export default function Login() {
             login(verifyData.access_token);
             navigate('/dashboard');
             return;
+          } else {
+            // Show error for primary fallback too
+            console.error("Verification Failed Details (Fallback):", verifyData);
+            setErrorDetail(verifyData.detail || 'Identity verification failed.');
+            toast.error("Login verification failed. See details below.");
           }
         } catch (fbError) {
           console.error("Firebase fallback failed:", fbError);
           // If Firebase also fails, it's a genuine wrong password
+          setErrorDetail(`Firebase Rejected Password: ${fbError.message}`);
         }
       }
 
@@ -111,8 +140,8 @@ export default function Login() {
               toast.dismiss('verify');
               console.error("Verification Failed Details:", verifyData); // DEBUG LOG
               // FORCE USER TO SEE ERROR
-              alert(`Login Error: ${verifyData.detail}\n\nPlease take a screenshot of this and send it to support.`);
-              toast.error(verifyData.detail || 'Identity verification failed.');
+              setErrorDetail(verifyData.detail || 'Identity verification failed.');
+              toast.error("Login verification failed. See details below.");
             }
 
           } catch (firebaseErr) {
