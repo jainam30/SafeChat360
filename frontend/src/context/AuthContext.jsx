@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
             setUser(res.data); // Replace with fresh DB data (includes specific avatar, name etc)
           }
         } catch (err) {
-          console.error("Failed to fetch user profile", err);
+          console.warn("Failed to fetch user profile (Session likely expired):", err.message);
           // If 401, maybe logout?
           if (err.response && err.response.status === 401) {
             logout();

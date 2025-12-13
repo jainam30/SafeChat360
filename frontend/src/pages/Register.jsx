@@ -45,12 +45,14 @@ export default function Register() {
         firebaseUser = userCredential.user;
         token = await firebaseUser.getIdToken();
       } catch (firebaseErr) {
-        console.error("Firebase Registration Error:", firebaseErr);
         if (firebaseErr.code === 'auth/email-already-in-use') {
+          // Handled gracefully - no console.error needed
           toast.success("Account already exists! Redirecting to Login...");
           setTimeout(() => navigate('/login'), 2000);
-          return; // Stop execution, treated as "handled"
+          return;
         }
+
+        console.error("Firebase Registration Error:", firebaseErr);
         throw new Error("Security check failed: " + firebaseErr.message);
       }
 
