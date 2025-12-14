@@ -91,28 +91,25 @@ export default function Chat() {
     }, [activeChat, token]);
 
     // WebSocket Connection
+    // WebSocket Connection
     useEffect(() => {
         if (!user || ws.current) return;
 
         // Determine WS Protocol
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Get Host (handle logic if API_URL is set or relative)
+
         let wsUrl = '';
-        const apiUrl = getApiUrl('');
+        const apiUrl = getApiUrl(''); // Get base API URL
+
         if (apiUrl.startsWith('http')) {
-            wsUrl = apiUrl.replace('http', 'ws');
+            // Absolute URL (Production or Custom Env)
+            wsUrl = apiUrl.replace(/^http/, 'ws');
+            // Remove trailing slash to avoid double slashes
+            if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
         } else {
-            // Relative, use window.location.host
-            wsUrl = `${protocol}//${window.location.hostname}:8000`; // Default dev port if not set
-            // Better: Use the target from getApiUrl if it was absolute, else guess. 
-            // Since getApiUrl calls import.meta.env.VITE_API_URL, let's use that.
-            const envUrl = import.meta.env.VITE_API_URL;
-            if (envUrl) {
-                wsUrl = envUrl.replace('http', 'ws');
-            } else {
-                // Proxy / Localhost fallback
-                wsUrl = `${protocol}//localhost:8000`;
-            }
+            // Relative URL (Development with Proxy)
+            // Use current host (e.g. localhost:5173) and let Vite proxy handle it
+            wsUrl = `${protocol}//${window.location.host}`;
         }
 
         // Final Path
@@ -130,6 +127,7 @@ export default function Chat() {
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                // console.log("WS Msg:", data.type); // debug
 
                 // Handle Signals (Call)
                 if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
