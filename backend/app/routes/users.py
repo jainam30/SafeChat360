@@ -6,7 +6,7 @@ from app.db import get_session
 from app import crud
 from app.deps import get_current_user
 from app.models import User
-from app.auth_utils import verify_password, get_password_hash
+from app.auth_utils import verify_password, get_secure_password_hash
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -95,7 +95,7 @@ def update_password(
     if not verify_password(req.old_password, user_in_session.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid old password")
     
-    new_hashed = get_password_hash(req.new_password)
+    new_hashed = get_secure_password_hash(req.new_password)
     crud.update_user(session, user_in_session, {"hashed_password": new_hashed})
     return {"status": "success", "message": "Password updated successfully"}
 
