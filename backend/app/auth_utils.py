@@ -28,7 +28,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         # In that case, it wasn't a raw password anyway.
         return False
 
-def get_password_hash(password: str) -> str:
+def get_secure_password_hash(password: str) -> str:
     # Always pre-hash with SHA256 to ensure length is 64 chars (Safe for bcrypt)
     sha256_password = hashlib.sha256(password.encode()).hexdigest()
     print(f"DEBUG: Pre-hashing password via SHA256. Len: {len(sha256_password)}")

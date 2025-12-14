@@ -5,7 +5,7 @@ from typing import Optional
 from sqlmodel import Session
 from app.db import get_session
 from app import crud
-from app.auth_utils import get_password_hash, verify_password, create_access_token
+from app.auth_utils import get_secure_password_hash, verify_password, create_access_token
 import traceback
 import logging
 from firebase_admin import auth
@@ -67,7 +67,7 @@ def register(request: Request, req: RegisterRequest, session: Session = Depends(
         if len(req.password) > 72:
              print(f"DEBUG WARNING: Password too long! ({len(req.password)} chars)")
 
-        hashed = get_password_hash(req.password)
+        hashed = get_secure_password_hash(req.password)
         user = crud.create_user(
             session, 
             email=req.email, 
@@ -158,7 +158,7 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
              # Create dummy password (user should use Forgot Password to set it if they want local login)
              # or better, valid password reset flow handles it.
              # We just need them to exist to login.
-             hashed = get_password_hash("fb_place")
+             hashed = get_secure_password_hash("fb_place")
              
              user = crud.create_user(
                 session, 
