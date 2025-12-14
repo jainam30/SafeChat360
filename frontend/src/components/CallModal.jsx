@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Video, Mic, MicOff, VideoOff, PhoneOff, X } from 'lucide-react';
 
 const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVideo = true, offerData }) => {
-    const [status, setStatus] = useState(isIncoming ? 'incoming' : 'calling'); // calling, incoming, connecting, connected, ended
+    const [status, setStatus] = useState(isIncoming ? 'incoming' : 'calling');
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [micEnabled, setMicEnabled] = useState(true);
@@ -11,27 +11,35 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const peerConnection = useRef(null);
+    const localStreamRef = useRef(null); // Ref to hold stream for cleanup
 
     const servers = {
         iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' }, // Public Google STUN
-            // In production, add TURN servers here
+            { urls: 'stun:stun.l.google.com:19302' },
         ]
     };
+
+    // Update Ref when state changes
+    useEffect(() => {
+        localStreamRef.current = localStream;
+    }, [localStream]);
 
     useEffect(() => {
         // Initialize Media
         const startMedia = async () => {
             try {
+                console.log("Requesting user media...");
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: isVideo,
                     audio: true
                 });
+                console.log("User media obtained", stream.id);
                 setLocalStream(stream);
                 if (localVideoRef.current) localVideoRef.current.srcObject = stream;
             } catch (err) {
                 console.error("Failed to get media", err);
-                endCall();
+                alert("Could not access camera/microphone. Please check permissions.");
+                onClose(); // Close immediately if no media
             }
         };
 
@@ -39,13 +47,19 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
             startMedia();
         }
 
-        // Cleanup
+        // Cleanup function
         return () => {
-            // Stop tracks
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
+            console.log("CallModal unmounting, cleaning up...");
+            // Stop tracks using Ref
+            if (localStreamRef.current) {
+                console.log("Stopping local tracks...");
+                localStreamRef.current.getTracks().forEach(track => {
+                    track.stop();
+                    console.log(`Stopped track: ${track.kind}`);
+                });
             }
             if (peerConnection.current) {
+                console.log("Closing PeerConnection");
                 peerConnection.current.close();
             }
         };
@@ -53,61 +67,67 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
 
     useEffect(() => {
         if (localStream && status === 'calling') {
+            console.log("Local stream ready, creating offer...");
             createOffer();
         }
     }, [localStream, status]);
 
     useEffect(() => {
-        // Handle Socket Events for Signaling
         if (!socket) return;
 
         const handleMessage = async (event) => {
-            const data = JSON.parse(event.data);
+            try {
+                const data = JSON.parse(event.data);
+                console.log("CallModal received signal:", data.type);
 
-            if (data.type === 'call-response') {
-                if (data.response === 'accept') {
-                    setStatus('connecting');
-                } else {
-                    setStatus('ended');
-                    setTimeout(onClose, 2000);
+                if (data.type === 'call-response') {
+                    if (data.response === 'accept') {
+                        console.log("Call Accepted by remote");
+                        setStatus('connecting');
+                    } else {
+                        console.log("Call Rejected by remote");
+                        setStatus('ended');
+                        setTimeout(onClose, 2000);
+                    }
+                } else if (data.type === 'offer') {
+                    // We handle this via props (isIncoming), but if we get a re-offer?
+                    console.log("Received Offer during call (Renegotiation not implemented)");
+                } else if (data.type === 'answer') {
+                    console.log("Received Answer");
+                    if (peerConnection.current) {
+                        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        console.log("Remote Description Set (Answer)");
+                    }
+                } else if (data.type === 'ice-candidate') {
+                    console.log("Received ICE Candidate");
+                    if (peerConnection.current) {
+                        try {
+                            await peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+                            console.log("Added ICE Candidate");
+                        } catch (e) {
+                            console.error("Error adding received ice candidate", e);
+                        }
+                    }
                 }
-            } else if (data.type === 'offer') {
-                // Should not happen here if we are caller, but if we are receiver...
-                if (status === 'incoming') {
-                    // We handle offer in 'acceptCall'
-                }
-            } else if (data.type === 'answer') {
-                if (peerConnection.current) {
-                    await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                }
-            } else if (data.type === 'ice-candidate') {
-                if (peerConnection.current) {
-                    try {
-                        await peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-                    } catch (e) { console.error("Error adding received ice candidate", e); }
-                }
+            } catch (e) {
+                console.error("Signal handling error", e);
             }
         };
 
-        // We need to attach this listener. 
-        // Problem: Chat.jsx might already have a listener. 
-        // We should pass a way to hook into socket or Chat.jsx should pass messages down.
-        // For simplicity, let's assume Chat.jsx delegates signaling messages to us or we add a second listener (WebSocket allows multiple onmessage? No, only one).
-        // Best approach: Chat.jsx handles 'onmessage' and passes relevant data to CallModal via props or Ref.
-        // Or we use `addEventListener` if using native WS object (it supports multiple).
         socket.addEventListener('message', handleMessage);
 
         return () => {
             socket.removeEventListener('message', handleMessage);
         };
-    }, [socket, status, localStream]);
-
+    }, [socket]); // Removed status/localStream dependencies to avoid re-attaching listener needlessly
 
     const createPeerConnection = () => {
+        console.log("Creating RTCPeerConnection");
         const pc = new RTCPeerConnection(servers);
 
         pc.onicecandidate = (event) => {
             if (event.candidate) {
+                console.log("Sending ICE Candidate");
                 socket.send(JSON.stringify({
                     type: 'ice-candidate',
                     candidate: event.candidate,
@@ -117,15 +137,17 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
         };
 
         pc.ontrack = (event) => {
+            console.log("Remote track received");
             setRemoteStream(event.streams[0]);
             if (remoteVideoRef.current) {
                 remoteVideoRef.current.srcObject = event.streams[0];
             }
         };
 
-        if (localStream) {
-            localStream.getTracks().forEach(track => {
-                pc.addTrack(track, localStream);
+        // Add local tracks
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => {
+                pc.addTrack(track, localStreamRef.current);
             });
         }
 
@@ -134,43 +156,47 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
     };
 
     const createOffer = async () => {
-        const pc = createPeerConnection();
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+        try {
+            const pc = createPeerConnection();
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            console.log("Offer created and sent");
 
-        socket.send(JSON.stringify({
-            type: 'offer',
-            sdp: offer,
-            sender_id: user.id,
-            receiver_id: targetUser.id,
-            isVideo
-        }));
+            socket.send(JSON.stringify({
+                type: 'offer',
+                sdp: offer,
+                sender_id: user.id,
+                receiver_id: targetUser.id,
+                isVideo
+            }));
+        } catch (e) {
+            console.error("Create Offer Failed", e);
+        }
     };
 
     const acceptCall = async () => {
-        // Start media first
+        console.log("Accepting call...");
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: isVideo,
                 audio: true
             });
+            console.log("Receiver media obtained");
             setLocalStream(stream);
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
             setStatus('connecting');
 
-            // Initialize PC
             const pc = createPeerConnection();
 
-            // Set Remote Description (The Offer)
             if (offerData && offerData.sdp) {
+                console.log("Setting Remote Description (Offer)");
                 await pc.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
 
-                // Create Answer
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
+                console.log("Answer created and sent");
 
-                // Send Answer
                 socket.send(JSON.stringify({
                     type: 'answer',
                     sdp: answer,
@@ -180,23 +206,13 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
             } else {
                 console.error("No offer data found");
             }
-
         } catch (e) {
             console.error("Accept call failed", e);
         }
     };
 
-    // FIX: logic for accepting is tricky if we don't have the offer stored.
-    // Let's refine: Chat.jsx receives 'offer'. It opens Modal(isIncoming=true, offerData=offer).
-    // Modal 'acceptCall':
-    // 1. Get user media.
-    // 2. Create PC.
-    // 3. pc.setRemoteDescription(offerData.sdp)
-    // 4. pc.createAnswer() -> setLocal -> send Answer.
-
-    // We will update the logic below in `acceptCall` assuming `offerData` prop.
-
     const rejectCall = () => {
+        console.log("Rejecting call");
         socket.send(JSON.stringify({
             type: 'call-response',
             response: 'reject',
@@ -206,7 +222,13 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
     };
 
     const endCall = () => {
+        console.log("Ending call manually");
         if (peerConnection.current) peerConnection.current.close();
+
+        // Stop tracks immediately here too
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+        }
         onClose();
     };
 
@@ -224,25 +246,27 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
         }
     };
 
-    // Render based on status
     return (
         <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center">
             {/* Status Header */}
             <div className="absolute top-10 text-center">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyber-primary to-purple-600 flex items-center justify-center text-4xl font-bold text-white mb-4 mx-auto border-4 border-white/10 shadow-lg shadow-cyber-primary/50">
-                    {isIncoming ? caller.username.charAt(0).toUpperCase() : targetUser.username.charAt(0).toUpperCase()}
+                    {isIncoming ? caller?.username.charAt(0).toUpperCase() : targetUser?.username.charAt(0).toUpperCase()}
                 </div>
                 <h2 className="text-2xl font-bold text-white">
-                    {isIncoming ? caller.username : targetUser.username}
+                    {isIncoming ? caller?.username : targetUser?.username}
                 </h2>
                 <p className="text-cyber-primary animate-pulse uppercase tracking-widest text-sm mt-2">
-                    {status === 'incoming' ? 'Incoming Call...' : status === 'calling' ? 'Calling...' : status === 'connecting' ? 'Connecting...' : 'Connected'}
+                    {status === 'incoming' ? 'Incoming Call...' : status === 'calling' ? 'Calling...' : status === 'connecting' ? 'Connecting...' : status === 'ended' ? 'Call Ended' : 'Connected'}
                 </p>
+                {/* Debug Info (Optional, hidden in prod but useful now) */}
+                <div className="text-[10px] text-gray-500 mt-2 font-mono">
+                    {peerConnection.current?.connectionState} | {peerConnection.current?.iceConnectionState}
+                </div>
             </div>
 
             {/* Video Area */}
             <div className="relative w-full max-w-4xl h-[60vh] flex items-center justify-center p-4">
-                {/* Remote Video */}
                 {remoteStream ? (
                     <video
                         ref={remoteVideoRef}
@@ -251,7 +275,9 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
                         className="w-full h-full object-contain rounded-2xl bg-black"
                     />
                 ) : (
-                    <div className="text-white/20 text-4xl">Waiting for video...</div>
+                    <div className="text-white/20 text-4xl animate-pulse">
+                        {status === 'connected' ? 'Waiting for video...' : '...'}
+                    </div>
                 )}
 
                 {/* Local Video (PiP) */}
