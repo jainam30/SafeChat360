@@ -12,6 +12,7 @@ if os.environ.get("VERCEL") or os.environ.get("RENDER"):
     DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:////tmp/safechat.db")
 else:
     DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
+print(f"DEBUG: Configured DATABASE_URL={DATABASE_URL}", flush=True)
 
 # Fix for Supabase/Heroku using deprecated 'postgres://' scheme
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
