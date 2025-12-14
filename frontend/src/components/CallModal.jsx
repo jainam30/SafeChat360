@@ -94,6 +94,7 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
                     console.log("Received Offer during call (Renegotiation not implemented)");
                 } else if (data.type === 'answer') {
                     console.log("Received Answer");
+                    setStatus('connecting'); // Update UI to show we are connecting
                     if (peerConnection.current) {
                         await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.sdp));
                         console.log("Remote Description Set (Answer)");
@@ -119,7 +120,7 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
         return () => {
             socket.removeEventListener('message', handleMessage);
         };
-    }, [socket]); // Removed status/localStream dependencies to avoid re-attaching listener needlessly
+    }, [socket]);
 
     const createPeerConnection = () => {
         console.log("Creating RTCPeerConnection");
@@ -133,6 +134,17 @@ const CallModal = ({ isIncoming, caller, targetUser, socket, onClose, user, isVi
                     candidate: event.candidate,
                     receiver_id: isIncoming ? caller.id : targetUser.id
                 }));
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            console.log("Connection State Change:", pc.connectionState);
+            if (pc.connectionState === 'connected') {
+                setStatus('connected');
+            } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                setStatus('ended');
+                // Optional: Don't close immediately, let user see it ended? Or close.
+                // setTimeout(onClose, 2000); 
             }
         };
 
