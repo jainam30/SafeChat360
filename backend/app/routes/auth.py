@@ -158,7 +158,7 @@ def verify_identity(request: Request, req: VerifyRequest, session: Session = Dep
              # Create dummy password (user should use Forgot Password to set it if they want local login)
              # or better, valid password reset flow handles it.
              # We just need them to exist to login.
-             hashed = get_password_hash("firebase_oauth_user_placeholder")
+             hashed = get_password_hash("fb_place")
              
              user = crud.create_user(
                 session, 
