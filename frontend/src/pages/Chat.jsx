@@ -151,11 +151,15 @@ export default function Chat() {
                     setMessages(prev => {
                         // Avoid duplicates
                         if (prev.find(m => m.id === data.id)) return prev;
+
+                        // Use Ref for current active chat to avoid stale closure
+                        const currentActive = activeChatRef.current;
+
                         // Filter by active chat
                         const isRelevant =
-                            (activeChat.type === 'global' && !data.receiver_id && !data.group_id) ||
-                            (activeChat.type === 'private' && (data.sender_id === activeChat.id || data.receiver_id === activeChat.id)) ||
-                            (activeChat.type === 'group' && data.group_id === activeChat.id);
+                            (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
+                            (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
+                            (currentActive.type === 'group' && data.group_id === currentActive.id);
 
                         if (isRelevant) {
                             return [...prev, data];
@@ -181,8 +185,7 @@ export default function Chat() {
                 ws.current = null;
             }
         };
-    }, [user, activeChat]); // Re-connect if user changes. ActiveChat dependency might not be needed if filtering is done in onmessage, but good for cleanup. Actually cleaner to connect ONCE per user session.
-    // Let's remove activeChat from dependency to verify stable connection. Filtering happens in handler.
+    }, [user]); // Re-connect ONLY if user changes. ActiveChat is handled via ref.
 
     // Auto-scroll
     useEffect(() => {
@@ -256,8 +259,16 @@ export default function Chat() {
             });
 
             if (!res.ok) {
-                const err = await res.json();
-                alert(err.detail || "Failed to send message");
+                let errorMsg = "Failed to send message";
+                try {
+                    const err = await res.json();
+                    errorMsg = err.detail || errorMsg;
+                } catch (jsonErr) {
+                    const text = await res.text();
+                    console.error("Non-JSON error response:", text);
+                    errorMsg = `Server Error: ${res.status}`;
+                }
+                alert(errorMsg);
                 return;
             }
 
@@ -270,7 +281,7 @@ export default function Chat() {
 
         } catch (err) {
             console.error("HTTP Send failed", err);
-            alert("Connection error. Please try again.");
+            alert("Connection error: " + err.message);
         }
     };
 
