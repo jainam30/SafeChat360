@@ -7,7 +7,6 @@ import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import logoImg from '../assets/safechat_logo.png';
 import { parsePhoneNumber } from 'libphonenumber-js';
 
