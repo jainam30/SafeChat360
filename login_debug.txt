@@ -1,0 +1,37 @@
+DEBUG: Configured DATABASE_URL=sqlite:///./safechat.db
+--- TESTING LOGIN FOR: jainam4 ---
+2025-12-21 09:47:58,119 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:47:58,124 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:47:58,124 INFO sqlalchemy.engine.Engine [generated in 0.00020s] ('jainam4',)
+2025-12-21 09:47:58,125 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.email = ?
+2025-12-21 09:47:58,126 INFO sqlalchemy.engine.Engine [generated in 0.00029s] ('jainam4',)
+2025-12-21 09:47:58,127 INFO sqlalchemy.engine.Engine ROLLBACK
+ERROR: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\JAINAM\OneDrive\Desktop\safechat360\backend\debug_login_local.py", line 20, in test_login
+    print("\u274c User NOT FOUND in DB.", flush=True)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>
+--- TESTING LOGIN FOR: jainam ---
+2025-12-21 09:47:58,142 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:47:58,142 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:47:58,142 INFO sqlalchemy.engine.Engine [cached since 0.01845s ago] ('jainam',)
+2025-12-21 09:47:58,144 INFO sqlalchemy.engine.Engine ROLLBACK
+ERROR: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\JAINAM\OneDrive\Desktop\safechat360\backend\debug_login_local.py", line 23, in test_login
+    print(f"\u2705 User Found: {user.username} (ID: {user.id})", flush=True)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
