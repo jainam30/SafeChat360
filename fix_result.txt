@@ -1,0 +1,16 @@
+--- FIX REPORT ---
+--- Fixing User: jainam4 ---
+❌ User 'jainam4' NOT FOUND in the database.
+Please Register properly on the website first.
+--- Fixing User: jainam ---
+✅ User Found: ID=1, Username=jainam, Email=jainamjainrj@gmail.com
+Resetting password to: 'Password123!'
+DEBUG: Pre-hashing password via SHA256. Len: 64
+✅ Password Reset Successfully.
+Try logging in with: jainam / Password123!
+--- Fixing User: admin ---
+❌ User 'admin' NOT FOUND in the database.
+Please Register properly on the website first.
+--- Fixing User: supervisor ---
+❌ User 'supervisor' NOT FOUND in the database.
+Please Register properly on the website first.

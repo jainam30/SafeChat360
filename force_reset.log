@@ -1,0 +1,11 @@
+--- STARTING RESET ---
+CWD: C:\Users\JAINAM\OneDrive\Desktop\safechat360
+Imports successful.
+Attempting reset for: jainam4
+User NOT FOUND.
+Attempting reset for: jainam
+FOUND USER: jainam (ID: 1)
+SUCCESS: Password reset to 'Password123!'
+Attempting reset for: admin
+User NOT FOUND.
+--- END ---

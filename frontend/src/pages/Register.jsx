@@ -34,6 +34,14 @@ export default function Register() {
       return;
     }
 
+    if (password.length < 6) {
+      const msg = 'Password must be at least 6 characters long.';
+      setError(msg);
+      toast.error(msg);
+      setLoading(false);
+      return;
+    }
+
     try {
       console.log("Submitting registration...");
 
@@ -45,15 +53,19 @@ export default function Register() {
         firebaseUser = userCredential.user;
         token = await firebaseUser.getIdToken();
       } catch (firebaseErr) {
+        console.error("Firebase Registration Error Details:", firebaseErr);
         if (firebaseErr.code === 'auth/email-already-in-use') {
-          // Handled gracefully - no console.error needed
           toast.success("Account already exists! Redirecting to Login...");
           setTimeout(() => navigate('/login'), 2000);
           return;
         }
-
-        console.error("Firebase Registration Error:", firebaseErr);
-        throw new Error("Security check failed: " + firebaseErr.message);
+        if (firebaseErr.code === 'auth/weak-password') {
+          throw new Error("Password is too weak. Please use at least 6 characters.");
+        }
+        if (firebaseErr.code === 'auth/invalid-email') {
+          throw new Error("The email address is badly formatted.");
+        }
+        throw new Error("Security check failed: " + (firebaseErr.message || firebaseErr.code));
       }
 
       // 2. Register in Backend

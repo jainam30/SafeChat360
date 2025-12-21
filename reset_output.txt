@@ -1,0 +1,50 @@
+DEBUG: Configured DATABASE_URL=sqlite:///./safechat.db
+2025-12-21 09:18:14,074 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:18:14,079 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:18:14,079 INFO sqlalchemy.engine.Engine [generated in 0.00020s] ('jainam4',)
+2025-12-21 09:18:14,080 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.email = ?
+2025-12-21 09:18:14,083 INFO sqlalchemy.engine.Engine [generated in 0.00310s] ('jainam4',)
+2025-12-21 09:18:14,084 INFO sqlalchemy.engine.Engine ROLLBACK
+2025-12-21 09:18:14,085 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:18:14,085 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:18:14,085 INFO sqlalchemy.engine.Engine [cached since 0.0059s ago] ('jainam',)
+DEBUG: Pre-hashing password via SHA256. Len: 64
+2025-12-21 09:18:14,294 INFO sqlalchemy.engine.Engine UPDATE user SET hashed_password=? WHERE user.id = ?
+2025-12-21 09:18:14,294 INFO sqlalchemy.engine.Engine [generated in 0.00015s] ('$2b$12$y5B2LG5XWYH.y5X81QyXv.DbuK1B5movVS8ATc2R2nlT/HimR2b9.', 1)
+2025-12-21 09:18:14,299 INFO sqlalchemy.engine.Engine COMMIT
+2025-12-21 09:18:14,304 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:18:14,304 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:18:14,304 INFO sqlalchemy.engine.Engine [cached since 0.2252s ago] ('admin',)
+2025-12-21 09:18:14,305 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.email = ?
+2025-12-21 09:18:14,305 INFO sqlalchemy.engine.Engine [cached since 0.2245s ago] ('admin',)
+2025-12-21 09:18:14,305 INFO sqlalchemy.engine.Engine ROLLBACK
+2025-12-21 09:18:14,306 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:18:14,306 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:18:14,306 INFO sqlalchemy.engine.Engine [cached since 0.2268s ago] ('supervisor',)
+2025-12-21 09:18:14,306 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.email = ?
+2025-12-21 09:18:14,306 INFO sqlalchemy.engine.Engine [cached since 0.2259s ago] ('supervisor',)
+2025-12-21 09:18:14,307 INFO sqlalchemy.engine.Engine ROLLBACK
+2025-12-21 09:18:14,307 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-21 09:18:14,307 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.username = ?
+2025-12-21 09:18:14,307 INFO sqlalchemy.engine.Engine [cached since 0.2281s ago] ('jainam30',)
+2025-12-21 09:18:14,308 INFO sqlalchemy.engine.Engine SELECT user.id, user.email, user.username, user.hashed_password, user.phone_number, user.full_name, user.profile_photo, user.role, user.trust_score, user.created_at 
+FROM user 
+WHERE user.email = ?
+2025-12-21 09:18:14,308 INFO sqlalchemy.engine.Engine [cached since 0.2272s ago] ('jainam30',)
+2025-12-21 09:18:14,308 INFO sqlalchemy.engine.Engine ROLLBACK

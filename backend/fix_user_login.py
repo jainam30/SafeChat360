@@ -35,8 +35,21 @@ def fix_user(username_or_email, new_password="Password123!"):
         print(f"Try logging in with: {user.username} / {new_password}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python fix_user_login.py <username_or_email>")
-        print("Example: python fix_user_login.py jainam4")
-    else:
-        fix_user(sys.argv[1])
+    usernames = ["jainam4", "jainam", "admin", "supervisor"]
+    if len(sys.argv) > 1:
+        usernames = [sys.argv[1]]
+        
+    with open("fix_result.txt", "w", encoding="utf-8") as f:
+        f.write("--- FIX REPORT ---\n")
+        
+    for u in usernames:
+        try:
+            # Capture stdout to file
+            original_stdout = sys.stdout
+            with open("fix_result.txt", "a", encoding="utf-8") as f:
+                sys.stdout = f
+                fix_user(u)
+                sys.stdout = original_stdout
+        except Exception as e:
+             with open("fix_result.txt", "a", encoding="utf-8") as f:
+                f.write(f"\nError fixing {u}: {e}\n")
