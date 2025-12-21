@@ -16,6 +16,7 @@
     "clsx": "^2.0.0",
     "firebase": "^12.6.0",
     "framer-motion": "^10.12.16",
+    "libphonenumber-js": "^1.12.33",
     "lucide-react": "^0.303.0",
     "postcss": "^8.4.31",
     "react": "^18.2.0",

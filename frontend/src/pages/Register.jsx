@@ -7,7 +7,9 @@ import { getApiUrl } from '../config';
 import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import logoImg from '../assets/safechat_logo.png';
+import { parsePhoneNumber } from 'libphonenumber-js';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -43,7 +45,6 @@ export default function Register() {
     // Validate Phone Number
     // Validate Phone Number with Strict Country Code
     const fullPhoneNumber = countryCode + phoneNumber.trim();
-    const phoneRegex = /^\+\d{1,4}[0-9\s-]{6,15}$/;
 
     if (!phoneNumber.trim()) {
       const msg = 'Please enter your mobile number.';
@@ -53,7 +54,17 @@ export default function Register() {
       return;
     }
 
-    if (!phoneRegex.test(fullPhoneNumber)) {
+    try {
+      const parsedNumber = parsePhoneNumber(fullPhoneNumber);
+      if (!parsedNumber || !parsedNumber.isValid()) {
+        const msg = `Invalid Phone Number for ${COUNTRY_CODES.find(c => c.code === countryCode)?.country || 'selected country'}. Please check again.`;
+        setError(msg);
+        toast.error(msg);
+        setLoading(false);
+        return;
+      }
+    } catch (parseError) {
+      // If parsing throws (e.g. nonsense input), it's invalid
       const msg = `Invalid Phone Number format. We checked: ${fullPhoneNumber}`;
       setError(msg);
       toast.error(msg);
