@@ -26,8 +26,10 @@ export default function Register() {
     setError('');
 
     // Validate Phone Number
-    if (!phoneNumber.trim().startsWith('+') || phoneNumber.replace(/[^0-9]/g, '').length < 7) {
-      const msg = 'Please enter a valid mobile number with country code (e.g. +91...)';
+    // Validate Phone Number with Strict Country Code
+    const phoneRegex = /^\+\d{1,4}[0-9\s-]{6,15}$/;
+    if (!phoneRegex.test(phoneNumber.trim())) {
+      const msg = 'Mobile number MUST start with a Country Code (e.g. +91 9876543210). Please add the "+" sign.';
       setError(msg);
       toast.error(msg);
       setLoading(false);
@@ -181,7 +183,7 @@ export default function Register() {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
               <input
                 type="tel"
-                placeholder="Mobile Number (e.g. +91 9876543210)"
+                placeholder="+91 9876543210 (Country Code Required)"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 required
