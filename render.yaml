@@ -1,12 +1,11 @@
 services:
   - type: web
     name: safechat-backend
-    env: python
+    env: docker
     region: singapore
     plan: free
-    rootDir: backend 
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    dockerfilePath: Dockerfile
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.12
