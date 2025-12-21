@@ -123,8 +123,8 @@ export default function Register() {
           </div>
 
           {error && (
-            <div className="p-4 mb-6 bg-red-50 border border-red-100 text-red-500 rounded-lg text-sm flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+            <div className="p-4 mb-6 bg-red-900/10 border border-red-500/50 text-red-600 rounded-lg text-sm whitespace-pre-wrap break-words">
+              <strong>REGISTRATION FAILED:</strong><br />
               {error}
             </div>
           )}
