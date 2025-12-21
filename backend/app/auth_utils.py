@@ -30,9 +30,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_secure_password_hash(password: str) -> str:
     # Always pre-hash with SHA256 to ensure length is 64 chars (Safe for bcrypt)
-    sha256_password = hashlib.sha256(password.encode()).hexdigest()
-    print(f"DEBUG: Pre-hashing password via SHA256. Len: {len(sha256_password)}")
-    return pwd_context.hash(sha256_password)
+    try:
+        sha256_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        # Ensure it's definitely short enough (hex digest is 64 chars, bcrypt limit is 72)
+        # Just to be paranoid, slice it.
+        final_input = sha256_password[:64]
+        return pwd_context.hash(final_input)
+    except Exception as e:
+        # Fallback: if encoding fails, just hash the string directly but safely truncated
+        print(f"Hashing Error: {e}")
+        safe_pass = password[:71]
+        return pwd_context.hash(safe_pass)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
