@@ -24,152 +24,69 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setErrorDetail(null); // Clear previous errors
+    setErrorDetail(null);
 
+    // 1. Validate Input
     if (!email) {
-      // ...
-      {
-        error && (
-          <div className="p-4 mb-6 bg-red-50 border border-red-100 text-red-500 rounded-lg text-sm flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )
-      }
-
-      {
-        errorDetail && (
-          <div className="p-4 mb-6 bg-red-900/10 border border-red-500/50 text-red-600 rounded-lg text-sm whitespace-pre-wrap break-words">
-            <strong>LOGIN VERIFICATION FAILED:</strong><br />
-            {errorDetail}
-            <br /><br />
-            <span className="text-xs text-gray-500">Please take a screenshot of this error box.</span>
-          </div>
-        )
-      }
-      toast.error('Please enter a valid email or username');
+      toast.error('Please enter a valid email');
       setLoading(false);
       return;
     }
 
     try {
-      // 1. Attempt Normal Login
-      const res = await fetch(getApiUrl('/api/auth/login'), {
+      // 2. FIREBASE LOGIN (Primary Authentication)
+      // This is the "Source of Truth". If this passes, the user is who they say they are.
+      console.log("Attempting Firebase Login...");
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      } catch (fbError) {
+        console.error("Firebase Login Failed:", fbError);
+        // Handle specific Firebase errors
+        if (fbError.code === 'auth/invalid-credential' || fbError.code === 'auth/wrong-password' || fbError.code === 'auth/user-not-found') {
+          throw new Error("Invalid email or password.");
+        } else if (fbError.code === 'auth/too-many-requests') {
+          throw new Error("Too many failed attempts. Please try again later.");
+        } else if (fbError.code === 'auth/invalid-email') {
+          throw new Error("Please use a valid Email Address (not username).");
+        }
+        throw new Error(fbError.message);
+      }
+
+      const token = await userCredential.user.getIdToken();
+      console.log("Firebase Login Success. Token obtained.");
+
+      // 3. BACKEND SESSION EXCHANGE
+      // Send the proof (token) to backend to get a session/access_token
+      const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: email.trim(), password, device_id: navigator.userAgent }),
+        body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
       });
 
-      const rawText = await res.text();
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch (jsonErr) {
-        throw new Error("Server returned an invalid response.");
-      }
+      const verifyData = await verifyRes.json();
 
-      if (res.ok && data.access_token) {
-        toast.success("Welcome back!");
-        login(data.access_token);
+      if (verifyRes.ok && verifyData.access_token) {
+        toast.success("Login successful!");
+        login(verifyData.access_token);
         navigate('/dashboard');
         return;
-      }
-
-      // HANDLE 401 INVALID CREDENTIALS (POSSIBLE SYNC ISSUE)
-      if (res.status === 401) {
-        console.log("Backend login failed. Trying Firebase fallback...");
-        try {
-          // Try logging in with Firebase directly (in case password was reset there)
-          const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
-          const token = await userCredential.user.getIdToken();
-
-          // If Firebase login works, authenticat via verify-identity
-          const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
-          });
-
-          const verifyData = await verifyRes.json();
-          if (verifyRes.ok && verifyData.access_token) {
-            toast.success("Login successful (synced)!");
-            login(verifyData.access_token);
-            navigate('/dashboard');
-            return;
-          } else {
-            // Show error for primary fallback too
-            console.error("Verification Failed Details (Fallback):", verifyData);
-            console.error("CRITICAL ERROR MESSAGE:", verifyData.detail); // PRINT STRING FOR USER TO SEE
-            setErrorDetail(verifyData.detail || JSON.stringify(verifyData));
-            toast.error("Login verification failed. Check the RED BOX.");
-          }
-        } catch (fbError) {
-          console.error("Firebase fallback failed:", fbError);
-          // If Firebase also fails, it's a genuine wrong password
-          setErrorDetail(`Firebase Rejected Password: ${fbError.message}`);
-        }
-      }
-
-      // 2. Handle Device Limit / Verification Needed
-      if (res.status === 403 && (data.detail === 'DEVICE_LIMIT_EXCEEDED' || data.detail === 'THREAT_DETECTED')) {
-        const proceed = window.confirm("New device detected or session limit exceeded. Verify identity to continue?");
-
-        if (proceed) {
-          toast.loading('Verifying identity with security provider...', { id: 'verify' });
-          // 3. Authenticate with Firebase to get proof
-          try {
-            // We use the password user just entered to get a firebase token
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const token = await userCredential.user.getIdToken();
-
-            // 4. Send Proof to Backend
-            const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
-            });
-
-            const verifyData = await verifyRes.json();
-            console.log("VERIFY RESPONSE:", verifyData); // DEBUG LOG
-
-            if (verifyRes.ok && verifyData.access_token) {
-              toast.dismiss('verify');
-              toast.success("Identity verified! Logging in...");
-              login(verifyData.access_token);
-              navigate('/dashboard');
-              return;
-            } else {
-              toast.dismiss('verify');
-              console.error("Verification Failed Details:", verifyData); // DEBUG LOG
-              // FORCE USER TO SEE ERROR
-              setErrorDetail(verifyData.detail || 'Identity verification failed.');
-              toast.error("Login verification failed. See details below.");
-            }
-
-          } catch (firebaseErr) {
-            console.error("Firebase Auth Error", firebaseErr);
-            toast.dismiss('verify');
-            toast.error('Security verification failed. Please check your credentials.');
-          }
-        } else {
-          toast('Login cancelled.');
-        }
       } else {
-        // CATCH ALL OTHER ERRORS (500, 400, 422, etc)
-        console.error("Login Failed with Status:", res.status, data);
-
-        if (res.status === 200 && !data.access_token) {
-          console.error("CRITICAL: Login 200 OK but NO TOKEN. Response:", data);
-        }
-
-        const msg = data.detail || 'Login failed';
-        setErrorDetail(`Server Error (${res.status}): ${msg}`); // Show in Red Box
-        toast.error("Login failed. Check the error box.");
+        // Backend rejected the valid Firebase User (rare, hopefully JIT fixes this)
+        console.error("Backend Verification Failed:", verifyData);
+        setErrorDetail(verifyData.detail || "Backend rejected valid authentication.");
+        throw new Error(verifyData.detail || "Login failed on server.");
       }
 
     } catch (err) {
       console.error("Login Error:", err);
-      toast.error(err.message || 'Request failed');
+      // Show error in the red box if it's a detail error, otherwise toast
+      if (err.message.includes("Invalid email")) {
+        setError(err.message);
+      } else {
+        setError(err.message);
+      }
+      toast.error(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -202,12 +119,12 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-cyber-muted ml-1">Email or Username</label>
+              <label className="text-xs font-medium text-cyber-muted ml-1">Email Address</label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
                 <input
-                  type="text"
-                  placeholder="Username or name@company.com"
+                  type="email"
+                  placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
