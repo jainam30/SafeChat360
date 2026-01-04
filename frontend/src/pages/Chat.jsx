@@ -28,6 +28,7 @@ export default function Chat() {
     const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
 
     const ws = useRef(null);
+    const reconnectTimeout = useRef(null);
     const messagesEndRef = useRef(null);
     const activeChatRef = useRef(activeChat);
 
@@ -93,97 +94,98 @@ export default function Chat() {
     // WebSocket Connection
     // WebSocket Connection
     useEffect(() => {
-        if (!user || ws.current) return;
+        if (!user) return;
 
-        // Determine WS Protocol
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const connect = () => {
+            if (ws.current && ws.current.readyState === WebSocket.OPEN) return;
 
-        let wsUrl = '';
-        const apiUrl = getApiUrl(''); // Get base API URL
+            // Determine WS Protocol
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            let wsUrl = '';
+            const apiUrl = getApiUrl('');
 
-        if (apiUrl.startsWith('http')) {
-            // Absolute URL (Production or Custom Env)
-            wsUrl = apiUrl.replace(/^http/, 'ws');
-            // Remove trailing slash to avoid double slashes
-            if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
-        } else {
-            // Relative URL (Development with Proxy)
-            // Use current host (e.g. localhost:5173) and let Vite proxy handle it
-            wsUrl = `${protocol}//${window.location.host}`;
-        }
+            if (apiUrl.startsWith('http')) {
+                wsUrl = apiUrl.replace(/^http/, 'ws');
+                if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
+            } else {
+                wsUrl = `${protocol}//${window.location.host}`;
+            }
+            wsUrl = `${wsUrl}/api/chat/ws/${user.id}`;
 
-        // Final Path
-        wsUrl = `${wsUrl}/api/chat/ws/${user.id}`;
+            console.log("Connecting to WS:", wsUrl);
+            const socket = new WebSocket(wsUrl);
 
-        console.log("Connecting to WS:", wsUrl);
-        const socket = new WebSocket(wsUrl);
+            socket.onopen = () => {
+                console.log("WS Connected");
+                setIsConnected(true);
+                ws.current = socket;
+                if (reconnectTimeout.current) {
+                    clearTimeout(reconnectTimeout.current);
+                    reconnectTimeout.current = null;
+                }
+            };
 
-        socket.onopen = () => {
-            console.log("WS Connected");
-            setIsConnected(true);
-            ws.current = socket;
-        };
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
+                        if (data.type === 'offer') {
+                            setCallData({
+                                isIncoming: true,
+                                caller: { id: data.sender_id, username: data.sender_username || "Unknown" },
+                                isVideo: data.isVideo,
+                                offerData: data
+                            });
+                        }
+                        return;
+                    }
 
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                // console.log("WS Msg:", data.type); // debug
+                    if (data.type === 'message' || !data.type) {
+                        setMessages(prev => {
+                            if (prev.find(m => m.id === data.id)) return prev;
+                            const currentActive = activeChatRef.current;
+                            const isRelevant =
+                                (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
+                                (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
+                                (currentActive.type === 'group' && data.group_id === currentActive.id);
 
-                // Handle Signals (Call)
-                if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
-                    // Handled by CallModal if active, or triggers modal
-                    if (data.type === 'offer') {
-                        // Incoming Call!
-                        setCallData({
-                            isIncoming: true,
-                            caller: { id: data.sender_id, username: data.sender_username || "Unknown" },
-                            isVideo: data.isVideo,
-                            offerData: data
+                            if (isRelevant) return [...prev, data];
+                            return prev;
                         });
                     }
-                    return;
+                } catch (e) {
+                    console.error("WS Parse error", e);
                 }
+            };
 
-                // Handle Chat Messages
-                if (data.type === 'message' || !data.type) { // Default to message
-                    setMessages(prev => {
-                        // Avoid duplicates
-                        if (prev.find(m => m.id === data.id)) return prev;
-
-                        // Use Ref for current active chat to avoid stale closure
-                        const currentActive = activeChatRef.current;
-
-                        // Filter by active chat
-                        const isRelevant =
-                            (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
-                            (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
-                            (currentActive.type === 'group' && data.group_id === currentActive.id);
-
-                        if (isRelevant) {
-                            return [...prev, data];
-                        }
-                        return prev;
-                    });
+            socket.onclose = () => {
+                console.log("WS Disconnected. Attempting to reconnect...");
+                setIsConnected(false);
+                ws.current = null;
+                // Auto reconnect after 3 seconds
+                if (!reconnectTimeout.current) {
+                    reconnectTimeout.current = setTimeout(connect, 3000);
                 }
-            } catch (e) {
-                console.error("WS Parse error", e);
-            }
+            };
+
+            socket.onerror = (err) => {
+                console.error("WS Error", err);
+                socket.close();
+            };
         };
 
-        socket.onclose = () => {
-            console.log("WS Disconnected");
-            setIsConnected(false);
-            ws.current = null;
-            // Optional: Reconnect logic could go here
-        };
+        connect();
 
         return () => {
             if (ws.current) {
                 ws.current.close();
                 ws.current = null;
             }
+            if (reconnectTimeout.current) {
+                clearTimeout(reconnectTimeout.current);
+            }
         };
-    }, [user]); // Re-connect ONLY if user changes. ActiveChat is handled via ref.
+    }, [user]);
 
     // Auto-scroll
     useEffect(() => {

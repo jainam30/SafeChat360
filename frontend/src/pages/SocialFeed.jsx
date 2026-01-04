@@ -407,9 +407,9 @@ const SocialFeed = () => {
                     {mediaPreview && (
                         <div className="relative w-fit">
                             {mediaType === 'image' ? (
-                                <img src={mediaPreview} alt="Preview" className="h-32 rounded-lg border border-cyber-border shadow-md" />
+                                <img src={mediaPreview} alt="Preview" className="w-full aspect-square object-cover rounded-lg border border-cyber-border shadow-md" />
                             ) : (
-                                <video src={mediaPreview} className="h-32 rounded-lg border border-cyber-border shadow-md" controls />
+                                <video src={mediaPreview} className="w-full aspect-square object-cover rounded-lg border border-cyber-border shadow-md" controls />
                             )}
                             <button
                                 onClick={() => { setMediaFile(null); setMediaPreview(''); setMediaType(''); }}

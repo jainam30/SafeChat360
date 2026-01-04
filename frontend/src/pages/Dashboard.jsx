@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [mediaType, setMediaType] = useState('text');
   const [privacy, setPrivacy] = useState('public');
   const [isPosting, setIsPosting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Story State
   const [showStoryModal, setShowStoryModal] = useState(false);
@@ -69,6 +70,13 @@ const Dashboard = () => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Immediate local preview
+    if (!isStory) {
+      const localUrl = URL.createObjectURL(file);
+      setMediaUrl(localUrl);
+      setMediaType(file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'text');
+    }
+
     if (file.size > 50 * 1024 * 1024) {
       alert("File too large (Max 50MB)");
       return;
@@ -94,6 +102,7 @@ const Dashboard = () => {
     formData.append('file', finalFile);
 
     try {
+      setIsUploading(true);
       const res = await fetch(getApiUrl('/api/upload'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -114,11 +123,17 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Upload failed", error);
       alert("Upload failed");
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const createPost = async () => {
     if (!newPostContent.trim() && !mediaUrl) return;
+    if (isUploading) {
+      alert("Please wait for the upload to complete.");
+      return;
+    }
     setIsPosting(true);
     try {
       const payload = {
@@ -225,10 +240,19 @@ const Dashboard = () => {
                 />
 
                 {mediaUrl && (
-                  <div className="relative mt-3 rounded-lg overflow-hidden max-h-80 bg-black">
-                    <button onClick={() => { setMediaUrl(''); setMediaType('text'); }} className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full"><X size={16} /></button>
-                    {mediaType === 'image' && <img src={mediaUrl} className="w-full h-full object-contain" alt="Post media preview" />}
-                    {mediaType === 'video' && <video src={mediaUrl} controls className="w-full h-full" />}
+                  <div className="relative mt-3 rounded-lg overflow-hidden aspect-square w-full max-w-[400px] bg-black/5 mx-auto border border-gray-100 shadow-inner">
+                    <button
+                      onClick={() => {
+                        setMediaUrl('');
+                        setMediaType('text');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full z-10 hover:bg-black/80 transition-colors"
+                    >
+                      <X size={18} />
+                    </button>
+                    {mediaType === 'image' && <img src={mediaUrl} className="w-full h-full object-cover" alt="Post media preview" />}
+                    {mediaType === 'video' && <video src={mediaUrl} controls className="w-full h-full object-cover" />}
                   </div>
                 )}
 
@@ -240,8 +264,8 @@ const Dashboard = () => {
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*,audio/*" onChange={handleFileUpload} />
                   </div>
                   {(newPostContent || mediaUrl) && (
-                    <button onClick={createPost} disabled={isPosting} className="text-sm font-bold text-blue-500 hover:text-blue-700 disabled:opacity-50">
-                      {isPosting ? 'Posting...' : 'Post'}
+                    <button onClick={createPost} disabled={isPosting || isUploading} className="text-sm font-bold text-blue-500 hover:text-blue-700 disabled:opacity-50">
+                      {isPosting ? 'Posting...' : isUploading ? 'Uploading...' : 'Post'}
                     </button>
                   )}
                 </div>
