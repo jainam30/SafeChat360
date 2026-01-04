@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlmodel import Session
+from sqlmodel import Session, select, or_, col
 from typing import List, Dict
 from app.db import get_session
 from app import crud
@@ -117,7 +117,6 @@ def search_users(
             return []
         
         # Search users by username or full name
-        from sqlmodel import col, or_, select
         # Use ilike for case-insensitive search
         statement = select(User).where(
             or_(

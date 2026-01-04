@@ -34,7 +34,26 @@ def fix_schema():
         except Exception as e:
             print(f"Story patch failed: {e}")
 
-        # 2. Fix Post Table (Just in case)
+        # 2. Fix Message Table
+        try:
+            print("Checking 'message' table for missing columns...")
+            queries = [
+                "ALTER TABLE message ADD COLUMN group_id INTEGER;"
+            ]
+            for q in queries:
+                try:
+                    conn.execute(text(q))
+                    print(f"Executed: {q}")
+                except Exception as e:
+                    if "duplicate column" in str(e).lower():
+                        print(f"Column already exists in 'message' table.")
+                    else:
+                        print(f"Skipping: {q} - {e}")
+            conn.commit()
+        except Exception as e:
+            print(f"Message patch failed: {e}")
+
+        # 3. Fix Post Table (Just in case)
         try:
             print("Checking 'post' table...")
             queries = [
