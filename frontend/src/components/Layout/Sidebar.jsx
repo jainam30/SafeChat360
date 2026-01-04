@@ -25,9 +25,9 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
   // We use `md:` prefix to apply desktop styles separately.
   return (
     <aside className={`
-        fixed inset-y-0 left-0 z-30 bg-white/90 backdrop-blur-xl border-r border-cyber-border shadow-2xl transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-30 glass-panel transition-transform duration-300 ease-in-out border-r border-white/10
         ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} 
-        md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'} md:shadow-sm md:bg-white/70
+        md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'}
     `}>
       <div className="h-16 hidden md:flex items-center justify-center border-b border-cyber-border mb-2">
         <SidebarSwitch checked={isCollapsed} onChange={() => setIsCollapsed(!isCollapsed)} />
@@ -45,8 +45,8 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative
                 ${isActive
-                  ? 'bg-cyber-primary text-white shadow-md shadow-cyber-primary/30'
-                  : 'text-cyber-muted hover:bg-slate-100 hover:text-cyber-text'
+                  ? 'bg-cyber-primary text-white shadow-lg shadow-cyber-primary/40 border border-cyber-primary/50'
+                  : 'text-cyber-muted hover:bg-white/5 hover:text-white'
                 }
                 ${isCollapsed ? 'justify-center px-2' : ''}
               `}

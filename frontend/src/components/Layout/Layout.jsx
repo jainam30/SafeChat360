@@ -9,16 +9,12 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-transparent text-cyber-text overflow-hidden relative">
-      {/* Background ambient glow - simplified for light mode */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-300/20 rounded-full blur-[100px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-300/20 rounded-full blur-[100px] animate-pulse-slow" style={{ animationDelay: '1.5s' }}></div>
-      </div>
+      {/* Background ambient glow - handled by AnimatedBackground */}{/* Replaced by AnimatedBackground component */}{/* Mobile Menu Button - Visible only on mobile when sidebar closed */}
 
       {/* Mobile Menu Button - Visible only on mobile when sidebar closed */}
       <button
         onClick={() => setSidebarOpen(true)}
-        className="md:hidden absolute top-4 left-4 z-40 p-2 bg-white/80 backdrop-blur rounded-full shadow-md text-cyber-primary border border-cyber-border hover:bg-white transition-colors"
+        className="md:hidden absolute top-4 left-4 z-40 p-2 glass-button text-white border border-white/20 hover:bg-white/10 transition-colors"
       >
         <Menu size={24} />
       </button>

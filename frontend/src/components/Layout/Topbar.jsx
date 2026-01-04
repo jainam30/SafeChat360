@@ -30,7 +30,7 @@ export default function Topbar() {
   }
 
   return (
-    <header className="h-16 border-b border-cyber-border bg-white/70 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
+    <header className="h-16 border-b border-white/10 glass-panel flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
@@ -48,7 +48,7 @@ export default function Topbar() {
           <input
             type="text"
             placeholder="Search..."
-            className="bg-slate-100 border border-cyber-border rounded-full pl-10 pr-4 py-1.5 text-sm text-cyber-text focus:outline-none focus:border-cyber-primary/50 focus:bg-white focus:ring-1 focus:ring-cyber-primary/20 transition-all w-64"
+            className="glass-input !rounded-full !py-1.5 !bg-black/20 focus:!bg-black/30 border-white/10 pl-10 pr-4 text-sm w-64"
           />
         </div>
 
@@ -56,7 +56,7 @@ export default function Topbar() {
         <div className="relative" ref={notificationRef}>
           <button
             onClick={handleNotificationClick}
-            className="p-2 rounded-full hover:bg-slate-100 text-cyber-muted hover:text-cyber-primary transition-colors relative"
+            className="p-2 rounded-full hover:bg-white/5 text-cyber-muted hover:text-white transition-colors relative"
           >
             <Bell size={20} />
             {notifications.length > 0 && (
@@ -65,9 +65,9 @@ export default function Topbar() {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden transform origin-top-right transition-all animate-in fade-in slide-in-from-top-2 z-50">
-              <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
+            <div className="absolute right-0 mt-2 w-80 glass-card overflow-hidden transform origin-top-right transition-all animate-in fade-in slide-in-from-top-2 z-50 border border-white/10">
+              <div className="p-3 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h3 className="font-semibold text-white text-sm">Notifications</h3>
                 {notifications.length > 0 && (
                   <span className="text-xs bg-cyber-primary/10 text-cyber-primary px-2 py-0.5 rounded-full font-medium">
                     {notifications.length} New
@@ -77,14 +77,14 @@ export default function Topbar() {
 
               <div className="max-h-[400px] overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400">
+                  <div className="p-8 text-center text-cyber-muted">
                     <Bell size={32} className="mx-auto mb-2 opacity-20" />
                     <p className="text-sm">No new notifications</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-white/5">
                     {notifications.map((notif) => (
-                      <div key={notif.id} className="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => {
+                      <div key={notif.id} className="p-4 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {
                         if (notif.type === 'friend_request') {
                           navigate('/friends');
                           setShowNotifications(false);
@@ -93,20 +93,20 @@ export default function Topbar() {
                         <div className="flex gap-3">
                           <div className="mt-1">
                             {notif.type === 'friend_request' ? (
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
+                              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
                                 <UserPlus size={16} />
                               </div>
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-cyber-muted">
                                 <Bell size={16} />
                               </div>
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm text-gray-800">
+                            <p className="text-sm text-white">
                               <span className="font-semibold">{notif.requester_name || 'Someone'}</span> sent you a friend request
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-xs text-cyber-muted mt-1">
                               {new Date(notif.created_at).toLocaleDateString()}
                             </p>
                           </div>
@@ -135,7 +135,7 @@ export default function Topbar() {
             {/* <div className="text-xs text-cyber-muted">Admin</div> */}
           </div>
           <Link to="/account" className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px] cursor-pointer hover:scale-105 transition-transform">
-            <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden border border-cyber-border">
+            <div className="h-full w-full rounded-full bg-black/20 flex items-center justify-center overflow-hidden border border-white/10">
               <img
                 src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`}
                 alt={user?.username}
@@ -149,7 +149,7 @@ export default function Topbar() {
           </Link>
           <button
             onClick={logout}
-            className="ml-2 px-4 py-1.5 rounded-lg border border-red-500/30 text-red-500 text-sm hover:bg-red-50 hover:border-red-500/50 transition-all"
+            className="ml-2 px-4 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-sm hover:bg-red-500/10 hover:border-red-500/50 transition-all font-medium"
           >
             Logout
           </button>

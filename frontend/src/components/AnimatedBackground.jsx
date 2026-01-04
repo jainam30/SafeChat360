@@ -5,8 +5,8 @@ const AnimatedBackground = () => {
     return (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]">
             {/* Gradient Mesh */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-200/30 rounded-full blur-[100px] animate-pulse-slow"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-200/30 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/20 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
 
             {/* Floating Stickers */}
             <div className="sticker absolute top-[15%] left-[10%] animate-float-slow text-cyber-primary">

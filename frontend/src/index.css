@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --bg-primary: #F0F4F8;
-    --text-primary: #1E293B;
+    --bg-primary: #141E30;
+    --text-primary: #F8FAFC;
   }
 
   body {
     @apply bg-cyber-background text-cyber-text antialiased;
-    background-image: linear-gradient(135deg, #F0F4F8 0%, #E0E7FF 100%);
+    background-image: linear-gradient(135deg, #141E30 0%, #3F5E96 100%);
     min-height: 100vh;
   }
 
@@ -25,15 +25,15 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
-    /* Slate 300 */
+    background: #3F5E96;
+    /* Royal Blue */
     border-radius: 5px;
-    border: 2px solid #F0F4F8;
+    border: 2px solid #141E30;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
-    /* Slate 400 */
+    background: #2D4A80;
+    /* Darker Blue */
   }
 }
 
@@ -45,33 +45,33 @@
     @apply absolute opacity-40 text-cyber-primary drop-shadow-lg pointer-events-none z-0;
   }
 
-  /* Light Theme Card */
+  /* Dark Theme Card */
   .glass-card {
-    @apply bg-white/90 backdrop-blur-xl border border-white/60 rounded-2xl shadow-lg transition-all duration-300;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    @apply bg-cyber-surface/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl transition-all duration-300;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 
   .glass-card:hover {
-    @apply transform -translate-y-1;
-    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.12);
+    @apply transform -translate-y-1 bg-cyber-surface/20 border-white/20;
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
   }
 
-  /* Light Theme Input */
+  /* Dark Theme Input */
   .glass-input {
-    @apply w-full bg-white border border-cyber-border rounded-xl px-4 py-3 text-cyber-text placeholder-cyber-muted focus:outline-none focus:border-cyber-primary focus:ring-2 focus:ring-cyber-primary/20 transition-all shadow-sm;
+    @apply w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-cyber-muted focus:outline-none focus:border-cyber-primary focus:ring-2 focus:ring-cyber-primary/50 transition-all shadow-inner;
   }
 
-  /* Light Theme Secondary Button */
+  /* Dark Theme Secondary Button */
   .glass-button {
-    @apply bg-white text-cyber-text border border-cyber-border px-4 py-2 rounded-xl font-medium hover:bg-slate-50 hover:border-cyber-muted transition-colors shadow-sm;
+    @apply bg-white/5 text-white border border-white/10 px-4 py-2 rounded-xl font-medium hover:bg-white/10 hover:border-white/20 transition-all shadow-sm backdrop-blur-md;
   }
 
-  /* Light Theme Primary Button */
+  /* Dark Theme Primary Button */
   .glass-button-primary {
-    @apply bg-cyber-primary text-white font-bold px-6 py-2.5 rounded-xl hover:bg-cyber-primary_hover shadow-lg shadow-cyber-primary/30 transition-all transform hover:-translate-y-0.5;
+    @apply bg-cyber-primary text-white font-bold px-6 py-2.5 rounded-xl hover:bg-cyber-primary_hover shadow-lg shadow-cyber-primary/40 transition-all transform hover:-translate-y-0.5 border border-white/5;
   }
 
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-xl border-r border-white/50 h-full shadow-sm;
+    @apply bg-black/20 backdrop-blur-xl border-r border-white/5 h-full shadow-lg;
   }
 }

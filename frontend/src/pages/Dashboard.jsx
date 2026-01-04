@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import {
   Heart, MessageCircle, Send, Bookmark, MoreHorizontal,
-  Smile, Image as ImageIcon, X, Globe, Users
+  Smile, Image as ImageIcon, X, Globe, Users, Plus, Camera, Video, AlertTriangle, Share2, Shield, Check
 } from 'lucide-react';
 import StoryViewer from '../components/StoryViewer';
 import StoryEditor from '../components/StoryEditor';
@@ -189,58 +189,58 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex justify-center bg-gray-50 min-h-screen">
-      <div className="w-full max-w-[1000px] flex justify-between gap-10 pt-8 pb-20 px-4">
+    <div className="flex justify-center min-h-screen">
+      <div className="w-full max-w-[1000px] flex flex-col lg:flex-row gap-10 pt-8 pb-20 px-4">
 
         {/* LEFT/MAIN COLUMN */}
-        <div className="w-full max-w-[630px] flex flex-col mx-auto lg:mx-0">
+        <div className="w-full lg:max-w-[630px] flex flex-col mx-auto lg:mx-0">
 
           {/* STORIES TRAY */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 overflow-x-auto scrollbar-hide flex gap-4 shadow-sm">
+          <div className="glass-panel border-none bg-black/20 rounded-xl p-4 mb-6 overflow-x-auto scrollbar-hide flex gap-4 shadow-sm">
             {/* Add Story Button */}
             <div className="flex flex-col items-center gap-1 min-w-[66px] cursor-pointer" onClick={() => document.getElementById('story-file').click()}>
-              <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-gray-100 border border-gray-300 relative">
-                <div className="w-full h-full rounded-full overflow-hidden bg-gray-50 flex items-center justify-center">
-                  <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover opacity-80" alt="Your profile" />
+              <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-white/10 border border-white/20 relative group hover:border-cyber-primary transition-colors">
+                <div className="w-full h-full rounded-full overflow-hidden bg-black/40 flex items-center justify-center">
+                  <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Your profile" />
                 </div>
-                <div className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-0.5 border-2 border-white">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14" /></svg>
+                <div className="absolute bottom-0 right-0 bg-cyber-primary text-white rounded-full p-0.5 border-2 border-black">
+                  <Plus size={12} strokeWidth={3} />
                 </div>
               </div>
-              <span className="text-xs text-gray-500 truncate w-full text-center">Your Story</span>
+              <span className="text-xs text-cyber-muted truncate w-full text-center group-hover:text-white">Your Story</span>
               <input id="story-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, true)} accept="image/*,video/*" />
             </div>
 
             {/* Story Items */}
             {stories.map(story => (
-              <div key={story.id} className="flex flex-col items-center gap-1 min-w-[66px] cursor-pointer" onClick={() => setViewingStory(story)}>
-                <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500">
-                  <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-50">
+              <div key={story.id} className="flex flex-col items-center gap-1 min-w-[66px] cursor-pointer group" onClick={() => setViewingStory(story)}>
+                <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-gradient-to-tr from-cyber-primary to-cyber-secondary group-hover:scale-105 transition-transform">
+                  <div className="w-full h-full rounded-full border-2 border-black overflow-hidden bg-black/40">
                     <img src={story.author_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${story.username}`} className="w-full h-full object-cover" alt={`${story.username}'s story`} />
                   </div>
                 </div>
-                <span className="text-xs text-gray-700 truncate w-16 text-center font-medium">{story.username}</span>
+                <span className="text-xs text-cyber-muted truncate w-16 text-center font-medium group-hover:text-white transition-colors">{story.username}</span>
               </div>
             ))}
           </div>
 
-          {/* CREATE POST (Minimalist) */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+          {/* CREATE POST */}
+          <div className="glass-card p-4 mb-6">
             <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100">
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-black/20 border border-white/10">
                 <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover" alt="Your profile" />
               </div>
               <div className="flex-1">
                 <input
                   type="text"
                   placeholder="Start a post..."
-                  className="w-full h-10 bg-gray-100 rounded-full px-4 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all"
+                  className="w-full h-10 bg-black/20 rounded-full px-4 text-sm text-white placeholder-cyber-muted focus:outline-none focus:ring-1 focus:ring-cyber-primary/50 transition-all border border-white/5"
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                 />
 
                 {mediaUrl && (
-                  <div className="relative mt-3 rounded-lg overflow-hidden aspect-square w-full max-w-[400px] bg-black/5 mx-auto border border-gray-100 shadow-inner">
+                  <div className="relative mt-3 rounded-lg overflow-hidden aspect-square w-full max-w-[400px] bg-black/20 mx-auto border border-white/10 shadow-inner">
                     <button
                       onClick={() => {
                         setMediaUrl('');
@@ -256,18 +256,38 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                <div className="flex justify-between items-center mt-3">
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
                   <div className="flex gap-2">
-                    <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-500 font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors">
-                      <ImageIcon size={18} /> Photo/Video
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-white/5 rounded-full text-cyber-muted hover:text-cyber-primary transition-colors tooltip" title="Add Photo/Video">
+                      <ImageIcon size={20} />
                     </button>
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*,audio/*" onChange={handleFileUpload} />
+                    <button onClick={() => setShowStoryModal(true)} className="p-2 hover:bg-white/5 rounded-full text-cyber-muted hover:text-pink-500 transition-colors tooltip" title="Create Story">
+                      <ImageIcon size={20} className="rotate-90" /> {/* Placeholder for Video icon if missing */}
+                    </button>
+                    <button className="p-2 hover:bg-white/5 rounded-full text-cyber-muted hover:text-yellow-500 transition-colors tooltip" title="Feeling/Activity">
+                      <Smile size={20} />
+                    </button>
+                    <div className="h-8 w-px bg-white/10 mx-2"></div>
+                    <select
+                      value={privacy}
+                      onChange={(e) => setPrivacy(e.target.value)}
+                      className="bg-transparent text-sm font-medium text-cyber-muted focus:outline-none cursor-pointer hover:text-white [&>option]:text-black"
+                    >
+                      <option value="public">Public</option>
+                      <option value="friends">Friends</option>
+                      <option value="private">Only Me</option>
+                    </select>
                   </div>
-                  {(newPostContent || mediaUrl) && (
-                    <button onClick={createPost} disabled={isPosting || isUploading} className="text-sm font-bold text-blue-500 hover:text-blue-700 disabled:opacity-50">
-                      {isPosting ? 'Posting...' : isUploading ? 'Uploading...' : 'Post'}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <div className="hidden">
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*,audio/*" onChange={handleFileUpload} />
+                    </div>
+                    {(newPostContent || mediaUrl) && (
+                      <button onClick={createPost} disabled={isPosting || isUploading} className="text-sm font-bold text-cyber-primary hover:text-cyber-primary_hover disabled:opacity-50">
+                        {isPosting ? 'Posting...' : isUploading ? 'Uploading...' : 'Post'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -276,24 +296,24 @@ const Dashboard = () => {
           {/* FEED STREAM */}
           <div className="flex flex-col gap-4">
             {posts.map(post => (
-              <article key={post.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+              <article key={post.id} className="glass-card overflow-hidden">
                 {/* Post Header */}
-                <div className="flex items-center justify-between p-3">
+                <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-100 cursor-pointer">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 cursor-pointer">
                       <img src={post.author_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`} className="w-full h-full object-cover" alt={`${post.username}'s profile`} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 leading-none cursor-pointer hover:underline">{post.username}</p>
-                      {post.location && <p className="text-xs text-gray-500">{post.location}</p>}
+                      <p className="text-sm font-semibold text-white leading-none cursor-pointer hover:underline">{post.username}</p>
+                      {post.location && <p className="text-xs text-cyber-muted mt-1">{post.location}</p>}
                     </div>
                   </div>
-                  <button className="text-gray-600 hover:text-gray-900"><MoreHorizontal size={20} /></button>
+                  <button className="text-cyber-muted hover:text-white"><MoreHorizontal size={20} /></button>
                 </div>
 
                 {/* Media */}
                 {post.media_url && (
-                  <div className="w-full bg-black/5 aspect-square relative flex items-center justify-center overflow-hidden">
+                  <div className="w-full bg-black/40 aspect-square relative flex items-center justify-center overflow-hidden border-y border-white/5">
                     {post.media_type === 'image' && <img src={post.media_url} className="w-full h-full object-cover" loading="lazy" alt="Post content" />}
                     {post.media_type === 'video' && <video src={post.media_url} controls className="w-full h-full object-contain" />}
                     {post.media_type === 'audio' && <div className="w-full p-10 flex justify-center"><audio src={post.media_url} controls /></div>}
@@ -302,15 +322,15 @@ const Dashboard = () => {
 
                 {/* Content If No Media */}
                 {!post.media_url && post.content && (
-                  <div className="p-4 bg-gradient-to-br from-indigo-50 to-pink-50 min-h-[200px] flex items-center justify-center text-center">
-                    <p className="text-xl font-medium text-gray-800">{post.content}</p>
+                  <div className="p-6 bg-gradient-to-br from-cyber-primary/10 to-purple-500/10 min-h-[150px] flex items-center justify-center text-center border-y border-white/5">
+                    <p className="text-lg font-medium text-white">{post.content}</p>
                   </div>
                 )}
 
                 {/* Action Bar */}
-                <div className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-4">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-5">
                       <button
                         onClick={async () => {
                           try {
@@ -319,94 +339,111 @@ const Dashboard = () => {
                             setPosts(posts.map(p => p.id === post.id ? { ...p, likes_count: (p.likes_count || 0) + (p.has_liked ? -1 : 1), has_liked: !p.has_liked } : p));
                           } catch (e) { console.error(e); }
                         }}
-                        className={`${post.has_liked ? 'text-red-500' : 'text-gray-800 hover:text-red-500'} transition-colors`}
+                        className={`${post.has_liked ? 'text-cyber-accent' : 'text-cyber-muted hover:text-cyber-accent'} transition-colors`}
                       >
                         <Heart size={24} fill={post.has_liked ? "currentColor" : "none"} />
                       </button>
-                      <button className="text-gray-800 hover:text-gray-600 transition-colors"><MessageCircle size={24} /></button>
-                      <button className="text-gray-800 hover:text-gray-600 transition-colors"><Send size={24} /></button>
+                      <button className="text-cyber-muted hover:text-white transition-colors"><MessageCircle size={24} /></button>
+                      <button className="text-cyber-muted hover:text-white transition-colors"><Send size={24} /></button>
                     </div>
-                    <button className="text-gray-800 hover:text-gray-600"><Bookmark size={24} /></button>
+                    <button className="text-cyber-muted hover:text-white"><Bookmark size={24} /></button>
                   </div>
 
                   {/* Likes Count */}
-                  <div className="text-sm font-semibold text-gray-900 mb-1">
+                  <div className="text-sm font-semibold text-white mb-2">
                     {post.likes_count || 0} likes
                   </div>
 
                   {/* Caption */}
                   {post.content && post.media_url && (
-                    <div className="text-sm text-gray-900 mb-1">
+                    <div className="text-sm text-white mb-2">
                       <span className="font-semibold mr-2">{post.username}</span>
-                      {post.content}
+                      <span className="text-gray-300">{post.content}</span>
                     </div>
                   )}
 
                   {/* Time */}
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">
+                  <div className="text-[10px] text-cyber-muted uppercase tracking-wide">
                     {new Date(post.created_at).toDateString()}
                   </div>
                 </div>
 
                 {/* Add Comment */}
-                <div className="border-t border-gray-100 p-3 flex items-center gap-3">
-                  <button className="text-gray-400"><Smile size={24} /></button>
-                  <input type="text" placeholder="Add a comment..." className="flex-1 border-none focus:ring-0 text-sm placeholder-gray-500" />
-                  <button className="text-blue-500 font-semibold text-sm opacity-50 hover:opacity-100">Post</button>
+                <div className="border-t border-white/10 p-3 flex items-center gap-3">
+                  <button className="text-cyber-muted hover:text-white"><Smile size={24} /></button>
+                  <input type="text" placeholder="Add a comment..." className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-cyber-muted text-white" />
+                  <button className="text-cyber-primary font-semibold text-sm opacity-50 hover:opacity-100">Post</button>
                 </div>
               </article>
             ))}
           </div>
 
           {posts.length === 0 && !loading && (
-            <div className="text-center py-10 text-gray-500">No posts yet. Be the first!</div>
+            <div className="text-center py-10 text-cyber-muted glass-card">No posts yet. Be the first!</div>
           )}
         </div>
 
         {/* RIGHT COLUMN (DESKTOP) */}
-        <div className="hidden lg:block w-[320px] pt-4 sticky top-8 h-fit">
-          {/* User Profile Mini */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-200">
-                <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover" alt="Current user" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-gray-900">{user?.username}</div>
-                <div className="text-sm text-gray-500">{user?.full_name}</div>
+        <div className="hidden lg:block w-[320px] space-y-6 h-fit sticky top-8">
+          {/* Profile Card */}
+          <div className="glass-card p-6 text-center">
+            <div className="relative inline-block">
+              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-cyber-primary to-cyber-secondary mx-auto">
+                <div className="w-full h-full rounded-full border-4 border-black/20 overflow-hidden bg-black/50">
+                  <img
+                    src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
             </div>
-            <button className="text-xs font-bold text-blue-500 hover:text-blue-700">Switch</button>
-          </div>
+            <h2 className="mt-4 text-xl font-bold text-white tracking-tight">{user?.username}</h2>
+            <p className="text-sm text-cyber-muted">{user?.email}</p>
 
-          <div className="flex justify-between items-center mb-4">
-            <div className="text-sm font-bold text-gray-500">Suggested for you</div>
-            <button className="text-xs font-bold text-gray-900 hover:text-gray-600">See All</button>
-          </div>
-
-          {/* Suggestions List */}
-          <div className="space-y-3">
-            {users.sort(() => 0.5 - Math.random()).slice(0, 5).map(u => (
-              <div key={u.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden">
-                    <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" alt={u.username} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm text-gray-900 hover:underline cursor-pointer">{u.username}</div>
-                    <div className="text-xs text-gray-500 truncate w-32">New to SafeChat360</div>
-                  </div>
-                </div>
-                <button className="text-xs font-bold text-blue-500 hover:text-blue-700">Follow</button>
+            <div className="flex justify-center gap-6 mt-6 border-t border-white/10 pt-4">
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">24</div>
+                <div className="text-xs text-cyber-muted uppercase tracking-wider">Posts</div>
               </div>
-            ))}
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">1.2k</div>
+                <div className="text-xs text-cyber-muted uppercase tracking-wider">Followers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">85</div>
+                <div className="text-xs text-cyber-muted uppercase tracking-wider">Following</div>
+              </div>
+            </div>
           </div>
 
-          {/* Footer Links */}
-          <div className="mt-8 flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-300">
-            <span>About</span><span>•</span><span>Help</span><span>•</span><span>API</span><span>•</span><span>Privacy</span><span>•</span><span>Terms</span>
+          {/* Suggested Friends */}
+          <div className="glass-card p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-sm font-bold text-white">Suggested for you</div>
+              <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary_hover">See All</button>
+            </div>
+
+            <div className="space-y-3">
+              {users.sort(() => 0.5 - Math.random()).slice(0, 5).map(u => (
+                <div key={u.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10">
+                      <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" alt={u.username} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white hover:underline cursor-pointer">{u.username}</div>
+                      <div className="text-xs text-cyber-muted truncate w-32">New Member</div>
+                    </div>
+                  </div>
+                  <button className="text-xs font-bold text-cyber-primary hover:text-white">Follow</button>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-4 text-xs text-gray-300 uppercase">
+
+          {/* Footer */}
+          <div className="glass-card p-4 text-xs text-cyber-muted text-center">
             © 2025 SafeChat360
           </div>
         </div>
@@ -415,7 +452,8 @@ const Dashboard = () => {
 
       {/* Story Modals */}
       {showStoryModal && storyMedia && (
-        <div className="fixed inset-0 z-[60]">
+        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center">
+          {/* Simple wrapper for now, assuming StoryEditor handles its own closing UI */}
           <StoryEditor
             mediaFile={storyMedia}
             mediaType={storyType}

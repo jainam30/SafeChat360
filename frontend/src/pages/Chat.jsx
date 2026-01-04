@@ -340,14 +340,14 @@ export default function Chat() {
     return (
         <div className="flex h-[calc(100vh-100px)] w-full mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm my-4 lg:rounded-none lg:my-0 lg:border-x-0 lg:border-t-0">
             {/* LEFT SIDEBAR (Chat List) */}
-            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-gray-200 bg-white`}>
+            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-white/10 glass-panel md:rounded-l-lg`}>
 
                 {/* Header */}
-                <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5">
-                    <div className="font-bold text-xl flex items-center gap-2">
-                        {user.username} <span className="text-xs text-gray-400 font-normal">▼</span>
+                <div className="h-16 border-b border-white/10 flex items-center justify-between px-5">
+                    <div className="font-bold text-xl flex items-center gap-2 text-white">
+                        {user.username} <span className="text-xs text-cyber-muted font-normal">▼</span>
                     </div>
-                    <button onClick={() => setShowGroupModal(true)} className="text-gray-900">
+                    <button onClick={() => setShowGroupModal(true)} className="text-white hover:text-cyber-primary transition-colors">
                         <Plus size={24} strokeWidth={1.5} />
                     </button>
                 </div>
@@ -427,9 +427,9 @@ export default function Chat() {
             </div>
 
             {/* RIGHT SIDE (Chat Window) */}
-            <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col bg-white`}>
+            <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col glass-card md:rounded-l-none md:rounded-r-lg`}>
                 {/* Chat Header */}
-                <div className="h-16 border-b border-gray-100 flex items-center justify-between px-5 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
+                <div className="h-16 border-b border-white/10 flex items-center justify-between px-5 sticky top-0 bg-white/5 backdrop-blur-sm z-10">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setMobileView('list')} className="md:hidden text-gray-900 mr-2"><ArrowLeft size={24} /></button>
 
@@ -500,12 +500,12 @@ export default function Chat() {
                                 )}
 
                                 <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative ${isMe
-                                    ? 'bg-blue-500 text-white rounded-br-md from-purple-500 to-blue-500 bg-gradient-to-br'
-                                    : 'bg-gray-100 text-gray-900 rounded-bl-md'}`}>
+                                    ? 'bg-cyber-primary text-white rounded-br-md'
+                                    : 'bg-white/10 text-white rounded-bl-md'}`}>
 
                                     {/* Sender Name in Group/Global */}
                                     {!isMe && activeChat.type !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== msg.sender_id) && (
-                                        <div className="text-xs text-gray-500 mb-1 ml-1">{msg.sender_username}</div>
+                                        <div className="text-xs text-cyber-secondary mb-1 ml-1">{msg.sender_username}</div>
                                     )}
 
                                     {msg.content}
@@ -533,9 +533,9 @@ export default function Chat() {
 
                 {/* Input Area */}
                 <div className="p-4 px-5">
-                    <div className="flex items-center gap-2 bg-white rounded-full border border-gray-300 px-2 py-1.5 focus-within:border-gray-400 transition-colors">
+                    <div className="flex items-center gap-2 bg-black/20 rounded-full border border-white/10 px-2 py-1.5 focus-within:border-cyber-primary/50 transition-colors">
                         <div className="flex items-center gap-1 ml-2">
-                            <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full"><Smile size={24} strokeWidth={1.5} /></button>
+                            <button className="p-2 text-cyber-muted hover:text-white rounded-full"><Smile size={24} strokeWidth={1.5} /></button>
                         </div>
                         <input
                             type="text"
@@ -543,15 +543,15 @@ export default function Chat() {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyPress={handleKeyPress}
                             placeholder="Message..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-gray-500 h-10"
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-white text-sm placeholder-cyber-muted h-10"
                         />
                         <div className="flex items-center gap-2 mr-2">
                             {inputValue.trim() ? (
-                                <button onClick={sendMessage} className="text-blue-500 font-semibold text-sm hover:text-blue-700">Send</button>
+                                <button onClick={sendMessage} className="text-cyber-primary font-bold text-sm hover:text-cyber-primary_hover">Send</button>
                             ) : (
                                 <>
-                                    <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full"><ImageIcon size={24} strokeWidth={1.5} /></button>
-                                    <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full"><Heart size={24} strokeWidth={1.5} /></button>
+                                    <button className="p-2 text-cyber-muted hover:text-white rounded-full"><ImageIcon size={24} strokeWidth={1.5} /></button>
+                                    <button className="p-2 text-cyber-muted hover:text-white rounded-full"><Heart size={24} strokeWidth={1.5} /></button>
                                 </>
                             )}
 

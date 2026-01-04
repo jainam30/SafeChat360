@@ -9,15 +9,15 @@ module.exports = {
     extend: {
       colors: {
         cyber: {
-          background: '#F0F4F8', // Soft Blue-Grey Light BG
-          surface: '#FFFFFF', // Clean White Surface
-          text: '#1E293B', // Slate 800 (Dark Grey for text)
-          muted: '#64748B', // Slate 500
-          primary: '#6366F1', // Indigo 500 (Vibrant, Friendly)
-          primary_hover: '#4F46E5', // Indigo 600
+          background: '#141E30', // Midnight Blue BG
+          surface: '#1E2B45', // Lighter Navy Surface
+          text: '#F8FAFC', // Near White Text
+          muted: '#94A3B8', // Slate 400 Muted Text
+          primary: '#3F5E96', // Royal Blue Primary
+          primary_hover: '#2D4A80', // Darker Royal Blue
           secondary: '#10B981', // Emerald 500 (Success)
           accent: '#F43F5E', // Rose 500 (Alerts)
-          border: '#E2E8F0', // Slate 200 (Subtle Borders)
+          border: '#2D3A52', // Darker Border
         }
       },
     },
@@ -40,7 +40,9 @@ module.exports = {
       }
     },
     backgroundImage: {
-      'gradient-light': 'linear-gradient(135deg, #F0F4F8 0%, #E0E7FF 100%)',
+      backgroundImage: {
+        'gradient-main': 'linear-gradient(135deg, #141E30 0%, #3F5E96 100%)',
+      }
     }
   },
   plugins: [],
