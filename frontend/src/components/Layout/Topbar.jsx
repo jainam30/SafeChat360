@@ -30,25 +30,25 @@ export default function Topbar() {
   }
 
   return (
-    <header className="h-16 border-b border-white/10 glass-panel flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
+    <header className="h-16 border-b border-white/20 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm bg-[#12c2e9]">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
-          <h1 className="text-xl font-bold text-cyber-primary header-glow">
+          <h1 className="text-xl font-bold text-white header-glow drop-shadow-md">
             SafeChat360
           </h1>
         </div>
-        <div className="h-4 w-px bg-cyber-border hidden sm:block"></div>
-        <div className="text-sm font-medium text-cyber-muted hidden sm:block">Dashboard</div>
+        <div className="h-4 w-px bg-white/20 hidden sm:block"></div>
+        <div className="text-sm font-medium text-slate-800 hidden sm:block">Dashboard</div>
       </div>
 
       <div className="flex items-center gap-4">
         <div className="relative group hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-4 h-4 group-focus-within:text-cyber-primary transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4 group-focus-within:text-slate-900 transition-colors" />
           <input
             type="text"
             placeholder="Search..."
-            className="glass-input !rounded-full !py-1.5 !bg-black/20 focus:!bg-black/30 border-white/10 pl-10 pr-4 text-sm w-64"
+            className="glass-input !rounded-full !py-1.5 !bg-white/30 focus:!bg-white/50 border-white/20 pl-10 pr-4 text-sm w-64 text-slate-900 placeholder-slate-600"
           />
         </div>
 
@@ -56,7 +56,7 @@ export default function Topbar() {
         <div className="relative" ref={notificationRef}>
           <button
             onClick={handleNotificationClick}
-            className="p-2 rounded-full hover:bg-white/5 text-cyber-muted hover:text-white transition-colors relative"
+            className="p-2 rounded-full hover:bg-white/20 text-slate-800 hover:text-slate-900 transition-colors relative"
           >
             <Bell size={20} />
             {notifications.length > 0 && (

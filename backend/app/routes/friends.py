@@ -8,8 +8,7 @@ from app.models import User, Friendship
 
 router = APIRouter(prefix="/api/friends", tags=["friends"])
 
-from app.routes.chat import manager
-import json
+# from app.routes.chat import manager # Moved inside functions to avoid circular import
 
 @router.post("/request/{friend_id}")
 async def send_friend_request(
@@ -27,6 +26,8 @@ async def send_friend_request(
     friendship = crud.create_friendship(session, current_user.id, friend_id)
     
     # Notify target
+    from app.routes.chat import manager
+    import json
     await manager.broadcast(
         json.dumps({
             "type": "notification",
@@ -75,6 +76,8 @@ async def accept_request(
     updated = crud.update_friendship_status(session, friendship_id, "accepted")
     
     # Notify original requester
+    from app.routes.chat import manager
+    import json
     await manager.broadcast(
         json.dumps({
             "type": "notification",
@@ -112,6 +115,7 @@ def search_users(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
+    from sqlmodel import select # Explicit import to fix reported NameError
     try:
         if not q:
             return []

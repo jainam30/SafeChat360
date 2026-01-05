@@ -25,7 +25,8 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
   // We use `md:` prefix to apply desktop styles separately.
   return (
     <aside className={`
-        fixed inset-y-0 left-0 z-30 glass-panel transition-transform duration-300 ease-in-out border-r border-white/10
+        fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out border-r border-white/20
+        bg-[#12c2e9]  /* Explicit Light Blue */
         ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} 
         md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'}
     `}>
@@ -45,15 +46,15 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative
                 ${isActive
-                  ? 'bg-cyber-primary text-white shadow-lg shadow-cyber-primary/40 border border-cyber-primary/50'
-                  : 'text-cyber-muted hover:bg-white/5 hover:text-white'
+                  ? 'bg-white text-cyber-primary shadow-md font-bold'
+                  : 'text-slate-800 hover:bg-white/20 hover:text-slate-900'
                 }
                 ${isCollapsed ? 'justify-center px-2' : ''}
               `}
               title={isCollapsed ? it.label : ''}
             >
               <div className="relative">
-                <Icon size={20} className={({ isActive }) => isActive ? 'animate-pulse' : 'group-hover:text-cyber-primary transition-colors'} />
+                <Icon size={20} className={({ isActive }) => isActive ? 'animate-pulse' : 'group-hover:text-slate-900 transition-colors'} />
                 {badgeCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-white">
                     {badgeCount}

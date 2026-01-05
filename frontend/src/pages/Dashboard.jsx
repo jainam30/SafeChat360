@@ -234,7 +234,7 @@ const Dashboard = () => {
                 <input
                   type="text"
                   placeholder="Start a post..."
-                  className="w-full h-10 bg-black/20 rounded-full px-4 text-sm text-white placeholder-cyber-muted focus:outline-none focus:ring-1 focus:ring-cyber-primary/50 transition-all border border-white/5"
+                  className="w-full h-10 bg-black/5 rounded-full px-4 text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyber-primary/50 transition-all border border-gray-200"
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                 />
@@ -304,8 +304,8 @@ const Dashboard = () => {
                       <img src={post.author_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`} className="w-full h-full object-cover" alt={`${post.username}'s profile`} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white leading-none cursor-pointer hover:underline">{post.username}</p>
-                      {post.location && <p className="text-xs text-cyber-muted mt-1">{post.location}</p>}
+                      <p className="text-sm font-semibold text-slate-800 leading-none cursor-pointer hover:underline">{post.username}</p>
+                      {post.location && <p className="text-xs text-slate-500 mt-1">{post.location}</p>}
                     </div>
                   </div>
                   <button className="text-cyber-muted hover:text-white"><MoreHorizontal size={20} /></button>
@@ -323,7 +323,7 @@ const Dashboard = () => {
                 {/* Content If No Media */}
                 {!post.media_url && post.content && (
                   <div className="p-6 bg-gradient-to-br from-cyber-primary/10 to-purple-500/10 min-h-[150px] flex items-center justify-center text-center border-y border-white/5">
-                    <p className="text-lg font-medium text-white">{post.content}</p>
+                    <p className="text-lg font-medium text-slate-800">{post.content}</p>
                   </div>
                 )}
 
@@ -350,20 +350,20 @@ const Dashboard = () => {
                   </div>
 
                   {/* Likes Count */}
-                  <div className="text-sm font-semibold text-white mb-2">
+                  <div className="text-sm font-semibold text-slate-800 mb-2">
                     {post.likes_count || 0} likes
                   </div>
 
                   {/* Caption */}
                   {post.content && post.media_url && (
-                    <div className="text-sm text-white mb-2">
+                    <div className="text-sm text-slate-800 mb-2">
                       <span className="font-semibold mr-2">{post.username}</span>
-                      <span className="text-gray-300">{post.content}</span>
+                      <span className="text-slate-600">{post.content}</span>
                     </div>
                   )}
 
                   {/* Time */}
-                  <div className="text-[10px] text-cyber-muted uppercase tracking-wide">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide">
                     {new Date(post.created_at).toDateString()}
                   </div>
                 </div>
@@ -371,7 +371,7 @@ const Dashboard = () => {
                 {/* Add Comment */}
                 <div className="border-t border-white/10 p-3 flex items-center gap-3">
                   <button className="text-cyber-muted hover:text-white"><Smile size={24} /></button>
-                  <input type="text" placeholder="Add a comment..." className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-cyber-muted text-white" />
+                  <input type="text" placeholder="Add a comment..." className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-slate-400 text-slate-800" />
                   <button className="text-cyber-primary font-semibold text-sm opacity-50 hover:opacity-100">Post</button>
                 </div>
               </article>
@@ -398,21 +398,21 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            <h2 className="mt-4 text-xl font-bold text-white tracking-tight">{user?.username}</h2>
-            <p className="text-sm text-cyber-muted">{user?.email}</p>
+            <h2 className="mt-4 text-xl font-bold text-slate-800 tracking-tight">{user?.username}</h2>
+            <p className="text-sm text-slate-500">{user?.email}</p>
 
-            <div className="flex justify-center gap-6 mt-6 border-t border-white/10 pt-4">
+            <div className="flex justify-center gap-6 mt-6 border-t border-gray-200 pt-4">
               <div className="text-center">
-                <div className="text-lg font-bold text-white">24</div>
-                <div className="text-xs text-cyber-muted uppercase tracking-wider">Posts</div>
+                <div className="text-lg font-bold text-slate-800">24</div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider">Posts</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-white">1.2k</div>
-                <div className="text-xs text-cyber-muted uppercase tracking-wider">Followers</div>
+                <div className="text-lg font-bold text-slate-800">1.2k</div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider">Followers</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-white">85</div>
-                <div className="text-xs text-cyber-muted uppercase tracking-wider">Following</div>
+                <div className="text-lg font-bold text-slate-800">85</div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider">Following</div>
               </div>
             </div>
           </div>
@@ -420,7 +420,7 @@ const Dashboard = () => {
           {/* Suggested Friends */}
           <div className="glass-card p-6">
             <div className="flex justify-between items-center mb-4">
-              <div className="text-sm font-bold text-white">Suggested for you</div>
+              <div className="text-sm font-bold text-slate-800">Suggested for you</div>
               <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary_hover">See All</button>
             </div>
 
@@ -428,12 +428,12 @@ const Dashboard = () => {
               {users.sort(() => 0.5 - Math.random()).slice(0, 5).map(u => (
                 <div key={u.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
                       <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" alt={u.username} />
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-white hover:underline cursor-pointer">{u.username}</div>
-                      <div className="text-xs text-cyber-muted truncate w-32">New Member</div>
+                      <div className="font-bold text-sm text-slate-800 hover:underline cursor-pointer">{u.username}</div>
+                      <div className="text-xs text-slate-500 truncate w-32">New Member</div>
                     </div>
                   </div>
                   <button className="text-xs font-bold text-cyber-primary hover:text-white">Follow</button>

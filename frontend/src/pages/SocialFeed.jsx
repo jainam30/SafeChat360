@@ -3,7 +3,7 @@ import { formatTimeForUser, formatDateForUser } from '../utils/dateFormatter';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon } from 'lucide-react';
+import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile } from 'lucide-react';
 
 const SocialFeed = () => {
     const [posts, setPosts] = useState([]);

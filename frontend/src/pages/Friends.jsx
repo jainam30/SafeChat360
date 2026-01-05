@@ -151,7 +151,7 @@ export default function Friends() {
                             </div>
                         ) : (
                             friends.map(friend => (
-                                <div key={friend.id} className="glass-card p-4 flex items-center gap-4 bg-white/60">
+                                <div key={friend.id} className="glass-card p-4 flex items-center gap-4">
                                     <Link to={`/profile/${friend.id}`} className="flex items-center gap-4 flex-1 group">
                                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
                                             {friend.username.charAt(0).toUpperCase()}
@@ -190,7 +190,7 @@ export default function Friends() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {searchResults.map(user => (
-                                <div key={user.id} className="glass-card p-4 flex items-center gap-4 bg-white/60">
+                                <div key={user.id} className="glass-card p-4 flex items-center gap-4">
                                     <Link to={`/profile/${user.id}`} className="flex-1 flex items-center gap-4 group">
                                         <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-cyber-text font-bold text-lg">
                                             {user.username.charAt(0).toUpperCase()}
@@ -240,7 +240,7 @@ export default function Friends() {
                             </div>
                         ) : (
                             requests.map(req => (
-                                <div key={req.id} className="glass-card p-4 flex items-center justify-between bg-white/60">
+                                <div key={req.id} className="glass-card p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg border border-amber-200">
                                             {req.requester_name.charAt(0).toUpperCase()}

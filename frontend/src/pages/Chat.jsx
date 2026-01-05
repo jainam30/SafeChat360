@@ -343,11 +343,11 @@ export default function Chat() {
             <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-white/10 glass-panel md:rounded-l-lg`}>
 
                 {/* Header */}
-                <div className="h-16 border-b border-white/10 flex items-center justify-between px-5">
-                    <div className="font-bold text-xl flex items-center gap-2 text-white">
+                <div className="h-16 border-b border-gray-200 flex items-center justify-between px-5">
+                    <div className="font-bold text-xl flex items-center gap-2 text-slate-900">
                         {user.username} <span className="text-xs text-cyber-muted font-normal">▼</span>
                     </div>
-                    <button onClick={() => setShowGroupModal(true)} className="text-white hover:text-cyber-primary transition-colors">
+                    <button onClick={() => setShowGroupModal(true)} className="text-slate-600 hover:text-cyber-primary transition-colors">
                         <Plus size={24} strokeWidth={1.5} />
                     </button>
                 </div>
@@ -501,7 +501,7 @@ export default function Chat() {
 
                                 <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative ${isMe
                                     ? 'bg-cyber-primary text-white rounded-br-md'
-                                    : 'bg-white/10 text-white rounded-bl-md'}`}>
+                                    : 'bg-slate-100 text-slate-900 rounded-bl-md'}`}>
 
                                     {/* Sender Name in Group/Global */}
                                     {!isMe && activeChat.type !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== msg.sender_id) && (
@@ -533,9 +533,9 @@ export default function Chat() {
 
                 {/* Input Area */}
                 <div className="p-4 px-5">
-                    <div className="flex items-center gap-2 bg-black/20 rounded-full border border-white/10 px-2 py-1.5 focus-within:border-cyber-primary/50 transition-colors">
+                    <div className="flex items-center gap-2 bg-slate-100 rounded-full border border-gray-200 px-2 py-1.5 focus-within:border-cyber-primary/50 transition-colors">
                         <div className="flex items-center gap-1 ml-2">
-                            <button className="p-2 text-cyber-muted hover:text-white rounded-full"><Smile size={24} strokeWidth={1.5} /></button>
+                            <button className="p-2 text-slate-500 hover:text-slate-800 rounded-full"><Smile size={24} strokeWidth={1.5} /></button>
                         </div>
                         <input
                             type="text"
@@ -543,15 +543,15 @@ export default function Chat() {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyPress={handleKeyPress}
                             placeholder="Message..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-white text-sm placeholder-cyber-muted h-10"
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 text-sm placeholder-slate-500 h-10"
                         />
                         <div className="flex items-center gap-2 mr-2">
                             {inputValue.trim() ? (
                                 <button onClick={sendMessage} className="text-cyber-primary font-bold text-sm hover:text-cyber-primary_hover">Send</button>
                             ) : (
                                 <>
-                                    <button className="p-2 text-cyber-muted hover:text-white rounded-full"><ImageIcon size={24} strokeWidth={1.5} /></button>
-                                    <button className="p-2 text-cyber-muted hover:text-white rounded-full"><Heart size={24} strokeWidth={1.5} /></button>
+                                    <button className="p-2 text-slate-500 hover:text-slate-800 rounded-full"><ImageIcon size={24} strokeWidth={1.5} /></button>
+                                    <button className="p-2 text-slate-500 hover:text-slate-800 rounded-full"><Heart size={24} strokeWidth={1.5} /></button>
                                 </>
                             )}
 

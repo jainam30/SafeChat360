@@ -4,20 +4,22 @@
 
 @layer base {
   :root {
-    --bg-primary: #141E30;
-    --text-primary: #F8FAFC;
+    --bg-primary: #12c2e9;
+    --text-primary: #1e293b;
   }
 
   body {
     @apply bg-cyber-background text-cyber-text antialiased;
-    background-image: linear-gradient(135deg, #141E30 0%, #3F5E96 100%);
+    position: relative;
     min-height: 100vh;
+    /* JShine Gradient Background (Purple to Red/Salmon only) */
+    background: linear-gradient(to right, #c471ed, #f64f59);
   }
 
-  /* Refined Scrollbar (Light) */
+  /* Refined Scrollbar (Light Theme) */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -25,53 +27,52 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #3F5E96;
-    /* Royal Blue */
-    border-radius: 5px;
-    border: 2px solid #141E30;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 99px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #2D4A80;
-    /* Darker Blue */
+    background: rgba(255, 255, 255, 0.6);
   }
 }
 
 @layer components {
 
   /* Sticker / Floating Icon Class */
-  /* Sticker / Floating Icon Class */
   .sticker {
     @apply absolute opacity-40 text-cyber-primary drop-shadow-lg pointer-events-none z-0;
   }
 
-  /* Dark Theme Card */
+  /* JShine Glass Card - Opaque White */
   .glass-card {
-    @apply bg-cyber-surface/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl transition-all duration-300;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    @apply bg-white/90 backdrop-blur-md border border-white/50 rounded-2xl shadow-lg transition-all duration-300 text-slate-800;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    /* Soft shadow + Dark Text */
   }
 
   .glass-card:hover {
-    @apply transform -translate-y-1 bg-cyber-surface/20 border-white/20;
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+    @apply bg-white border-white/60;
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
   }
 
-  /* Dark Theme Input */
+  /* JShine Input */
   .glass-input {
-    @apply w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-cyber-muted focus:outline-none focus:border-cyber-primary focus:ring-2 focus:ring-cyber-primary/50 transition-all shadow-inner;
+    @apply bg-white/40 border border-white/30 text-slate-800 placeholder-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyber-primary/50 focus:border-cyber-primary/50 transition-all duration-200;
   }
 
-  /* Dark Theme Secondary Button */
+  /* JShine Button */
   .glass-button {
-    @apply bg-white/5 text-white border border-white/10 px-4 py-2 rounded-xl font-medium hover:bg-white/10 hover:border-white/20 transition-all shadow-sm backdrop-blur-md;
+    @apply text-white font-medium rounded-xl shadow-lg hover:shadow-black/10 hover:brightness-105 active:scale-95 transition-all duration-200;
+    background-color: #12c2e9;
+    /* Navbar/Action color */
   }
 
-  /* Dark Theme Primary Button */
+  /* Primary Button Overlay */
   .glass-button-primary {
-    @apply bg-cyber-primary text-white font-bold px-6 py-2.5 rounded-xl hover:bg-cyber-primary_hover shadow-lg shadow-cyber-primary/40 transition-all transform hover:-translate-y-0.5 border border-white/5;
+    @apply bg-cyber-primary text-white font-bold px-6 py-2.5 rounded-xl hover:bg-cyber-primary_hover shadow-lg shadow-cyber-primary/40 transition-all transform hover:-translate-y-0.5 border border-white/20;
   }
 
   .glass-panel {
-    @apply bg-black/20 backdrop-blur-xl border-r border-white/5 h-full shadow-lg;
+    @apply bg-white/10 backdrop-blur-lg border-b border-white/20 shadow-sm;
   }
 }

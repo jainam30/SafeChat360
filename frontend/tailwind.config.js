@@ -9,15 +9,15 @@ module.exports = {
     extend: {
       colors: {
         cyber: {
-          background: '#141E30', // Midnight Blue BG
-          surface: '#1E2B45', // Lighter Navy Surface
-          text: '#F8FAFC', // Near White Text
-          muted: '#94A3B8', // Slate 400 Muted Text
-          primary: '#3F5E96', // Royal Blue Primary
-          primary_hover: '#2D4A80', // Darker Royal Blue
-          secondary: '#10B981', // Emerald 500 (Success)
-          accent: '#F43F5E', // Rose 500 (Alerts)
-          border: '#2D3A52', // Darker Border
+          background: 'transparent', // Let body gradient show through
+          surface: '#ffffff', // White surface for glass effect
+          text: '#1e293b', // Slate 800 (Dark text for readability on light/bright bg)
+          muted: '#64748b', // Slate 500
+          primary: '#12c2e9', // JShine Blue (Navbar/Actions)
+          primary_hover: '#0ea5e9', // Darker Blue
+          secondary: '#c471ed', // JShine Purple
+          accent: '#f64f59', // JShine Red
+          border: '#e2e8f0', // Slate 200 (Light border)
         }
       },
     },
