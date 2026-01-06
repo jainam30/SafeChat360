@@ -49,16 +49,16 @@ const ImageModeration = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <ImageIcon className="text-cyber-primary" />
+        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 drop-shadow-md">
+          <ImageIcon className="text-white" />
           Image Moderation
         </h1>
-        <p className="text-cyber-muted">Scan images for explicit content, violence, and other unsafe elements.</p>
+        <p className="text-white/80 font-medium">Scan images for explicit content, violence, and other unsafe elements.</p>
       </div>
 
-      <div className="glass-panel p-8 rounded-2xl mb-8 flex flex-col items-center justify-center border-dashed border-2 border-white/10 hover:border-cyber-primary/30 transition-colors bg-black/20">
+      <div className="bg-white/90 backdrop-blur-md shadow-lg p-8 rounded-2xl mb-8 flex flex-col items-center justify-center border-dashed border-2 border-slate-300 hover:border-blue-500 transition-colors bg-slate-50">
         <input
           type="file"
           accept="image/*"
@@ -68,41 +68,41 @@ const ImageModeration = () => {
         />
 
         {!imageFile ? (
-          <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center gap-4 py-8">
-            <div className="w-16 h-16 rounded-full bg-cyber-primary/10 flex items-center justify-center text-cyber-primary mb-2">
-              <Upload size={32} />
+          <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center gap-4 py-8 w-full">
+            <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-[#12c2e9] mb-2 shadow-inner">
+              <Upload size={36} />
             </div>
             <div className="text-center">
-              <p className="text-white font-medium text-lg">Click to upload an image</p>
-              <p className="text-cyber-muted text-sm mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+              <p className="text-slate-800 font-bold text-xl">Click to upload an image</p>
+              <p className="text-slate-500 text-sm mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
             </div>
           </label>
         ) : (
           <div className="flex flex-col items-center gap-6 w-full">
-            <div className="relative group">
+            <div className="relative group max-w-full">
               <img
                 src={URL.createObjectURL(imageFile)}
                 alt="Preview"
-                className="max-h-64 rounded-lg shadow-2xl border border-white/10"
+                className="max-h-64 rounded-xl shadow-xl border border-slate-200"
               />
-              <label htmlFor="image-upload" className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-lg">
-                <span className="text-white font-medium">Change Image</span>
+              <label htmlFor="image-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
+                <span className="text-white font-bold bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm">Change Image</span>
               </label>
             </div>
 
             <button
               onClick={handleModerateImage}
-              className="glass-button-primary flex items-center gap-2"
+              className="px-8 py-3 bg-[#12c2e9] text-white font-bold rounded-xl hover:bg-blue-500 shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></span>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                   Scanning...
                 </>
               ) : (
                 <>
-                  <Zap size={18} />
+                  <Zap size={20} />
                   Moderate Image
                 </>
               )}

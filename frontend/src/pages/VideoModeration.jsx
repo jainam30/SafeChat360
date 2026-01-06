@@ -58,21 +58,21 @@ const VideoModeration = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto p-6">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                    <Film className="text-cyber-primary" />
+                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 drop-shadow-md">
+                    <Film className="text-white" />
                     Video Moderation
                 </h1>
-                <p className="text-cyber-muted">Analyze video content for visual and audio violations.</p>
+                <p className="text-white/80 font-medium">Analyze video content for visual and audio violations.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Upload & Preview */}
-                <div className="glass-panel p-6 rounded-2xl">
+                <div className="bg-white/90 backdrop-blur-md shadow-lg p-6 rounded-2xl flex flex-col h-full">
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-white/20 rounded-xl aspect-video flex flex-col items-center justify-center cursor-pointer hover:border-cyber-primary/50 hover:bg-white/5 transition-all overflow-hidden relative group"
+                        className="border-2 border-dashed border-slate-300 rounded-xl aspect-video flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-slate-50 transition-all overflow-hidden relative group bg-slate-50"
                     >
                         {previewUrl ? (
                             <video
@@ -82,9 +82,11 @@ const VideoModeration = () => {
                             />
                         ) : (
                             <div className="text-center p-6">
-                                <Upload size={48} className="mx-auto text-cyber-muted mb-4 group-hover:text-cyber-primary transition-colors" />
-                                <p className="text-white font-medium">Click to upload video</p>
-                                <p className="text-sm text-cyber-muted mt-1">MP4, MOV supported</p>
+                                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                    <Upload size={32} />
+                                </div>
+                                <p className="text-slate-800 font-bold text-lg">Click to upload video</p>
+                                <p className="text-sm text-slate-500 mt-1">MP4, MOV supported</p>
                             </div>
                         )}
                         <input
@@ -100,16 +102,16 @@ const VideoModeration = () => {
                         <button
                             onClick={handleAnalyze}
                             disabled={!file || loading}
-                            className="glass-button-primary disabled:opacity-50 flex items-center gap-2 w-full justify-center py-3"
+                            className="px-6 py-3 bg-[#12c2e9] text-white font-bold rounded-xl hover:bg-blue-500 shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 flex items-center gap-2 w-full justify-center"
                         >
                             {loading ? (
                                 <>
-                                    <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></span>
+                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                                     Analyzing Frames & Audio...
                                 </>
                             ) : (
                                 <>
-                                    <Shield size={18} />
+                                    <Shield size={20} />
                                     Analyze Video
                                 </>
                             )}
@@ -118,37 +120,44 @@ const VideoModeration = () => {
                 </div>
 
                 {/* Results */}
-                <div className="glass-panel p-6 rounded-2xl h-full">
-                    <h3 className="text-xl font-semibold text-white mb-4">Analysis Report</h3>
+                <div className="bg-white/90 backdrop-blur-md shadow-lg p-6 rounded-2xl h-full flex flex-col">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Analysis Report</h3>
 
                     {!result && !loading && (
-                        <div className="h-48 flex items-center justify-center text-cyber-muted text-center italic">
+                        <div className="flex-1 flex items-center justify-center text-slate-400 italic text-center p-8 border border-dashed border-slate-200 rounded-xl bg-slate-50">
                             Upload a video and click Analyze<br />to see moderation results
                         </div>
                     )}
 
                     {loading && (
                         <div className="space-y-4 animate-pulse">
-                            <div className="h-10 bg-white/5 rounded-lg w-full"></div>
-                            <div className="h-4 bg-white/5 rounded w-3/4"></div>
-                            <div className="h-4 bg-white/5 rounded w-1/2"></div>
+                            <div className="h-12 bg-slate-200 rounded-xl w-full"></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="h-20 bg-slate-200 rounded-xl w-full"></div>
+                                <div className="h-20 bg-slate-200 rounded-xl w-full"></div>
+                            </div>
+                            <div className="h-40 bg-slate-200 rounded-xl w-full"></div>
                         </div>
                     )}
 
                     {result && (
-                        <div className="space-y-6">
+                        <div className="space-y-6 animate-fade-in">
                             {/* Status Banner */}
-                            <div className={`p-4 rounded-xl flex items-center gap-4 ${result.is_flagged ? 'bg-red-500/20 border border-red-500/30' : 'bg-green-500/20 border border-green-500/30'}`}>
+                            <div className={`p-4 rounded-xl flex items-center gap-4 shadow-sm border ${result.is_flagged ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                                 {result.is_flagged ? (
-                                    <AlertTriangle className="text-red-400" size={32} />
+                                    <div className="p-3 bg-red-100 rounded-full text-red-500">
+                                        <AlertTriangle size={24} />
+                                    </div>
                                 ) : (
-                                    <Check className="text-green-400" size={32} />
+                                    <div className="p-3 bg-green-100 rounded-full text-green-500">
+                                        <Check size={24} />
+                                    </div>
                                 )}
                                 <div>
-                                    <h4 className={`text-lg font-bold ${result.is_flagged ? 'text-red-400' : 'text-green-400'}`}>
+                                    <h4 className={`text-lg font-bold ${result.is_flagged ? 'text-red-600' : 'text-green-600'}`}>
                                         {result.is_flagged ? 'Content Flagged' : 'Content Safe'}
                                     </h4>
-                                    <p className="text-sm text-white/70">
+                                    <p className="text-sm text-slate-600">
                                         {result.is_flagged ? 'Violations detected in video or audio.' : 'No inappropriate content detected.'}
                                     </p>
                                 </div>
@@ -156,29 +165,29 @@ const VideoModeration = () => {
 
                             {/* Stats */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-black/20 p-3 rounded-lg">
-                                    <div className="text-xs text-cyber-muted uppercase">Scanned Frames</div>
-                                    <div className="text-xl font-bold text-white">{result.scanned_frames || 0}</div>
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Scanned Frames</div>
+                                    <div className="text-2xl font-black text-slate-800">{result.scanned_frames || 0}</div>
                                 </div>
-                                <div className="bg-black/20 p-3 rounded-lg">
-                                    <div className="text-xs text-cyber-muted uppercase">Issues Found</div>
-                                    <div className="text-xl font-bold text-white">{result.flags?.length || 0}</div>
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Issues Found</div>
+                                    <div className={`text-2xl font-black ${result.flags?.length > 0 ? 'text-red-500' : 'text-slate-800'}`}>{result.flags?.length || 0}</div>
                                 </div>
                             </div>
 
                             {/* Issues List */}
                             {result.flags?.length > 0 && (
-                                <div className="bg-black/20 p-4 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar">
-                                    <h5 className="text-sm font-medium text-cyber-muted mb-3 uppercase tracking-wider">Detailed Findings</h5>
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-[300px] overflow-y-auto custom-scrollbar shadow-inner">
+                                    <h5 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Detailed Findings</h5>
                                     <div className="space-y-3">
                                         {result.flags.map((flag, idx) => (
-                                            <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                                                <span className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded font-mono">
+                                            <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                                                <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded font-mono font-bold">
                                                     {flag.timestamp}
                                                 </span>
                                                 <div>
-                                                    <div className="text-sm font-bold text-white uppercase">{flag.type.replace('_', ' ')}</div>
-                                                    <div className="text-xs text-gray-400 mt-1">
+                                                    <div className="text-sm font-bold text-slate-800 uppercase">{flag.type.replace('_', ' ')}</div>
+                                                    <div className="text-xs text-slate-500 mt-1">
                                                         {flag.details?.map(d => d.label || d.reason).join(', ') || 'Unspecified violation'}
                                                     </div>
                                                 </div>

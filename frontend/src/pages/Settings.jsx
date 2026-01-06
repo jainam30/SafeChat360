@@ -67,9 +67,9 @@ const BlocklistSettings = () => {
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg mb-6">
-      <h2 className="text-xl font-semibold mb-4">Custom Blocked Words</h2>
-      <p className="text-sm text-gray-400 mb-4">Add specific words or phrases to automatically flag.</p>
+    <div className="bg-white/90 backdrop-blur-md shadow-lg p-6 rounded-2xl mb-6">
+      <h2 className="text-xl font-bold text-slate-800 mb-4">Custom Blocked Words</h2>
+      <p className="text-sm text-slate-600 mb-4">Add specific words or phrases to automatically flag.</p>
 
       <form onSubmit={addTerm} className="flex gap-2 mb-4">
         <input
@@ -77,12 +77,12 @@ const BlocklistSettings = () => {
           value={newTerm}
           onChange={e => setNewTerm(e.target.value)}
           placeholder="Enter word to block..."
-          className="flex-1 px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+          className="flex-1 px-3 py-2 bg-slate-50 text-slate-900 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
         />
         <button
           type="submit"
           disabled={loading || !newTerm.trim()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-[#12c2e9] text-white font-medium rounded-xl hover:bg-blue-500 disabled:opacity-50 flex items-center gap-2 shadow-md transition-all"
         >
           <Plus size={16} /> Add
         </button>
@@ -90,14 +90,14 @@ const BlocklistSettings = () => {
 
       <div className="flex flex-wrap gap-2">
         {terms.map(term => (
-          <span key={term.id} className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-200 flex items-center gap-2 border border-gray-600">
+          <span key={term.id} className="px-3 py-1 bg-slate-100 rounded-full text-sm text-slate-700 flex items-center gap-2 border border-slate-200 shadow-sm">
             {term.term}
-            <button onClick={() => removeTerm(term.id)} className="text-gray-400 hover:text-red-400 transition-colors">
+            <button onClick={() => removeTerm(term.id)} className="text-slate-400 hover:text-red-500 transition-colors">
               <Trash2 size={14} />
             </button>
           </span>
         ))}
-        {terms.length === 0 && <span className="text-sm text-gray-500 italic">No custom rules added.</span>}
+        {terms.length === 0 && <span className="text-sm text-slate-400 italic">No custom rules added.</span>}
       </div>
     </div>
   );
@@ -115,33 +115,36 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">⚙️ Settings</h1>
+      <h1 className="text-3xl font-bold text-white mb-6 drop-shadow-md">⚙️ Settings</h1>
 
-      <div className="bg-gray-800 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold mb-4">Account</h2>
+      <div className="bg-white/90 backdrop-blur-md shadow-lg p-6 rounded-2xl mb-6">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Account</h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-            <input type="email" value={user?.email || ''} disabled className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded border border-gray-600" />
+            <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
+            <input type="email" value={user?.email || ''} disabled className="w-full px-3 py-2 bg-slate-50 text-slate-900 rounded-xl border border-slate-200" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Role</label>
-            <input type="text" value={user?.role || ''} disabled className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded border border-gray-600" />
+            <label className="block text-sm font-medium text-slate-600 mb-1">Role</label>
+            <input type="text" value={user?.role || ''} disabled className="w-full px-3 py-2 bg-slate-50 text-slate-900 rounded-xl border border-slate-200" />
           </div>
         </div>
       </div>
 
-      <div className="bg-gray-800 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold mb-4">Moderation Settings</h2>
-        <div className="space-y-3">
-          <label className="flex items-center">
-            <input type="checkbox" defaultChecked className="mr-2" /> Auto-flag explicit content
+      <div className="bg-white/90 backdrop-blur-md shadow-lg p-6 rounded-2xl mb-6">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Moderation Settings</h2>
+        <div className="space-y-3 text-slate-700">
+          <label className="flex items-center cursor-pointer">
+            <input type="checkbox" defaultChecked className="mr-3 w-5 h-5 accent-blue-500 rounded" />
+            <span className="font-medium">Auto-flag explicit content</span>
           </label>
-          <label className="flex items-center">
-            <input type="checkbox" defaultChecked className="mr-2" /> Enable audio transcription
+          <label className="flex items-center cursor-pointer">
+            <input type="checkbox" defaultChecked className="mr-3 w-5 h-5 accent-blue-500 rounded" />
+            <span className="font-medium">Enable audio transcription</span>
           </label>
-          <label className="flex items-center">
-            <input type="checkbox" className="mr-2" /> Send notifications on flags
+          <label className="flex items-center cursor-pointer">
+            <input type="checkbox" className="mr-3 w-5 h-5 accent-blue-500 rounded" />
+            <span className="font-medium">Send notifications on flags</span>
           </label>
         </div>
       </div>
@@ -150,10 +153,10 @@ export default function Settings() {
 
 
       <div className="flex gap-3">
-        <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        <button onClick={handleSave} className="px-6 py-2.5 bg-[#12c2e9] text-white font-bold rounded-xl hover:bg-blue-500 shadow-lg shadow-blue-500/30 transition-all">
           {saved ? '✓ Saved' : 'Save Changes'}
         </button>
-        <button onClick={logout} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+        <button onClick={logout} className="px-6 py-2.5 bg-red-500/10 text-red-600 font-bold border border-red-200 rounded-xl hover:bg-red-500 hover:text-white transition-all">
           Logout
         </button>
       </div>

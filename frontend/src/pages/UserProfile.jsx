@@ -124,7 +124,7 @@ export default function UserProfile() {
                     {/* Info */}
                     <div className="flex-1 space-y-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-cyber-text flex items-center gap-3">
+                            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
                                 {profile.full_name || profile.username}
                                 <span className="text-sm font-normal py-1 px-3 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
                                     @{profile.username}
@@ -133,7 +133,7 @@ export default function UserProfile() {
                             <div className="flex items-center gap-4 mt-2 text-sm text-cyber-muted">
                                 <span className="flex items-center gap-1">
                                     <Shield size={14} className={profile.trust_score >= 80 ? "text-green-500" : "text-yellow-500"} />
-                                    Trust Score: <span className="text-cyber-text font-mono font-bold">{profile.trust_score}</span>
+                                    Trust Score: <span className="text-slate-900 font-mono font-bold">{profile.trust_score}</span>
                                 </span>
                                 <span className="flex items-center gap-1">
                                     <Calendar size={14} />
