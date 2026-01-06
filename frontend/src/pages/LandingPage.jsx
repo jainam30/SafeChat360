@@ -346,11 +346,11 @@ function FeatureCard({ icon, title, desc, color, isCustomIcon }) {
                     {icon}
                 </div>
             ) : (
-                <div className={`relative z-10 w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300 ring-4 ring-white`}>
+                <div className={`relative z-10 w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform duration-300`}>
                     {typeof icon === 'string' ? (
-                        <img src={icon} alt={title} className="w-8 h-8 object-contain" />
+                        <img src={icon} alt={title} className="w-8 h-8 object-contain drop-shadow-sm" />
                     ) : (
-                        React.cloneElement(icon, { size: 24, className: "text-white" })
+                        React.cloneElement(icon, { size: 24, className: "text-white drop-shadow-sm" })
                     )}
                 </div>
             )}
