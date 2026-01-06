@@ -30,7 +30,7 @@ export default function Topbar() {
   }
 
   return (
-    <header className="h-16 border-b border-white/20 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm bg-[#12c2e9]">
+    <header className="h-16 border-b border-white/20 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
