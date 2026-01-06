@@ -44,13 +44,13 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
               key={it.to}
               to={it.to}
               className={({ isActive }) => `
-                flex items - center gap - 3 px - 4 py - 3 rounded - xl transition - all duration - 200 group relative
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative
                 ${isActive
                   ? 'bg-white text-cyber-primary shadow-md font-bold'
                   : 'text-slate-800 hover:bg-white/20 hover:text-slate-900'
                 }
                 ${isCollapsed ? 'justify-center px-2' : ''}
-  `}
+              `}
               title={isCollapsed ? it.label : ''}
             >
               <div className="relative">
@@ -62,7 +62,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
                 )}
               </div>
 
-              <span className={`font - medium transition - all duration - 300 ${isCollapsed ? 'w-0 opacity-0 overflow-hidden ml-0' : 'w-auto opacity-100 flex-1 flex justify-between items-center'} `}>
+              <span className={`font-medium transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 overflow-hidden ml-0' : 'w-auto opacity-100 flex-1 flex justify-between items-center'}`}>
                 {it.label}
                 {badgeCount > 0 && !isCollapsed && (
                   <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-lg shadow-red-500/50 animate-pulse">
