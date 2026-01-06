@@ -13,7 +13,8 @@
     position: relative;
     min-height: 100vh;
     /* JShine Gradient Background (Purple to Red/Salmon only) */
-    background: linear-gradient(to right, #c471ed, #f64f59);
+    /* Updated JShine Gradient Background (Teal to Deep Purple) */
+    background-image: linear-gradient(to top, #30cfd0 0%, #330867 100%);
   }
 
   /* Refined Scrollbar (Light Theme) */

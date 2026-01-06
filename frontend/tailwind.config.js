@@ -41,7 +41,7 @@ module.exports = {
     },
     backgroundImage: {
       backgroundImage: {
-        'gradient-main': 'linear-gradient(135deg, #141E30 0%, #3F5E96 100%)',
+        'gradient-main': 'linear-gradient(to top, #30cfd0 0%, #330867 100%)',
       }
     }
   },
