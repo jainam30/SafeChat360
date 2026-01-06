@@ -47,7 +47,7 @@ export default function LandingPage() {
                     <div className="hidden md:flex items-center gap-6">
                         <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-slate-600 hover:text-cyber-primary transition-colors">Features</button>
                         <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-slate-600 hover:text-cyber-primary transition-colors">How it works</button>
-                        <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-slate-600 hover:text-cyber-primary transition-colors">Pricing</button>
+
                     </div>
                     <div className="flex items-center gap-2 md:gap-3">
                         <Link to="/login" className="text-xs md:text-sm font-bold text-slate-600 hover:text-cyber-primary transition-colors px-2 py-1 md:px-3 md:py-2">Log In</Link>
@@ -78,17 +78,17 @@ export default function LandingPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
-                    className="text-5xl md:text-7xl font-extrabold mb-6 max-w-5xl leading-[1.1] text-slate-900 tracking-tight"
+                    className="text-5xl md:text-7xl font-extrabold mb-6 max-w-5xl leading-[1.1] text-white tracking-tight drop-shadow-md"
                 >
                     Making the Internet <br className="hidden md:block" />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyber-primary via-purple-600 to-blue-600 animate-gradient-x">Safe & Civil</span> Again
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5ee7df] via-white to-[#b490ca] animate-gradient-x">Safe & Civil</span> Again
                 </motion.h1>
 
                 <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-                    className="text-xl text-slate-600 max-w-2xl mb-10 leading-relaxed font-medium"
+                    className="text-xl text-white/90 max-w-2xl mb-10 leading-relaxed font-medium drop-shadow-sm"
                 >
                     Real-time AI moderation for communities of any size.
                     Detect toxicity, hate speech, and NSFW content instantly across text, images, and video.
@@ -284,40 +284,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Pricing Section */}
-            <section id="pricing" className="relative z-10 container mx-auto px-6 py-24">
-                <div className="text-center mb-20">
-                    <span className="text-cyber-primary font-bold tracking-wider uppercase text-sm mb-2 block">Plans</span>
-                    <h2 className="text-4xl font-extrabold text-slate-900 mb-6">Simple Pricing</h2>
-                </div>
-                <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                    {[
-                        { name: "Starter", price: "Free", feat: ["up to 1,000 users", "Basic Filters", "Community Support"] },
-                        { name: "Pro", price: "$49/mo", feat: ["up to 10k users", "Image & Video Mod", "Priority Support"], popular: true },
-                        { name: "Enterprise", price: "Custom", feat: ["Unlimited Scale", "Custom Models", "Dedicated Manager"] }
-                    ].map((plan, idx) => (
-                        <motion.div
-                            key={idx}
-                            whileHover={{ scale: 1.02 }}
-                            className={`p-8 rounded-3xl border ${plan.popular ? 'border-cyber-primary bg-slate-900 text-white ring-4 ring-cyber-primary/20' : 'border-slate-200 bg-white text-slate-900'} relative shadow-xl flex flex-col`}
-                        >
-                            {plan.popular && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-cyber-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Most Popular</div>}
-                            <h3 className="text-lg font-bold mb-2 opacity-80">{plan.name}</h3>
-                            <div className="text-4xl font-extrabold mb-6">{plan.price}</div>
-                            <ul className="mb-8 space-y-3 flex-1">
-                                {plan.feat.map((f, i) => (
-                                    <li key={i} className="flex items-center gap-2 text-sm font-medium opacity-70">
-                                        <CheckCircle size={16} /> {f}
-                                    </li>
-                                ))}
-                            </ul>
-                            <button className={`w-full py-3 rounded-xl font-bold transition-all ${plan.popular ? 'bg-cyber-primary hover:bg-cyber-primary_hover text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'}`}>
-                                Choose Plan
-                            </button>
-                        </motion.div>
-                    ))}
-                </div>
-            </section>
+            {/* Pricing Section Removed as per user request */}
 
             {/* CTA Section */}
             <section className="relative z-10 container mx-auto px-6 py-24">
@@ -370,16 +337,16 @@ function FeatureCard({ icon, title, desc, color, isCustomIcon }) {
     return (
         <motion.div
             whileHover={{ y: -5 }}
-            className="group p-8 rounded-3xl bg-white border border-slate-100 hover:border-slate-200 hover:shadow-xl transition-all relative overflow-hidden"
+            className="group p-8 rounded-3xl bg-white/95 backdrop-blur-md border border-white/50 hover:border-white shadow-lg hover:shadow-xl transition-all relative overflow-hidden"
         >
-            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${color} opacity-5 rounded-bl-full group-hover:opacity-10 transition-opacity`}></div>
+            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${color} opacity-10 rounded-bl-full group-hover:opacity-20 transition-opacity`}></div>
 
             {isCustomIcon ? (
                 <div className="relative z-10 mb-6 group-hover:scale-105 transition-transform duration-300">
                     {icon}
                 </div>
             ) : (
-                <div className={`relative z-10 w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`relative z-10 w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300 ring-4 ring-white`}>
                     {typeof icon === 'string' ? (
                         <img src={icon} alt={title} className="w-8 h-8 object-contain" />
                     ) : (
@@ -389,7 +356,7 @@ function FeatureCard({ icon, title, desc, color, isCustomIcon }) {
             )}
 
             <h3 className="text-xl font-bold mb-3 text-slate-900">{title}</h3>
-            <p className="text-slate-500 leading-relaxed font-medium text-sm">{desc}</p>
+            <p className="text-slate-600 leading-relaxed font-medium text-sm">{desc}</p>
         </motion.div>
     );
 }
@@ -397,8 +364,8 @@ function FeatureCard({ icon, title, desc, color, isCustomIcon }) {
 function StatItem({ icon, label }) {
     return (
         <div className="flex flex-col items-center p-4 hover:scale-105 transition-transform duration-300">
-            <img src={icon} alt={label} className="w-24 h-24 mb-4 object-contain drop-shadow-md" />
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">{label}</div>
+            <img src={icon} alt={label} className="w-24 h-24 mb-4 object-contain drop-shadow-md invert brightness-0 filter" />
+            <div className="text-sm font-bold text-white uppercase tracking-wider drop-shadow-sm">{label}</div>
         </div>
     );
 }
