@@ -24,11 +24,12 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
   // Desktop: we obey isCollapsed.
   // We use `md:` prefix to apply desktop styles separately.
   return (
-    fixed inset - y - 0 left - 0 z - 30 transition - transform duration - 300 ease -in -out border - r border - white / 20
-  bg - [linear - gradient(to_top,#5ee7df_0 %, #b490ca_100 %)]
-        ${ mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64' }
-  md:relative md: translate - x - 0 ${ isCollapsed ? 'md:w-20' : 'md:w-64' }
-  `}>
+    <aside className={`
+        fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out border-r border-white/20
+        bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]
+        ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} 
+        md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'}
+    `}>
       <div className="h-16 hidden md:flex items-center justify-center border-b border-cyber-border mb-2">
         <SidebarSwitch checked={isCollapsed} onChange={() => setIsCollapsed(!isCollapsed)} />
       </div>
@@ -44,12 +45,11 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
               to={it.to}
               className={({ isActive }) => `
                 flex items - center gap - 3 px - 4 py - 3 rounded - xl transition - all duration - 200 group relative
-                ${
-    isActive
-      ? 'bg-white text-cyber-primary shadow-md font-bold'
-      : 'text-slate-800 hover:bg-white/20 hover:text-slate-900'
-  }
-                ${ isCollapsed ? 'justify-center px-2' : '' }
+                ${isActive
+                  ? 'bg-white text-cyber-primary shadow-md font-bold'
+                  : 'text-slate-800 hover:bg-white/20 hover:text-slate-900'
+                }
+                ${isCollapsed ? 'justify-center px-2' : ''}
   `}
               title={isCollapsed ? it.label : ''}
             >
@@ -62,7 +62,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
                 )}
               </div>
 
-              <span className={`font - medium transition - all duration - 300 ${ isCollapsed ? 'w-0 opacity-0 overflow-hidden ml-0' : 'w-auto opacity-100 flex-1 flex justify-between items-center' } `}>
+              <span className={`font - medium transition - all duration - 300 ${isCollapsed ? 'w-0 opacity-0 overflow-hidden ml-0' : 'w-auto opacity-100 flex-1 flex justify-between items-center'} `}>
                 {it.label}
                 {badgeCount > 0 && !isCollapsed && (
                   <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-lg shadow-red-500/50 animate-pulse">
