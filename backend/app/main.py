@@ -46,6 +46,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://safe-chat360.vercel.app", # Explicitly allow Vercel frontend
     "*" # For development, fine to allow all
 ]
 

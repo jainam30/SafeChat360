@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
+import { getApiUrl } from "../config";
 
 const AuthContext = createContext();
 
 // Helper to decode JWT safely
 const decodeToken = (token) => {
+  // ... existing decodeToken code ...
   try {
     const parts = token.split(".");
     if (parts.length === 3) {
@@ -34,15 +36,12 @@ export function AuthProvider({ children }) {
       // define async fetcher
       const fetchUserData = async () => {
         try {
-          // We need to use getApiUrl in case we are in prod without proxy, 
-          // but if we are using vite proxy, relative path is fine. 
-          // Ideally import getApiUrl. For now assuming proxy or we add import.
-          // Let's use the basic decoding first to render something fast
+          // FIX: Use getApiUrl to ensure we hit the Backend, not the Frontend (Vercel)
           const decoded = decodeToken(token);
           setUser(prev => ({ ...prev, ...decoded })); // Optimistic update
 
           // Then fetch real data
-          const res = await axios.get('/api/users/me');
+          const res = await axios.get(getApiUrl('/api/users/me'));
           if (res.data) {
             setUser(res.data); // Replace with fresh DB data (includes specific avatar, name etc)
           }
