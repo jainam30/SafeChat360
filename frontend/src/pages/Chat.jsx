@@ -130,11 +130,14 @@ export default function Chat() {
                     const data = JSON.parse(event.data);
                     if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
                         if (data.type === 'offer') {
-                            setCallData({
-                                isIncoming: true,
-                                caller: { id: data.sender_id, username: data.sender_username || "Unknown" },
-                                isVideo: data.isVideo,
-                                offerData: data
+                            setCallData(prev => {
+                                if (prev) return prev; // Allow hook to handle renegotiation or ignore if busy
+                                return {
+                                    isIncoming: true,
+                                    caller: { id: data.sender_id, username: data.sender_username || "Unknown" },
+                                    isVideo: data.isVideo,
+                                    offerData: data
+                                };
                             });
                         }
                         return;
