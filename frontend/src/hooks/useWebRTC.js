@@ -191,13 +191,18 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            socket.send(JSON.stringify({
-                type: 'offer',
-                sdp: offer,
-                sender_id: user.id,
-                receiver_id: targetUser.id,
-                isVideo
-            }));
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'offer',
+                    sdp: offer,
+                    sender_id: user.id,
+                    receiver_id: targetUser.id,
+                    isVideo
+                }));
+            } else {
+                console.error("Socket not connected, cannot send offer");
+                setError("Connection lost. Cannot start call.");
+            }
         } catch (e) {
             console.error("Create Offer Failed", e);
             setError("Failed to start call");
@@ -227,12 +232,17 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
 
-                socket.send(JSON.stringify({
-                    type: 'answer',
-                    sdp: answer,
-                    sender_id: user.id,
-                    receiver_id: caller.id
-                }));
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'answer',
+                        sdp: answer,
+                        sender_id: user.id,
+                        receiver_id: caller.id
+                    }));
+                } else {
+                    console.error("Socket not connected, cannot send answer");
+                    setError("Connection lost.");
+                }
 
                 // Flush candidates
                 while (candidatesQueue.current.length) {
@@ -248,7 +258,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
     };
 
     const rejectCall = () => {
-        if (socket && caller) {
+        if (socket && caller && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
                 type: 'call-response',
                 response: 'reject',

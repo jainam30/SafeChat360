@@ -110,7 +110,7 @@ export default function Chat() {
             } else {
                 wsUrl = `${protocol}//${window.location.host}`;
             }
-            wsUrl = `${wsUrl}/api/chat/ws/${user.id}`;
+            wsUrl = `${wsUrl}/api/chat/ws/${user.id}?token=${token}`;
 
             console.log("Connecting to WS:", wsUrl);
             const socket = new WebSocket(wsUrl);
@@ -123,6 +123,19 @@ export default function Chat() {
                     clearTimeout(reconnectTimeout.current);
                     reconnectTimeout.current = null;
                 }
+            };
+            // ...
+            // ...
+            const startCall = (isVideo) => {
+                if (!isConnected) {
+                    alert("Chat service disconnected. Please wait for reconnection.");
+                    return;
+                }
+                if (activeChat.type !== 'private') return;
+                setCallData({
+                    isIncoming: false,
+                    isVideo: isVideo
+                });
             };
 
             socket.onmessage = (event) => {
@@ -433,39 +446,41 @@ export default function Chat() {
             <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col glass-card md:rounded-l-none md:rounded-r-lg`}>
                 {/* Chat Header */}
                 <div className="h-16 border-b border-white/10 flex items-center justify-between px-5 sticky top-0 bg-white/5 backdrop-blur-sm z-10">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setMobileView('list')} className="md:hidden text-gray-900 mr-2"><ArrowLeft size={24} /></button>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button onClick={() => setMobileView('list')} className="md:hidden text-gray-900 mr-2 flex-shrink-0"><ArrowLeft size={24} /></button>
 
                         {activeChat.type === 'private' ? (
                             <>
-                                <div className="w-8 h-8 rounded-full overflow-hidden">
+                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
                                     <img src={activeChat.data.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data.username}`} className="w-full h-full object-cover" />
                                 </div>
-                                <div>
-                                    <div className="text-sm font-bold text-gray-900">{activeChat.data.username}</div>
-                                    <div className="text-xs text-gray-500">Active now</div>
+                                <div className="min-w-0">
+                                    <div className="text-sm font-bold text-gray-900 truncate">{activeChat.data.username}</div>
+                                    <div className="text-xs text-gray-500 truncate">Active now</div>
                                 </div>
                             </>
                         ) : activeChat.type === 'group' ? (
                             <>
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Users size={16} /></div>
-                                <div className="text-sm font-bold text-gray-900">{activeChat.data.name}</div>
+                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0"><Users size={16} /></div>
+                                <div className="min-w-0">
+                                    <div className="text-sm font-bold text-gray-900 truncate">{activeChat.data.name}</div>
+                                </div>
                             </>
                         ) : (
                             <>
-                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><Hash size={16} /></div>
-                                <div>
-                                    <div className="text-sm font-bold text-gray-900">Global Chat</div>
-                                    <div className="text-xs text-gray-500">Public</div>
+                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0"><Hash size={16} /></div>
+                                <div className="min-w-0">
+                                    <div className="text-sm font-bold text-gray-900 truncate">Global Chat</div>
+                                    <div className="text-xs text-gray-500 truncate">Public</div>
                                 </div>
                             </>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-4 text-gray-900">
-                        <Phone size={24} strokeWidth={1.5} className="cursor-pointer hover:opacity-70" onClick={() => startCall(false)} />
-                        <Video size={24} strokeWidth={1.5} className="cursor-pointer hover:opacity-70" onClick={() => startCall(true)} />
-                        <Info size={24} strokeWidth={1.5} className="cursor-pointer hover:opacity-70" />
+                    <div className="flex items-center gap-2 md:gap-4 text-gray-900 flex-shrink-0">
+                        <Phone size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" onClick={() => startCall(false)} />
+                        <Video size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" onClick={() => startCall(true)} />
+                        <Info size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" />
                     </div>
                 </div>
 
@@ -502,7 +517,7 @@ export default function Chat() {
                                     </div>
                                 )}
 
-                                <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative ${isMe
+                                <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative break-words ${isMe
                                     ? 'bg-cyber-primary text-white rounded-br-md'
                                     : 'bg-slate-100 text-slate-900 rounded-bl-md'}`}>
 

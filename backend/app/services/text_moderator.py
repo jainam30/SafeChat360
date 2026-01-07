@@ -15,14 +15,31 @@ except Exception:
 
 # List of inappropriate keywords/patterns
 BLOCKED_KEYWORDS = {
-    # Sexual/nudity related
-    r'\b(porn|xxx|nsfw|nude|naked|sex|sexual|orgasm|masturbat|dick|pussy|cock)\b',
-    # Abusive/offensive
-    r'\b(fuck|shit|damn|bastard|asshole|bitch|slut|whore|cunt|nigger|retard|idiot|stupid|dumbass|loser)\b',
-    # Violence/hate
-    r'\b(kill|murder|suicide|terrorist|hate|racist|homophobic)\b',
-    # Drug related
-    r'\b(cocaine|heroin|meth|weed|drugs|dealer)\b',
+    # English - Sexual/Nudity
+    r'\b(porn|xxx|nsfw|nude|naked|sex|sexual|orgasm|masturbat|dick|pussy|cock|vagina|penis|boobs|tits)\b',
+    # English - Abusive/Offensive
+    r'\b(fuck|shit|damn|bastard|asshole|bitch|slut|whore|cunt|nigger|nigga|faggot|dyke|retard|idiot|stupid|dumbass|loser|scum)\b',
+    # English - Violence/Hate
+    r'\b(kill|murder|suicide|terrorist|hate|racist|homophobic|rapist|rape|die)\b',
+    # English - Drug related
+    r'\b(cocaine|heroin|meth|weed|drugs|dealer|marijuana|lsd|ecstasy)\b',
+    
+    # Hindi / Hinglish
+    r'\b(madarchod|bhenchod|bc|mc|chutiya|kamina|kutta|saala|harami|bhosdike|gand|lund|choot|randi|bhadwa|launda|loda)\b',
+    
+    # Spanish
+    r'\b(puta|mierda|cabron|pendejo|coño|gilipollas|zorra|maricon|chinga)\b',
+    
+    # French
+    r'\b(merde|putain|connard|salope|batard|encule)\b',
+    
+    # German
+    r'\b(scheisse|arschloch|schlampe|fotze|verdammt)\b',
+
+    # Variations/Obfuscations
+    r'f+u+c+k+',
+    r's+h+i+t+',
+    r'b+i+t+c+h+',
 }
 
 def _translate_to_english(text: str) -> dict:
@@ -112,7 +129,7 @@ def moderate_text(text: str, additional_keywords: list = None) -> Dict:
             for o in outputs[0]:
                 label = o.get('label')
                 score = float(o.get('score', 0))
-                if label.lower() in ['toxic', 'obscene', 'threat', 'severe_toxic', 'identity_hate', 'insult'] and score >= 0.6:
+                if label.lower() in ['toxic', 'obscene', 'threat', 'severe_toxic', 'identity_hate', 'insult'] and score >= 0.5:
                     is_flagged = True
                     flags.append({"type": "ml_model", "label": label, "score": round(score, 3)})
             if is_flagged:
