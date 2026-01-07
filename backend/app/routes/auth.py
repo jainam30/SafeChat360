@@ -67,7 +67,21 @@ def register(request: Request, req: RegisterRequest, session: Session = Depends(
         if len(req.password) > 72:
              print(f"DEBUG WARNING: Password too long! ({len(req.password)} chars)")
 
-        hashed = get_secure_password_hash(req.password)
+        # FIX: Pre-hash password with SHA-256 to allow passwords > 72 chars
+        import hashlib
+        # Convert password to bytes, hash it, then hex digest gives us a fixed length string (64 chars) which is safe-ish,
+        # BUT bcrypt expects bytes. A better way is to pass the raw bytes of the sha256 digest (32 bytes).
+        # However, passlib's bcrypt wrapper usually handles strings.
+        # Let's just truncate checking or rely on frontend? 
+        # No, strict fix: If password > 70, use sha256 of it as the password for bcrypt.
+        
+        pwd_for_hash = req.password
+        if len(req.password) > 70:
+            # We use hexdigest to get a consistent ASCII string that is < 72 bytes? 
+            # SHA256 hexdigest is 64 chars. 64 < 72. Perfect.
+            pwd_for_hash = hashlib.sha256(req.password.encode('utf-8')).hexdigest()
+        
+        hashed = get_secure_password_hash(pwd_for_hash)
         user = crud.create_user(
             session, 
             email=req.email, 
