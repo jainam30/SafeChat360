@@ -202,10 +202,16 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         let mounted = true;
 
         const startMedia = async () => {
-            // FIX: Don't start media if there is no active call (idle) or if it's incoming (waiting for accept)
+            // 1. Guard: If we are idle/incoming, we don't start outgoing media automatically.
+            //    (Incoming calls start media in acceptCall)
             if (status === 'idle' || status === 'incoming') return;
 
+            // 2. Guard: If we ALREADY have a stream, DO NOT fetch a new one.
+            //    This prevents orphaned streams when status changes (calling -> connecting).
+            if (localStreamRef.current) return;
+
             try {
+                console.log("Acquiring local media...");
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: isVideo,
                     audio: {
@@ -216,6 +222,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 });
 
                 if (!mounted) {
+                    // Component unmounted during await, cleanup immediately
                     stream.getTracks().forEach(t => t.stop());
                     return;
                 }
@@ -224,6 +231,11 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 setLocalStream(stream);
                 localStreamRef.current = stream;
 
+                // Sync initial toggle states (in case they were toggled before media was ready)
+                stream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+                stream.getVideoTracks().forEach(t => t.enabled = videoEnabled);
+
+                // If this is the OFFENSIVE start (calling), trigger offer
                 if (status === 'calling') {
                     createOffer(stream);
                 }
@@ -239,7 +251,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         return () => {
             mounted = false;
         };
-    }, [status, isVideo]);
+    }, [status, isVideo, micEnabled, videoEnabled]);
 
 
 
