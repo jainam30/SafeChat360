@@ -23,6 +23,16 @@ async def lifespan(app: FastAPI):
         SQLModel.metadata.create_all(engine)
         print("Tables created.")
         
+        # AUTO-MIGRATION: Fix missing 'type' column for existing production DB
+        try:
+            from sqlalchemy import text
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE message ADD COLUMN type VARCHAR DEFAULT 'text'"))
+                connection.commit()
+            print("MIGRATION SUCCESS: Added 'type' column to message table.")
+        except Exception as e:
+            print(f"MIGRATION INFO: Column 'type' likely exists or other error. {e}")
+        
         # Initialize Firebase
         print("Initializing Firebase...")
         init_firebase()
