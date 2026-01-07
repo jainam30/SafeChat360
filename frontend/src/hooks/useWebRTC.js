@@ -170,20 +170,23 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         };
 
         pc.ontrack = (event) => {
-            console.log("Remote track received", event.track.kind, event.streams[0]);
+            console.log("Remote track received", event.track.kind);
 
-            // FIX: Ensure we have a stream to render. If streams[0] is null, create one.
+            // FIX: Ensure we have a stream to render
             let stream = event.streams[0];
             if (!stream) {
                 stream = new MediaStream();
                 stream.addTrack(event.track);
             }
 
-            setRemoteStream(prevStream => {
-                // Return the stream. If we already had one, this might replace it, 
-                // but typically for a single peer call, we just want "the" remote stream.
-                return stream;
-            });
+            // FIX: Create a NEW MediaStream object reference to force React to re-render the <video> element
+            // We use the tracks from the received stream (or new one)
+            const newStreamRef = new MediaStream(stream.getTracks());
+
+            // If the track is new but not in stream yet (rare), add it?
+            // Usually stream.getTracks() has it.
+
+            setRemoteStream(newStreamRef);
         };
 
         peerConnection.current = pc;
@@ -478,12 +481,17 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 // Upgrade to Video
                 try {
                     console.log("Upgrading to video...");
-                    const newStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    // We need video, but getUserMedia might request audio too if we aren't careful.
+                    // Requesting audio: true creates a second mic track -> LEAK!
+                    // Requesting ONLY video: true avoids the audio leak.
+                    const newStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     const newVideoTrack = newStream.getVideoTracks()[0];
 
                     if (newVideoTrack) {
                         localStreamRef.current.addTrack(newVideoTrack);
-                        setLocalStream(new MediaStream(localStreamRef.current.getTracks())); // Trigger re-render
+
+                        // Force state update with NEW stream object to ensure UI renders
+                        setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
 
                         if (peerConnection.current) {
                             const senders = peerConnection.current.getSenders();
