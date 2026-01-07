@@ -243,7 +243,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                         // Actually this hook assumes it's already 'in call' if active.
                         // But for renegotiation:
                         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                        const answer = await pc.createAnswer();
+                        const answer = await pc.createAnswer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
                         await pc.setLocalDescription(answer);
                         socket.send(JSON.stringify({
                             type: 'answer',
@@ -295,7 +295,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
         try {
-            const offer = await pc.createOffer();
+            const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
             await pc.setLocalDescription(offer);
 
             if (socket && socket.readyState === WebSocket.OPEN) {
@@ -333,7 +333,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             if (offerData && offerData.sdp) {
                 if (pc.signalingState === "stable") {
                     await pc.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
-                    const answer = await pc.createAnswer();
+                    const answer = await pc.createAnswer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
                     await pc.setLocalDescription(answer);
 
                     if (socket && socket.readyState === WebSocket.OPEN) {
