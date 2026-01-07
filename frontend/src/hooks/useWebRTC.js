@@ -190,7 +190,8 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         let mounted = true;
 
         const startMedia = async () => {
-            if (status === 'incoming') return;
+            // FIX: Don't start media if there is no active call (idle) or if it's incoming (waiting for accept)
+            if (status === 'idle' || status === 'incoming') return;
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -227,6 +228,9 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             mounted = false;
         };
     }, [status, isVideo]);
+
+
+
 
     // Socket Signal Handler
     useEffect(() => {
@@ -395,9 +399,15 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
     // End call and notify peer
     const endCall = (notifyPeer = true) => {
         stopAudio();
+
+        // Robust Cleanup: Stop all tracks
         if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach(t => t.stop());
+            localStreamRef.current.getTracks().forEach(t => {
+                t.stop();
+                t.enabled = false;
+            });
         }
+
         if (peerConnection.current) {
             peerConnection.current.close();
             peerConnection.current = null;
