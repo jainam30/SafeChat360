@@ -189,8 +189,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex justify-center min-h-screen">
-      <div className="w-full max-w-[1000px] flex flex-col lg:flex-row gap-10 pt-8 pb-20 px-4">
+    <div className="flex justify-center min-h-full">
+      <div className="w-full max-w-[1000px] flex flex-col lg:flex-row gap-4 lg:gap-10 pt-0 lg:pt-8 pb-10 lg:pb-20 px-0 lg:px-4">
 
         {/* LEFT/MAIN COLUMN */}
         <div className="w-full lg:max-w-[630px] flex flex-col mx-auto lg:mx-0">

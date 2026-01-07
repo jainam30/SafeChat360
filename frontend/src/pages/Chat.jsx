@@ -358,9 +358,9 @@ export default function Chat() {
     if (!user) return <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>;
 
     return (
-        <div className="flex h-[calc(100dvh-64px)] md:h-[calc(100vh-100px)] w-full mx-auto bg-white border border-gray-200 rounded-none md:rounded-lg overflow-hidden shadow-sm my-0 md:my-4 lg:rounded-none lg:my-0 lg:border-x-0 lg:border-t-0">
+        <div className="flex h-full w-full mx-auto bg-white border border-gray-200 rounded-none md:rounded-lg overflow-hidden shadow-sm lg:border-x-0 lg:border-t-0">
             {/* LEFT SIDEBAR (Chat List) */}
-            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col border-r border-white/10 glass-panel md:rounded-l-lg`}>
+            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[320px] lg:w-[360px] flex-col border-r border-white/10 glass-panel md:rounded-l-lg`}>
 
                 {/* Header */}
                 <div className="h-16 border-b border-gray-200 flex items-center justify-between px-5">
@@ -501,92 +501,64 @@ export default function Chat() {
 
                     {messages.map((msg, index) => {
                         const isMe = msg.sender_id === user?.id;
-                        const showAvatar = !isMe && (index === messages.length - 1 || messages[index + 1]?.sender_id !== msg.sender_id);
                         const senderUser = !isMe ? (users.find(u => u.id === msg.sender_id) || friends.find(f => f.id === msg.sender_id)) : null;
 
-                        // Message grouping logic for spacing/border-radius can be added here
-
-                        if (msg.type && msg.type !== 'message') return null;
-
                         return (
-                            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group mb-1 relative`}>
-                                {!isMe && (
-                                    <div className="w-7 h-7 flex-shrink-0 mr-2 flex items-end">
-                                        {showAvatar ? (
-                                            <img
-                                                src={senderUser?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender_username}`}
-                                                className="w-7 h-7 rounded-full object-cover"
-                                            />
-                                        ) : <div className="w-7" />}
-                                    </div>
-                                )}
-
-                                <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative break-words ${isMe
-                                    ? 'bg-cyber-primary text-white rounded-br-md'
-                                    : 'bg-slate-100 text-slate-900 rounded-bl-md'}`}>
-
-                                    {/* Sender Name in Group/Global */}
-                                    {!isMe && activeChat.type !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== msg.sender_id) && (
-                                        <div className="text-xs text-cyber-secondary mb-1 ml-1">{msg.sender_username}</div>
-                                    )}
-
-                                    {msg.content}
-
-                                    {/* Hover Options */}
-                                    <div className={`absolute top-1/2 -translate-y-1/2 ${isMe ? '-left-10' : '-right-10'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-2`}>
-                                        <button onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === msg.id ? null : msg.id); }} className="text-gray-400 hover:text-gray-600">
-                                            <MoreHorizontal size={16} />
-                                        </button>
-                                    </div>
-
-                                    {/* Context Menu */}
-                                    {activeMessageMenu === msg.id && (
-                                        <div className="absolute top-full mt-2 z-50 bg-white shadow-lg rounded-lg border border-gray-100 p-1 min-w-[120px]">
-                                            {isMe && <button onClick={() => handleDeleteMessage(msg.id, 'everyone')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-red-50 text-red-500 rounded">Unsend</button>}
-                                            <button onClick={() => handleDeleteMessage(msg.id, 'me')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 text-gray-700 rounded">Delete for me</button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            <MessageBubble
+                                key={msg.id || index}
+                                message={msg}
+                                isOwn={isMe}
+                                formatTime={formatTimeForUser}
+                                senderUser={senderUser}
+                                activeChatType={activeChat.type}
+                                messages={messages}
+                                index={index}
+                                user={user}
+                                setActiveMessageMenu={setActiveMessageMenu}
+                                activeMessageMenu={activeMessageMenu}
+                                handleDeleteMessage={handleDeleteMessage}
+                            />
                         );
                     })}
                     <div ref={messagesEndRef} />
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 px-5">
-                    <div className="flex items-center gap-2 bg-slate-100 rounded-full border border-gray-200 px-2 py-1.5 focus-within:border-cyber-primary/50 transition-colors">
-                        <div className="flex items-center gap-1 ml-2">
-                            <button className="p-2 text-slate-500 hover:text-slate-800 rounded-full"><Smile size={24} strokeWidth={1.5} /></button>
-                        </div>
+                <div className="p-4 bg-gray-900/50 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-10">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            sendMessage();
+                        }}
+                        className="flex items-center gap-2"
+                    >
                         <input
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Message..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 text-sm placeholder-slate-500 h-10"
+                            placeholder="Type a message..."
+                            className="flex-1 bg-white/5 border border-white/10 rounded-full px-6 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-cyber-primary focus:ring-1 focus:ring-cyber-primary transition-all"
                         />
-                        <div className="flex items-center gap-2 mr-2">
-                            {inputValue.trim() ? (
-                                <button onClick={sendMessage} className="text-cyber-primary font-bold text-sm hover:text-cyber-primary_hover">Send</button>
-                            ) : (
-                                <>
-                                    <button className="p-2 text-slate-500 hover:text-slate-800 rounded-full"><ImageIcon size={24} strokeWidth={1.5} /></button>
-                                    <button className="p-2 text-slate-500 hover:text-slate-800 rounded-full"><Heart size={24} strokeWidth={1.5} /></button>
-                                </>
-                            )}
-
-                            {/* AI Assist Button (Hidden/Optional) */}
-                            {inputValue.trim() && (
-                                <button onClick={handleAiAssist} className="p-2 text-purple-500 hover:bg-purple-50 rounded-full" title="AI Assist">
-                                    <Sparkles size={20} />
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                        <button
+                            type="submit"
+                            disabled={!inputValue.trim()}
+                            className="p-3 rounded-full bg-gradient-to-r from-cyber-primary to-purple-600 text-white shadow-lg shadow-cyber-primary/20 hover:shadow-cyber-primary/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+                        >
+                            <Send size={20} />
+                        </button>
+                    </form>
                 </div>
             </div>
+
+            {/* Call Modal */}
+            {callData && (
+                <CallModal
+                    {...callData}
+                    user={user}
+                    socket={ws.current}
+                    onClose={() => setCallData(null)}
+                />
+            )}
 
             {showGroupModal && (
                 <CreateGroupModal
@@ -595,19 +567,74 @@ export default function Chat() {
                     onCreated={handleGroupCreated}
                 />
             )}
-
-            {callData && (
-                <CallModal
-                    isIncoming={callData.isIncoming}
-                    caller={callData.caller}
-                    targetUser={activeChat.data}
-                    socket={ws.current}
-                    onClose={() => setCallData(null)}
-                    user={user}
-                    isVideo={callData.isVideo}
-                    offerData={callData.offerData}
-                />
-            )}
         </div>
     );
 }
+
+// Helper for rendering individual messages
+const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType, messages, index, user, setActiveMessageMenu, activeMessageMenu, handleDeleteMessage }) => {
+    // System/Call Log Message
+    if (message.msg_type === 'call') {
+        return (
+            <div className="flex justify-center my-4">
+                <div className="bg-gray-800/60 backdrop-blur-sm px-4 py-1.5 rounded-full flex items-center gap-2 text-xs text-gray-300 border border-white/5">
+                    <Phone size={12} className={message.content.includes("Ended") ? "text-red-400" : "text-green-400"} />
+                    <span className="font-medium">
+                        {message.sender_id === user.id ? "You" : message.sender_username} - {message.content}
+                    </span>
+                    <span className="text-gray-500">• {formatTime(message.created_at)}</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Standard Text Message
+    const showAvatar = !isOwn && (index === messages.length - 1 || messages[index + 1]?.sender_id !== message.sender_id);
+
+    return (
+        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group mb-1 relative`}>
+            {!isOwn && (
+                <div className="w-7 h-7 flex-shrink-0 mr-2 flex items-end">
+                    {showAvatar ? (
+                        <img
+                            src={senderUser?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.sender_username}`}
+                            className="w-7 h-7 rounded-full object-cover"
+                            alt="avatar"
+                        />
+                    ) : <div className="w-7" />}
+                </div>
+            )}
+            <div
+                className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative break-words ${isOwn
+                    ? 'bg-cyber-primary text-white rounded-br-md'
+                    : 'bg-slate-100 text-slate-900 rounded-bl-md'}`}
+            >
+                {/* Sender Name in Group/Global */}
+                {!isOwn && activeChatType !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== message.sender_id) && (
+                    <div className="text-xs text-cyber-secondary mb-1 ml-1">{message.sender_username}</div>
+                )}
+
+                {message.content}
+
+                <div className={`text-[10px] mt-1 opacity-70 flex items-center justify-end gap-1 font-medium ${isOwn ? 'text-blue-100' : 'text-gray-400'}`}>
+                    {formatTime(message.created_at)}
+                </div>
+
+                {/* Hover Options */}
+                <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? '-left-10' : '-right-10'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-2`}>
+                    <button onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === message.id ? null : message.id); }} className="text-gray-400 hover:text-gray-600">
+                        <MoreHorizontal size={16} />
+                    </button>
+                </div>
+
+                {/* Context Menu */}
+                {activeMessageMenu === message.id && (
+                    <div className="absolute top-full mt-2 z-50 bg-white shadow-lg rounded-lg border border-gray-100 p-1 min-w-[120px]">
+                        {isOwn && <button onClick={() => handleDeleteMessage(message.id, 'everyone')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-red-50 text-red-500 rounded">Unsend</button>}
+                        <button onClick={() => handleDeleteMessage(message.id, 'me')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 text-gray-700 rounded">Delete for me</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};

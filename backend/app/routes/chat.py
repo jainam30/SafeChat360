@@ -241,17 +241,82 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
             from app.models import GroupMember
             
             # Signaling Messages (Don't save to DB)
+            # Signaling Messages (Don't save to DB usually, enabling Logging for Start/End)
             msg_type = message_data.get("type")
-            if msg_type in ["call-request", "call-response", "offer", "answer", "ice-candidate"]:
-                 print(f"WS: Handling signaling message: {msg_type}")
+            
+            if msg_type in ["call-request", "call-response", "offer", "answer", "ice-candidate", "hang-up"]:
+                 # Relay to receiver first (Low Latency)
                  if receiver_id:
-                     # Relay to receiver
                      await manager.broadcast(
                          json.dumps(message_data), 
                          receiver_id=receiver_id, 
                          sender_id=user_id
                      )
-                 continue # Skip DB save for signaling
+                 
+                 # LOGGING: Intercept specific events to save to DB
+                 if msg_type == "answer":
+                      # Call Started
+                      try:
+                          with Session(engine) as log_session:
+                              log_msg = Message(
+                                  sender_id=user_id,
+                                  sender_username=sender_username,
+                                  receiver_id=receiver_id,
+                                  content="Voice Call Started",
+                                  type="call",
+                                  created_at=datetime.utcnow()
+                              )
+                              log_session.add(log_msg)
+                              log_session.commit()
+                              # Optional: Broadcast the log message to chat? 
+                              # The clients might just see it on refresh or we can broadcast it as a 'message' type separately.
+                              # For now, let's auto-broadcast it as a chat message too so it appears in feed instantly.
+                              log_session.refresh(log_msg)
+                              chat_log = {
+                                "type": "message",
+                                "id": log_msg.id,
+                                "sender_id": log_msg.sender_id,
+                                "sender_username": log_msg.sender_username,
+                                "receiver_id": log_msg.receiver_id,
+                                "content": log_msg.content,
+                                "msg_type": "call", # Custom field for frontend distinction
+                                "created_at": log_msg.created_at.isoformat()
+                              }
+                              await manager.broadcast(json.dumps(chat_log), receiver_id=receiver_id, sender_id=user_id)
+                              
+                      except Exception as e:
+                          print(f"Failed to log call start: {e}")
+
+                 elif msg_type == "hang-up":
+                      # Call Ended
+                      try:
+                          with Session(engine) as log_session:
+                              log_msg = Message(
+                                  sender_id=user_id,
+                                  sender_username=sender_username,
+                                  receiver_id=receiver_id,
+                                  content="Voice Call Ended",
+                                  type="call",
+                                  created_at=datetime.utcnow()
+                              )
+                              log_session.add(log_msg)
+                              log_session.commit()
+                              log_session.refresh(log_msg)
+                              chat_log = {
+                                "type": "message",
+                                "id": log_msg.id,
+                                "sender_id": log_msg.sender_id,
+                                "sender_username": log_msg.sender_username,
+                                "receiver_id": log_msg.receiver_id,
+                                "content": log_msg.content,
+                                "msg_type": "call",
+                                "created_at": log_msg.created_at.isoformat()
+                              }
+                              await manager.broadcast(json.dumps(chat_log), receiver_id=receiver_id, sender_id=user_id)
+                      except Exception as e:
+                          print(f"Failed to log call end: {e}")
+                 
+                 continue # Done handling signaling
 
             # Chat Message
             group_members = None
@@ -268,6 +333,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
                     receiver_id=receiver_id,
                     group_id=group_id,
                     content=content,
+                    type=message_data.get("msg_type", "text"), # Allow frontend to specify type if needed, default text
                     created_at=datetime.utcnow()
                 )
                 session.add(msg)
@@ -282,6 +348,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
                     "receiver_id": msg.receiver_id,
                     "group_id": msg.group_id,
                     "content": msg.content,
+                    "msg_type": msg.type,
                     "created_at": msg.created_at.isoformat()
                 }
                 

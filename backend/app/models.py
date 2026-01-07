@@ -66,6 +66,8 @@ class Message(SQLModel, table=True):
     receiver_id: Optional[int] = None # None = Global (if group_id also None)
     group_id: Optional[int] = None # NEW: For Group Chats
     content: str
+    type: str = Field(default="text") # text, image, video, call, system
+    is_unsent: bool = False
     is_unsent: bool = False
     deleted_by_ids: Optional[str] = None # Comma separated list of user_ids
     created_at: datetime = Field(default_factory=datetime.utcnow)
