@@ -16,3 +16,4 @@ firebase-admin
 slowapi
 deep-translator
 google-generativeai
+websockets
