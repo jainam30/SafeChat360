@@ -79,6 +79,9 @@ const CallModal = ({ onClose, onMinimize }) => {
         }
     };
 
+    const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
+    const showOverlay = !hasRemoteVideo || status !== 'connected';
+
     return (
         <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
             {/* Background */}
@@ -98,8 +101,8 @@ const CallModal = ({ onClose, onMinimize }) => {
                 </div>
             )}
 
-            {/* Status Header (Only when not connected/video) */}
-            {(!remoteStream || status !== 'connected') && (
+            {/* Overlay: Avatar & Name (Visible if NO remote video or NOT connected) */}
+            {showOverlay && (
                 <div className="absolute top-20 text-center z-10 flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyber-primary to-purple-600 flex items-center justify-center text-4xl font-bold text-white mb-4 border-4 border-white/10 shadow-lg relative">
                         {(isIncoming ? caller?.profile_photo : targetUser?.profile_photo) ? (
@@ -110,7 +113,10 @@ const CallModal = ({ onClose, onMinimize }) => {
                         {['incoming', 'calling'].includes(status) && <div className="absolute inset-0 rounded-full border-4 border-white animate-ping opacity-20"></div>}
                     </div>
                     <h2 className="text-3xl font-bold text-white">{isIncoming ? caller?.username : targetUser?.username}</h2>
-                    <p className="text-cyber-primary font-medium tracking-widest text-sm mt-2 uppercase animate-pulse">{getStatusText()}</p>
+                    {/* Hide status text if connected (per user request) */}
+                    {status !== 'connected' && (
+                        <p className="text-cyber-primary font-medium tracking-widest text-sm mt-2 uppercase animate-pulse">{getStatusText()}</p>
+                    )}
                 </div>
             )}
 
