@@ -72,6 +72,9 @@ app.include_router(chat.router)
 app.include_router(friends.router)
 app.include_router(groups.router)
 app.include_router(notifications.router)
+
+# MANUAL FIX: Register WebSocket explicitly to bypass APIRouter prefix issues
+app.add_websocket_route("/api/chat/ws/{client_id}", chat.websocket_endpoint)
 from app.routes import upload
 app.include_router(upload.router)
 
