@@ -343,8 +343,15 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
     const createOffer = async (stream) => {
         const pc = createPeerConnection();
-        // Add tracks
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        // Safely add tracks (Check if already added to prevent InvalidAccessError during renegotiation)
+        const senders = pc.getSenders();
+        stream.getTracks().forEach(track => {
+            const alreadyHas = senders.some(sender => sender.track === track);
+            if (!alreadyHas) {
+                pc.addTrack(track, stream);
+            }
+        });
 
         try {
             const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
