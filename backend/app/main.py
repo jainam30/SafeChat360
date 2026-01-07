@@ -73,8 +73,13 @@ app.include_router(friends.router)
 app.include_router(groups.router)
 app.include_router(notifications.router)
 
-# MANUAL FIX: Register WebSocket explicitly to bypass APIRouter prefix issues
-app.add_websocket_route("/api/chat/ws/{client_id}", chat.websocket_endpoint)
+from fastapi import WebSocket
+
+# MANUAL FIX: Register WebSocket explicitly in main app to bypass Router issues
+@app.websocket("/api/chat/ws/{client_id}")
+async def ws_proxy(websocket: WebSocket, client_id: str, token: str = None):
+    # Delegate to the logic in chat.py
+    await chat.websocket_endpoint(websocket, client_id, token)
 from app.routes import upload
 app.include_router(upload.router)
 
