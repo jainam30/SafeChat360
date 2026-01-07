@@ -178,7 +178,11 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: isVideo,
-                    audio: true
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
                 });
 
                 if (!mounted) {
@@ -320,7 +324,11 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             stopAudio(); // Stop ringing
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: isVideo,
-                audio: true
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
             });
 
             setLocalStream(stream);

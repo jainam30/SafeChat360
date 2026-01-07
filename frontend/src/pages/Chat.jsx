@@ -9,10 +9,13 @@ import {
     Smile, Heart, Info
 } from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
-import CallModal from '../components/CallModal';
+import CreateGroupModal from '../components/CreateGroupModal';
+
+import { useCall } from '../context/CallContext';
 
 export default function Chat() {
     const { user, token } = useAuth();
+    const { socket, isConnected, startCall: startCallContext } = useCall();
 
     // State
     const [activeChat, setActiveChat] = useState({ type: 'global', id: null, data: null });
@@ -21,14 +24,10 @@ export default function Chat() {
     const [groups, setGroups] = useState([]);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
-    const [isConnected, setIsConnected] = useState(false);
     const [showGroupModal, setShowGroupModal] = useState(false);
 
-    const [callData, setCallData] = useState(null);
     const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
 
-    const ws = useRef(null);
-    const reconnectTimeout = useRef(null);
     const messagesEndRef = useRef(null);
     const activeChatRef = useRef(activeChat);
 
@@ -91,121 +90,38 @@ export default function Chat() {
         fetchHistory();
     }, [activeChat, token]);
 
-    // WebSocket Connection
-    // WebSocket Connection
+    // WebSocket Listeners (using global socket)
     useEffect(() => {
-        if (!user) return;
+        if (!socket) return;
 
-        const connect = () => {
-            if (ws.current && ws.current.readyState === WebSocket.OPEN) return;
+        const handleMessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
 
-            // Determine WS Protocol
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            let wsUrl = '';
-            const apiUrl = getApiUrl('');
+                // Ignore call signaling (handled by context)
+                if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) return;
 
-            if (apiUrl.startsWith('http')) {
-                // Replace http -> ws, https -> wss
-                wsUrl = apiUrl.replace(/^http/, 'ws');
-            } else {
-                // Relative API path or localhost fallback
-                wsUrl = `${protocol}//${window.location.host}${apiUrl}`;
-            }
-            // Ensure no double slashes if apiUrl was just '/'
-            if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
+                if (data.type === 'message' || !data.type) {
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === data.id)) return prev;
+                        const currentActive = activeChatRef.current;
+                        const isRelevant =
+                            (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
+                            (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
+                            (currentActive.type === 'group' && data.group_id === currentActive.id);
 
-            wsUrl = `${wsUrl}/api/chat/ws/${user.id}?token=${token}`;
-
-            console.log("Connecting to WS:", wsUrl);
-            const socket = new WebSocket(wsUrl);
-
-            socket.onopen = () => {
-                console.log("WS Connected");
-                setIsConnected(true);
-                ws.current = socket;
-                if (reconnectTimeout.current) {
-                    clearTimeout(reconnectTimeout.current);
-                    reconnectTimeout.current = null;
+                        if (isRelevant) return [...prev, data];
+                        return prev;
+                    });
                 }
-            };
-            // ...
-            // ...
-            const startCall = (isVideo) => {
-                if (!isConnected) {
-                    alert("Chat service disconnected. Please wait for reconnection.");
-                    return;
-                }
-                if (activeChat.type !== 'private') return;
-                setCallData({
-                    isIncoming: false,
-                    isVideo: isVideo
-                });
-            };
-
-            socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) {
-                        if (data.type === 'offer') {
-                            setCallData(prev => {
-                                if (prev) return prev; // Allow hook to handle renegotiation or ignore if busy
-                                return {
-                                    isIncoming: true,
-                                    caller: { id: data.sender_id, username: data.sender_username || "Unknown" },
-                                    isVideo: data.isVideo,
-                                    offerData: data
-                                };
-                            });
-                        }
-                        return;
-                    }
-
-                    if (data.type === 'message' || !data.type) {
-                        setMessages(prev => {
-                            if (prev.find(m => m.id === data.id)) return prev;
-                            const currentActive = activeChatRef.current;
-                            const isRelevant =
-                                (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
-                                (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
-                                (currentActive.type === 'group' && data.group_id === currentActive.id);
-
-                            if (isRelevant) return [...prev, data];
-                            return prev;
-                        });
-                    }
-                } catch (e) {
-                    console.error("WS Parse error", e);
-                }
-            };
-
-            socket.onclose = () => {
-                console.log("WS Disconnected. Attempting to reconnect...");
-                setIsConnected(false);
-                ws.current = null;
-                // Auto reconnect after 3 seconds
-                if (!reconnectTimeout.current) {
-                    reconnectTimeout.current = setTimeout(connect, 3000);
-                }
-            };
-
-            socket.onerror = (err) => {
-                console.error("WS Error", err);
-                socket.close();
-            };
-        };
-
-        connect();
-
-        return () => {
-            if (ws.current) {
-                ws.current.close();
-                ws.current = null;
-            }
-            if (reconnectTimeout.current) {
-                clearTimeout(reconnectTimeout.current);
+            } catch (e) {
+                console.error("WS Parse error", e);
             }
         };
-    }, [user]);
+
+        socket.addEventListener('message', handleMessage);
+        return () => socket.removeEventListener('message', handleMessage);
+    }, [socket]);
 
     // Auto-scroll
     useEffect(() => {
@@ -252,13 +168,12 @@ export default function Chat() {
     }, [activeChat, token]);
 
     const startCall = (isVideo) => {
+        if (!isConnected) {
+            alert("Chat service disconnected. Please wait for reconnection.");
+            return;
+        }
         if (activeChat.type !== 'private') return;
-        setCallData({
-            isIncoming: false,
-            isVideo: isVideo,
-            targetUser: activeChat.data,
-            caller: user
-        });
+        startCallContext(activeChat.data, isVideo);
     };
 
     const sendMessage = async () => {
@@ -551,16 +466,6 @@ export default function Chat() {
                     </form>
                 </div>
             </div>
-
-            {/* Call Modal */}
-            {callData && (
-                <CallModal
-                    {...callData}
-                    user={user}
-                    socket={ws.current}
-                    onClose={() => setCallData(null)}
-                />
-            )}
 
             {showGroupModal && (
                 <CreateGroupModal
