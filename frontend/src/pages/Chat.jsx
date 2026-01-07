@@ -9,7 +9,6 @@ import {
     Smile, Heart, Info
 } from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
-import CreateGroupModal from '../components/CreateGroupModal';
 
 import { useCall } from '../context/CallContext';
 
