@@ -105,11 +105,15 @@ export default function Chat() {
             const apiUrl = getApiUrl('');
 
             if (apiUrl.startsWith('http')) {
+                // Replace http -> ws, https -> wss
                 wsUrl = apiUrl.replace(/^http/, 'ws');
-                if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
             } else {
-                wsUrl = `${protocol}//${window.location.host}`;
+                // Relative API path or localhost fallback
+                wsUrl = `${protocol}//${window.location.host}${apiUrl}`;
             }
+            // Ensure no double slashes if apiUrl was just '/'
+            if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
+
             wsUrl = `${wsUrl}/api/chat/ws/${user.id}?token=${token}`;
 
             console.log("Connecting to WS:", wsUrl);
