@@ -41,7 +41,7 @@ async def upload_file(file: UploadFile = File(...)):
         # Note: In production (Vercel), this local storage won't work perfectly for persistence,
         # but is required for the demo to function now.
         return {
-            "url": f"http://localhost:8000/uploads/{unique_name}", 
+            "url": f"/uploads/{unique_name}", 
             "type": "image" if file.content_type.startswith("image") else "video"
         }
     except Exception as e:

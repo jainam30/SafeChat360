@@ -255,7 +255,9 @@ export default function Chat() {
         if (activeChat.type !== 'private') return;
         setCallData({
             isIncoming: false,
-            isVideo: isVideo
+            isVideo: isVideo,
+            targetUser: activeChat.data,
+            caller: user
         });
     };
 

@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Type, Smile, Music, Send, Trash2, Move } from 'lucide-react';
+import { getApiUrl } from '../config';
 
 const MOCK_MUSIC_TRACKS = [
     { id: '1', title: 'Cyber Pulse', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
@@ -116,9 +115,9 @@ const StoryEditor = ({ mediaFile, mediaType, onClose, onPost }) => {
                 onTouchEnd={handleDragEnd}
             >
                 {mediaType === 'video' ? (
-                    <video src={previewUrl} className="w-full h-full object-cover" autoPlay loop muted />
+                    <video src={previewUrl.startsWith('http') || previewUrl.startsWith('blob:') ? previewUrl : getApiUrl(previewUrl)} className="w-full h-full object-cover" autoPlay loop muted />
                 ) : (
-                    <img src={previewUrl} className="w-full h-full object-cover" alt="Preview" />
+                    <img src={previewUrl.startsWith('http') || previewUrl.startsWith('blob:') ? previewUrl : getApiUrl(previewUrl)} className="w-full h-full object-cover" alt="Preview" />
                 )}
 
                 {/* Overlays */}

@@ -1,9 +1,13 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Clock, User } from 'lucide-react';
+import { getApiUrl } from '../config';
 
 const StoryViewer = ({ story, onClose }) => {
     if (!story) return null;
+
+    const getFullUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        return getApiUrl(url);
+    };
 
     // Close on Escape key
     useEffect(() => {
@@ -48,13 +52,13 @@ const StoryViewer = ({ story, onClose }) => {
                 <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
                     {story.media_type === 'image' ? (
                         <img
-                            src={story.media_url}
+                            src={getFullUrl(story.media_url)}
                             className="w-full h-full object-contain"
                             alt="Story"
                         />
                     ) : story.media_type === 'video' ? (
                         <video
-                            src={story.media_url}
+                            src={getFullUrl(story.media_url)}
                             className="w-full h-full object-contain"
                             controls
                             autoPlay

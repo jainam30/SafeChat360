@@ -10,6 +10,14 @@ import StoryEditor from '../components/StoryEditor';
 
 const Dashboard = () => {
   const { token, user } = useAuth();
+
+  // Helper to resolve media URLs
+  const getMediaSrc = (url) => {
+    if (!url) return '';
+    if (url.startsWith('blob:') || url.startsWith('http')) return url;
+    return getApiUrl(url);
+  };
+
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
   const [users, setUsers] = useState([]);
@@ -71,10 +79,14 @@ const Dashboard = () => {
     if (!file) return;
 
     // Immediate local preview
+    const localUrl = URL.createObjectURL(file);
     if (!isStory) {
-      const localUrl = URL.createObjectURL(file);
       setMediaUrl(localUrl);
       setMediaType(file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'text');
+    } else {
+      setStoryMedia(localUrl);
+      setStoryType(file.type.startsWith('image/') ? 'image' : 'video');
+      setShowStoryModal(true);
     }
 
     if (file.size > 50 * 1024 * 1024) {
@@ -251,8 +263,8 @@ const Dashboard = () => {
                     >
                       <X size={18} />
                     </button>
-                    {mediaType === 'image' && <img src={mediaUrl} className="w-full h-full object-cover" alt="Post media preview" />}
-                    {mediaType === 'video' && <video src={mediaUrl} controls className="w-full h-full object-cover" />}
+                    {mediaType === 'image' && <img src={getMediaSrc(mediaUrl)} className="w-full h-full object-cover" alt="Post media preview" />}
+                    {mediaType === 'video' && <video src={getMediaSrc(mediaUrl)} controls className="w-full h-full object-cover" />}
                   </div>
                 )}
 
@@ -314,9 +326,9 @@ const Dashboard = () => {
                 {/* Media */}
                 {post.media_url && (
                   <div className="w-full bg-black/40 aspect-square relative flex items-center justify-center overflow-hidden border-y border-white/5">
-                    {post.media_type === 'image' && <img src={post.media_url} className="w-full h-full object-cover" loading="lazy" alt="Post content" />}
-                    {post.media_type === 'video' && <video src={post.media_url} controls className="w-full h-full object-contain" />}
-                    {post.media_type === 'audio' && <div className="w-full p-10 flex justify-center"><audio src={post.media_url} controls /></div>}
+                    {post.media_type === 'image' && <img src={getMediaSrc(post.media_url)} className="w-full h-full object-cover" loading="lazy" alt="Post content" />}
+                    {post.media_type === 'video' && <video src={getMediaSrc(post.media_url)} controls className="w-full h-full object-contain" />}
+                    {post.media_type === 'audio' && <div className="w-full p-10 flex justify-center"><audio src={getMediaSrc(post.media_url)} controls /></div>}
                   </div>
                 )}
 
