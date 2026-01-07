@@ -255,6 +255,9 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 }
 
                 else if (data.type === 'answer') {
+                    stopAudio(); // Stop beeping immediately
+                    if (status === 'calling') setStatus('connecting'); // Clear timeout
+
                     if (pc && pc.signalingState === "have-local-offer") { // FIX: Only set remote if we are waiting for it
                         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                         // Flush candidates
@@ -399,10 +402,46 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         }
     };
 
-    const toggleVideo = () => {
+    const toggleVideo = async () => {
         if (localStreamRef.current) {
-            localStreamRef.current.getVideoTracks().forEach(t => t.enabled = !videoEnabled);
-            setVideoEnabled(!videoEnabled);
+            const videoTracks = localStreamRef.current.getVideoTracks();
+            if (videoTracks.length > 0) {
+                // Toggle existing track
+                videoTracks.forEach(t => t.enabled = !videoEnabled);
+                setVideoEnabled(!videoEnabled);
+            } else {
+                // Upgrade to Video
+                try {
+                    console.log("Upgrading to video...");
+                    const newStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    const newVideoTrack = newStream.getVideoTracks()[0];
+
+                    if (newVideoTrack) {
+                        localStreamRef.current.addTrack(newVideoTrack);
+                        setLocalStream(new MediaStream(localStreamRef.current.getTracks())); // Trigger re-render
+
+                        if (peerConnection.current) {
+                            const senders = peerConnection.current.getSenders();
+                            const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+
+                            if (videoSender) {
+                                videoSender.replaceTrack(newVideoTrack);
+                            } else {
+                                peerConnection.current.addTrack(newVideoTrack, localStreamRef.current);
+                            }
+
+                            // Trigger Renegotiation
+                            if (status === 'connected') {
+                                createOffer(localStreamRef.current);
+                            }
+                        }
+                        setVideoEnabled(true);
+                    }
+                } catch (e) {
+                    console.error("Failed to upgrade to video", e);
+                    setError("Could not access camera.");
+                }
+            }
         }
     };
 
