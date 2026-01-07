@@ -80,7 +80,8 @@ const CallModal = ({ onClose, onMinimize }) => {
     };
 
     const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
-    const showOverlay = !hasRemoteVideo || status !== 'connected';
+    // FIX: Hide overlay immediately if we have video, regardless of 'connected' status text lag
+    const showOverlay = !hasRemoteVideo;
 
     return (
         <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
