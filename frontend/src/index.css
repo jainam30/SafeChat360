@@ -11,7 +11,7 @@
   body {
     @apply bg-cyber-background text-cyber-text antialiased;
     position: relative;
-    min-height: 100vh;
+    min-height: 100dvh;
     /* JShine Gradient Background (Purple to Red/Salmon only) */
     /* Updated JShine Gradient Background (Teal to Deep Purple) */
     background-image: linear-gradient(to top, #30cfd0 0%, #330867 100%);

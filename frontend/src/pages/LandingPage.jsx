@@ -117,7 +117,7 @@ export default function LandingPage() {
                 >
                     <div className="absolute -inset-1 bg-gradient-to-r from-cyber-primary via-purple-500 to-blue-500 rounded-2xl blur-xl opacity-30 animate-pulse-slow"></div>
                     <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden ring-1 ring-black/5">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 min-h-[400px] md:h-[600px]">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 min-h-fit md:min-h-[400px] md:h-[600px]">
                             {/* Sidebar Mockup */}
                             <div className="hidden md:flex col-span-2 bg-slate-50/50 border-r border-slate-200/60 p-4 flex-col gap-4">
                                 <div className="h-8 w-8 bg-cyber-primary/20 rounded-lg mb-4"></div>
@@ -256,7 +256,7 @@ export default function LandingPage() {
                     <h2 className="text-4xl font-extrabold text-slate-900 mb-6">How It Works</h2>
                     <p className="text-slate-600 max-w-2xl mx-auto text-lg">Seamless integration into your existing platform in minutes.</p>
                 </div>
-                <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                     {[
                         { title: "Connect API", desc: "Use our SDK to connect your chat stream.", step: "1", icon: connectApiIcon },
                         { title: "Real-time Scan", desc: "Our AI processes every message instantly.", step: "2", icon: realTimeScanIcon },

@@ -25,7 +25,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
   // We use `md:` prefix to apply desktop styles separately.
   return (
     <aside className={`
-        fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out border-r border-white/20
+        fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out border-r border-white/20
         bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]
         ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} 
         md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'}

@@ -101,7 +101,7 @@ export default function UserProfile() {
                 <ArrowLeft size={18} /> Back
             </button>
 
-            <div className="glass-card p-8 rounded-2xl relative overflow-hidden bg-white/80 shadow-lg">
+            <div className="glass-card p-4 md:p-8 rounded-2xl relative overflow-hidden bg-white/80 shadow-lg">
                 {/* Background Decoration */}
                 <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-100 to-purple-100 blur-xl opacity-70"></div>
 
