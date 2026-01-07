@@ -34,7 +34,7 @@ export default function Topbar() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
-          <h1 className="text-xl font-bold text-white header-glow drop-shadow-md">
+          <h1 className="hidden sm:block text-xl font-bold text-white header-glow drop-shadow-md">
             SafeChat360
           </h1>
         </div>
@@ -149,9 +149,11 @@ export default function Topbar() {
           </Link>
           <button
             onClick={logout}
-            className="ml-2 px-4 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-sm hover:bg-red-500/10 hover:border-red-500/50 transition-all font-medium"
+            className="ml-2 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-all font-medium flex items-center justify-center"
+            title="Logout"
           >
-            Logout
+            <span className="hidden sm:inline">Logout</span>
+            <span className="sm:hidden transform rotate-90 scale-125">⏻</span>
           </button>
         </div>
       </div>

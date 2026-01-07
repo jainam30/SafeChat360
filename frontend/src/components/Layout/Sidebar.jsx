@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom'
 import { Home, MessageSquare, Clock, Settings, Info, Users, AlertTriangle, UserPlus, Globe } from 'lucide-react'
 import SidebarSwitch from './SidebarSwitch'
 import { useNotifications } from '../../context/NotificationContext';
+// Added utility to hide text on mobile if needed
+const hideOnMobile = 'hidden md:inline';
 
 const items = [
   { to: '/dashboard', label: 'Dashboard', icon: Home },
@@ -52,6 +54,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
                 ${isCollapsed ? 'justify-center px-2' : ''}
               `}
               title={isCollapsed ? it.label : ''}
+              onClick={() => setMobileOpen(false)}
             >
               <div className="relative">
                 <Icon size={20} className={({ isActive }) => isActive ? 'animate-pulse' : 'group-hover:text-slate-900 transition-colors'} />
