@@ -9,7 +9,7 @@ const SERVERS = {
 
 export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUser, offerData, onClose }) => {
     // State
-    const [status, setStatus] = useState(isIncoming ? 'incoming' : 'calling'); // calling, ringing, connecting, connected, ended
+    const [status, setStatus] = useState('idle'); // idle, calling, ringing, connecting, connected, ended, rejected, busy
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [micEnabled, setMicEnabled] = useState(true);
@@ -27,6 +27,18 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
     const gainNodeRef = useRef(null);
     const toneIntervalRef = useRef(null);
 
+    // Watch for call start
+    useEffect(() => {
+        if (isIncoming === true) {
+            setStatus('incoming');
+        } else if (isIncoming === false) {
+            setStatus('calling');
+        } else {
+            setStatus('idle');
+            stopAudio();
+        }
+    }, [isIncoming]);
+
     // --- Sound Generators ---
     const stopAudio = () => {
         if (toneIntervalRef.current) clearInterval(toneIntervalRef.current);
@@ -42,7 +54,9 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         audioCtxRef.current = new AudioContext();
 
         const playBeep = () => {
-            if (status !== 'calling' && status !== 'ringing') return;
+            // Only play if still in calling state
+            if (status !== 'calling') return;
+
             const osc = audioCtxRef.current.createOscillator();
             const gain = audioCtxRef.current.createGain();
             osc.type = 'sine';
@@ -68,6 +82,9 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         audioCtxRef.current = new AudioContext();
 
         const playRing = () => {
+            // Only play if still in incoming state
+            if (status !== 'incoming') return;
+
             // Trill effect
             const now = audioCtxRef.current.currentTime;
             const osc = audioCtxRef.current.createOscillator();
