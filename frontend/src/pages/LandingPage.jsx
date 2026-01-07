@@ -364,7 +364,7 @@ function FeatureCard({ icon, title, desc, color, isCustomIcon }) {
 function StatItem({ icon, label }) {
     return (
         <div className="flex flex-col items-center p-4 hover:scale-105 transition-transform duration-300">
-            <img src={icon} alt={label} className="w-24 h-24 mb-4 object-contain drop-shadow-md invert brightness-0 filter" />
+            <img src={icon} alt={label} className="w-24 h-24 mb-4 object-contain drop-shadow-md" />
             <div className="text-sm font-bold text-white uppercase tracking-wider drop-shadow-sm">{label}</div>
         </div>
     );
