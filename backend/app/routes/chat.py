@@ -143,8 +143,21 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
                 message_data = json.loads(data)
                 content = message_data.get("content")
                 sender_username = message_data.get("sender_username")
-                receiver_id = message_data.get("receiver_id") # Int or None
-                group_id = message_data.get("group_id") # Int or None
+                
+                # FIX: Ensure IDs are integers for dictionary lookups
+                receiver_id = message_data.get("receiver_id") 
+                if receiver_id is not None:
+                    try:
+                        receiver_id = int(receiver_id)
+                    except ValueError:
+                        receiver_id = None
+                        
+                group_id = message_data.get("group_id") 
+                if group_id is not None:
+                     try:
+                        group_id = int(group_id)
+                     except ValueError:
+                        group_id = None
             except:
                 print("WS: Error parsing JSON data")
                 continue
