@@ -170,8 +170,20 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         };
 
         pc.ontrack = (event) => {
-            console.log("Remote track received", event.streams[0]);
-            setRemoteStream(event.streams[0]);
+            console.log("Remote track received", event.track.kind, event.streams[0]);
+
+            // FIX: Ensure we have a stream to render. If streams[0] is null, create one.
+            let stream = event.streams[0];
+            if (!stream) {
+                stream = new MediaStream();
+                stream.addTrack(event.track);
+            }
+
+            setRemoteStream(prevStream => {
+                // Return the stream. If we already had one, this might replace it, 
+                // but typically for a single peer call, we just want "the" remote stream.
+                return stream;
+            });
         };
 
         peerConnection.current = pc;
@@ -432,8 +444,13 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
     const toggleMic = () => {
         if (localStreamRef.current) {
-            localStreamRef.current.getAudioTracks().forEach(t => t.enabled = !micEnabled);
-            setMicEnabled(!micEnabled);
+            const audioTracks = localStreamRef.current.getAudioTracks();
+            if (audioTracks.length > 0) {
+                // Toggle tracks
+                const enabled = !micEnabled;
+                audioTracks.forEach(t => t.enabled = enabled);
+                setMicEnabled(enabled);
+            }
         }
     };
 
@@ -442,8 +459,9 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             const videoTracks = localStreamRef.current.getVideoTracks();
             if (videoTracks.length > 0) {
                 // Toggle existing track
-                videoTracks.forEach(t => t.enabled = !videoEnabled);
-                setVideoEnabled(!videoEnabled);
+                const enabled = !videoEnabled;
+                videoTracks.forEach(t => t.enabled = enabled);
+                setVideoEnabled(enabled);
             } else {
                 // Upgrade to Video
                 try {

@@ -29,6 +29,7 @@ import PostView from './pages/PostView';
 
 import ErrorBoundary from './components/ErrorBoundary';
 
+import FloatingVideo from './components/FloatingVideo';
 import CallModal from './components/CallModal';
 
 const GlobalCallUI = () => {
@@ -37,21 +38,7 @@ const GlobalCallUI = () => {
   if (!callData) return null;
 
   if (isMinimized) {
-    // Mini Bar (Call Bar)
-    return (
-      <div
-        onClick={() => setIsMinimized(false)}
-        className="fixed bottom-20 right-4 z-[9999] bg-gray-900 border border-white/20 rounded-lg p-3 flex items-center gap-3 shadow-2xl cursor-pointer animate-in fade-in slide-in-from-bottom-5 hover:scale-105 transition-transform"
-      >
-        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center animate-pulse">
-          <span className="text-white font-bold text-xs">{callData.isVideo ? 'VIDEO' : 'VOICE'}</span>
-        </div>
-        <div className="flex flex-col">
-          <span className="text-white text-sm font-bold">{callData.isIncoming ? callData.caller?.username : callData.targetUser?.username}</span>
-          <span className="text-gray-400 text-xs">Tap to return</span>
-        </div>
-      </div>
-    );
+    return <FloatingVideo />;
   }
 
   return (
