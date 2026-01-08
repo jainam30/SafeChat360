@@ -3,13 +3,18 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)  # Load environment variables from .env if present, overriding system env
+load_dotenv()  # checking local .env, but NOT overriding system envs (crucial for Render)
 
 # DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
-# For Vercel: Use /tmp for SQLite if no DATABASE_URL is set (prevents Read-Only error), 
+# For Vercel/Render: Use /tmp for SQLite if no DATABASE_URL is set (prevents Read-Only error), 
 # OR prefer the actual environment variable.
 if os.environ.get("VERCEL") or os.environ.get("RENDER"):
-    DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:////tmp/safechat.db")
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        print("CRITICAL WARNING: DATABASE_URL is missing in Production! Using ephemeral SQLite.", flush=True)
+        DATABASE_URL = "sqlite:////tmp/safechat.db"
+    else:
+        DATABASE_URL = url
 else:
     DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
 print(f"DEBUG: Configured DATABASE_URL={DATABASE_URL}", flush=True)
