@@ -448,7 +448,7 @@ const Dashboard = () => {
                       <div className="text-xs text-slate-500 truncate w-32">New Member</div>
                     </div>
                   </div>
-                  <button className="text-xs font-bold text-cyber-primary hover:text-white">Follow</button>
+                  <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary">Follow</button>
                 </div>
               ))}
             </div>

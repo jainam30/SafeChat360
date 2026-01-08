@@ -181,11 +181,11 @@ export default function Account() {
     return (
         <div className="max-w-4xl mx-auto">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-cyber-text mb-2 flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
                     <Shield className="text-cyber-primary" />
                     Account Settings
                 </h1>
-                <p className="text-cyber-muted">Manage your profile and security preferences.</p>
+                <p className="text-white">Manage your profile and security preferences.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

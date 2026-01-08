@@ -11,8 +11,8 @@ module.exports = {
         cyber: {
           background: 'transparent', // Let body gradient show through
           surface: '#ffffff', // White surface for glass effect
-          text: '#1e293b', // Slate 800 (Dark text for readability on light/bright bg)
-          muted: '#64748b', // Slate 500
+          text: '#ffffff', // White (Global text for dark gradient background)
+          muted: '#cbd5e1', // Slate 300 (Visible muted text on dark bg)
           primary: '#12c2e9', // JShine Blue (Navbar/Actions)
           primary_hover: '#0ea5e9', // Darker Blue
           secondary: '#c471ed', // JShine Purple

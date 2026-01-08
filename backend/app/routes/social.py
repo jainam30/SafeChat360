@@ -33,7 +33,11 @@ class PostResponse(BaseModel):
     author_photo: Optional[str] = None
     likes_count: int = 0
     comments_count: int = 0
+    author_photo: Optional[str] = None
+    likes_count: int = 0
+    comments_count: int = 0
     has_liked: bool = False
+    is_saved: bool = False
 
 class CommentCreate(BaseModel):
     content: str
@@ -371,6 +375,10 @@ def get_posts(
                 likes = crud.get_likes_count(session, post.id)
                 comments = crud.get_comments_count(session, post.id) if hasattr(crud, 'get_comments_count') else len(crud.get_comments(session, post.id))
                 has_liked = crud.has_user_liked(session, current_user.id, post.id)
+                
+                # Check is_saved
+                from app.models import SavedPost
+                is_saved = session.exec(select(SavedPost).where(SavedPost.user_id == current_user.id, SavedPost.post_id == post.id)).first() is not None
 
                 response.append(PostResponse(
                     id=post.id,
@@ -386,7 +394,8 @@ def get_posts(
                     author_photo=u_photo,
                     likes_count=likes,
                     comments_count=comments,
-                    has_liked=has_liked
+                    has_liked=has_liked,
+                    is_saved=is_saved
                 ))
             except Exception as e:
                 print(f"Post serialization failed: {e}")
@@ -603,15 +612,109 @@ def get_comments(
     session: Session = Depends(get_session)
 ):
     comments = crud.get_comments(session, post_id)
-    return [
-        CommentResponse(
-            id=c.id,
-            content=c.content,
-            username=c.username,
-            user_id=c.user_id,
-            created_at=c.created_at.isoformat()
-        ) for c in comments
-    ]
+@router.post("/posts/{post_id}/save")
+def save_post(
+    post_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    from app.models import SavedPost
+    
+    # Check if header exists using CRUD generic or manual check
+    post = crud.get_post(session, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    # Privacy Check (Prevent saving private content)
+    is_visible = False
+    if post.user_id == current_user.id:
+        is_visible = True
+    elif post.privacy == 'public':
+        is_visible = True
+    elif post.privacy == 'friends':
+        friend_ids = crud.get_friends(session, current_user.id)
+        if post.user_id in friend_ids:
+            is_visible = True
+    elif post.privacy == 'private':
+        if post.allowed_users:
+            allowed = post.allowed_users.split(',')
+            if str(current_user.id) in allowed:
+                is_visible = True
+    
+    if not is_visible:
+        raise HTTPException(status_code=403, detail="Post not available to save")
+
+    # Check if already saved
+    existing = session.exec(select(SavedPost).where(SavedPost.user_id == current_user.id, SavedPost.post_id == post_id)).first()
+    
+    if existing:
+        # Unsave
+        session.delete(existing)
+        session.commit()
+        return {"status": "unsaved", "message": "Post removed from saved items"}
+    else:
+        # Save
+        saved = SavedPost(user_id=current_user.id, post_id=post_id)
+        session.add(saved)
+        session.commit()
+        return {"status": "saved", "message": "Post saved"}
+
+@router.get("/posts/saved", response_model=List[PostResponse])
+def get_saved_posts(
+    limit: int = 50,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    from app.models import SavedPost
+    
+    # Join SavedPost -> Post
+    statement = select(Post, SavedPost.created_at).join(SavedPost).where(SavedPost.user_id == current_user.id).order_by(SavedPost.created_at.desc()).offset(offset).limit(limit)
+    
+    try:
+        results = session.exec(statement).all()
+        # Results is list of (Post, saved_date) tuples? Or just Post if select(Post)?
+        # SQLModel select(Post, SavedPost) returns tuples.
+        # But wait, statement = select(Post, ...).join...
+        # If I select Post, I get Post objects.
+        
+        # Actually simplest is two queries or check documentation.
+        # Let's do scalar select(Post)
+        statement = select(Post).join(SavedPost).where(SavedPost.user_id == current_user.id).order_by(SavedPost.created_at.desc()).offset(offset).limit(limit)
+        posts = session.exec(statement).all()
+        
+        # reuse get_posts logic but for this specific list
+        # Copy-paste logic for packing response? Or call generic helper? 
+        # I'll verify if crud.get_posts can filter? No.
+        
+        response = []
+        for post in posts:
+            # ... (Manual hydration similar to get_posts) ...
+            user = crud.get_user(session, post.user_id)
+            likes = crud.get_likes_count(session, post.id)
+            comments = len(crud.get_comments(session, post.id))
+            has_liked = crud.has_user_liked(session, current_user.id, post.id)
+            
+            response.append(PostResponse(
+                id=post.id,
+                content=post.content,
+                username=user.username if user else "Unknown",
+                user_id=post.user_id,
+                media_url=post.media_url,
+                media_type=post.media_type,
+                is_flagged=post.is_flagged,
+                flag_reason=post.flag_reason,
+                created_at=post.created_at.isoformat(),
+                privacy=post.privacy,
+                author_photo=user.profile_photo if user else None,
+                likes_count=likes,
+                comments_count=comments,
+                has_liked=has_liked
+            ))
+        return response
+    except Exception as e:
+        print(f"Error fetching saved posts: {e}")
+        return []
 
 # ----------------------------------------------------------------------------
 # STORIES ENDPOINTS

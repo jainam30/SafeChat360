@@ -121,3 +121,9 @@ class Comment(SQLModel, table=True):
     username: str
     post_id: int = Field(index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SavedPost(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    post_id: int = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

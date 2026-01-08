@@ -3,7 +3,7 @@ import { formatTimeForUser, formatDateForUser } from '../utils/dateFormatter';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile } from 'lucide-react';
+import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile, Bookmark } from 'lucide-react';
 
 const SocialFeed = () => {
     const [posts, setPosts] = useState([]);
@@ -74,67 +74,84 @@ const SocialFeed = () => {
     /* Import compressor at top of file needed, but let's do inline import or assume globally imported? No I must add import to top. will do in separate op if needed, but replace_file_content doesn't easily allow top insert when editing middle. I will add import in a separate call or use dynamic import? Dynamic import is safe. */
 
     const handleFileChange = async (e) => {
-        // ... existing logic ...
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 50 * 1024 * 1024) { alert("File too large (max 50MB)"); return; } // Increased limit
+        if (file.size > 100 * 1024 * 1024) { alert("File too large (max 100MB)"); return; } // Increased limit
         const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
         if (!type) { alert("Only images and videos are supported"); return; }
 
-        let fileToUse = file;
+        // Immediate Upload using /api/upload
+        // This avoids Base64 limits for large videos and simplifies backend handling
+        const formData = new FormData();
+        formData.append('file', file);
 
-        // Compress if image
-        if (type === 'image') {
-            try {
-                // Dynamically import to avoid top-level complexity with multi-edit tools
-                const { compressImage } = await import('../utils/imageCompressor');
-                const compressedDataUrl = await compressImage(file);
+        // Show temporary preview while uploading? Or just wait? 
+        // Let's use a flag if we want loading UI, but for now simple alert on fail is standard
 
-                // For SocialFeed, we setPreview as DataURL directly. 
-                // We keep mediaFile as the Blob/File for consistency if we wanted to upload via FormData,
-                // BUT SocialFeed uses JSON body with base64 string for posts (legacy way)!
-                // So here, we actually WANT the base64 string to be the main thing.
+        try {
+            const res = await fetch(getApiUrl('/api/upload'), {
+                method: 'POST',
+                body: formData
+                // Note: Content-Type header excluded so browser sets boundary
+            });
 
-                setMediaPreview(compressedDataUrl);
-                setMediaFile(file); // Keep original? No, we likely won't upload it separately in SocialFeed. content is sent as base64.
-                // Wait: handlePost uses mediaPreview (base64) directly.
-                // const payload = { ... media_url: mediaPreview ... }
-                // So compressing here and setting mediaPreview is ALL we need to do!
-                return;
-            } catch (e) {
-                console.error("Compression error", e);
+            if (res.ok) {
+                const data = await res.json();
+                // Ensure full URL for preview if relative
+                const fullUrl = data.url.startsWith('http') ? data.url : getApiUrl(data.url);
+                setMediaPreview(fullUrl);
+                setMediaType(data.type); // 'video' or 'image'
+                setMediaFile(null);
+            } else {
+                alert("Failed to upload media. Please try again.");
             }
+        } catch (e) {
+            console.error("Upload error:", e);
+            alert("Error uploading media.");
         }
-
-        setMediaFile(file);
-        setMediaType(type);
-        const reader = new FileReader();
-        reader.onloadend = () => { setMediaPreview(reader.result); };
-        reader.readAsDataURL(file);
     };
 
-    const handleEditFileChange = (e) => {
+    const handleEditFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 2 * 1024 * 1024) { alert("File is too large (max 2MB)"); return; }
+        if (file.size > 100 * 1024 * 1024) { alert("File is too large (max 100MB)"); return; }
         const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
         if (!type) { alert("Only images and videos are supported"); return; }
-        setEditMediaFile(file);
-        setEditMediaType(type);
-        const reader = new FileReader();
-        reader.onloadend = () => { setEditMediaPreview(reader.result); };
-        reader.readAsDataURL(file);
+
+        // Immediate Upload
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(getApiUrl('/api/upload'), {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // Ensure full URL for preview
+                const fullUrl = data.url.startsWith('http') ? data.url : getApiUrl(data.url);
+                setEditMediaPreview(fullUrl);
+                setEditMediaType(data.type);
+                setEditMediaFile(null);
+            } else {
+                alert("Failed to upload media");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error uploading media");
+        }
     };
 
     const handlePost = async () => {
         // ... existing logic ...
-        if (!newPost.trim() && !mediaFile) return;
+        if (!newPost.trim() && !mediaFile && !mediaPreview) return; // check mediaPreview too since mediaFile is null after upload
         if (privacy === 'private' && selectedUsers.length === 0) { alert("Please select at least one friend for private post."); return; }
         setSubmitting(true);
         try {
             const payload = {
                 content: newPost,
-                media_url: mediaPreview,
+                media_url: mediaPreview, // content is now URL (or base64 if image compression used - wait: image compression sets DataURL, while upload sets URL. Both work.)
                 media_type: mediaType,
                 privacy: privacy,
                 allowed_users: privacy === 'private' ? selectedUsers : []
@@ -267,6 +284,28 @@ const SocialFeed = () => {
         }
     };
 
+    const handleSave = async (post) => {
+        // Optimistic
+        const originalPosts = [...posts];
+        setPosts(posts.map(p => {
+            if (p.id === post.id) {
+                return { ...p, is_saved: !p.is_saved };
+            }
+            return p;
+        }));
+
+        try {
+            const res = await fetch(getApiUrl(`/api/social/posts/${post.id}/save`), {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Failed to save");
+        } catch (e) {
+            console.error(e);
+            setPosts(originalPosts);
+        }
+    };
+
     const [activeCommentPostId, setActiveCommentPostId] = useState(null);
     const [comments, setComments] = useState({}); // Map post_id -> comments array
     const [newComment, setNewComment] = useState('');
@@ -384,11 +423,11 @@ const SocialFeed = () => {
             )}
 
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-cyber-text mb-2 flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
                     <User className="text-cyber-primary" />
                     Social Feed
                 </h1>
-                <p className="text-cyber-muted">Post updates, photos, and videos.</p>
+                <p className="text-white">Post updates, photos, and videos.</p>
             </div>
 
             {/* Share Box */}
@@ -401,7 +440,7 @@ const SocialFeed = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                         <textarea
-                            className="w-full bg-black/20 border border-white/10 rounded-xl p-3 focus:ring-2 focus:ring-cyber-primary/50 focus:border-cyber-primary outline-none transition-all resize-none h-24 text-white placeholder-cyber-muted"
+                            className="w-full bg-black/20 border border-white/10 rounded-xl p-3 focus:ring-2 focus:ring-black focus:border-black outline-none transition-all resize-none h-24 text-black placeholder-cyber-muted"
                             placeholder={`What's on your mind, ${user?.username}?`}
                             value={newPost}
                             onChange={(e) => setNewPost(e.target.value)}
@@ -615,6 +654,13 @@ const SocialFeed = () => {
                                 {post.likes_count > 0 ? post.likes_count : 'Like'}
                             </button>
                             <div className="flex gap-4 shrink-0">
+                                <button
+                                    onClick={() => handleSave(post)}
+                                    className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn ${post.is_saved ? 'text-cyber-primary' : 'text-cyber-muted hover:text-cyber-primary'}`}
+                                >
+                                    <Bookmark size={18} className={`group-hover/btn:scale-110 transition-transform ${post.is_saved ? 'fill-current' : ''}`} />
+                                    <span className="hidden xs:inline">{post.is_saved ? 'Saved' : 'Save'}</span>
+                                </button>
                                 <button
                                     onClick={() => toggleComments(post.id)}
                                     className="flex items-center gap-2 text-cyber-muted hover:text-blue-500 transition-colors text-sm font-medium group/btn"
