@@ -103,31 +103,31 @@ export default function Friends() {
     return (
         <div className="max-w-4xl mx-auto">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-cyber-text mb-2 flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
                     <Users className="text-cyber-primary" />
                     Friends & Connections
                 </h1>
-                <p className="text-cyber-muted">Find friends and manage your network.</p>
+                <p className="text-white">Find friends and manage your network.</p>
             </div>
 
             {/* Tabs */}
             <div className="flex gap-4 border-b border-cyber-border mb-8 overflow-x-auto pb-1">
                 <button
                     onClick={() => setActiveTab('friends')}
-                    className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'friends' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-cyber-muted hover:text-cyber-text'}`}
+                    className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'friends' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-white hover:text-cyber-text'}`}
                 >
                     My Friends
                 </button>
                 <button
                     onClick={() => setActiveTab('find')}
-                    className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'find' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-cyber-muted hover:text-cyber-text'}`}
+                    className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'find' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-white hover:text-cyber-text'}`}
                 >
                     Find People
                 </button>
                 <div className="relative">
                     <button
                         onClick={() => setActiveTab('requests')}
-                        className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'requests' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-cyber-muted hover:text-cyber-text'}`}
+                        className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'requests' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-white hover:text-cyber-text'}`}
                     >
                         Requests
                     </button>
