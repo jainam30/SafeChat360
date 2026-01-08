@@ -30,7 +30,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
         fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out border-r border-white/20
         bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} 
-        w-40 max-w-[50%]
+        w-20 max-w-[50%]
         md:relative md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-64'} md:block
     `}>
       <div className="h-16 hidden md:flex items-center justify-center border-b border-cyber-border mb-2">
