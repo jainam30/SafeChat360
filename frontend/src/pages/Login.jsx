@@ -106,8 +106,8 @@ export default function Login() {
             <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20 hover:scale-105 transition-transform">
               <img src={logoImg} alt="SafeChat360" className="w-full h-full rounded-2xl object-cover" />
             </Link>
-            <h1 className="text-3xl font-bold text-cyber-text mb-2 tracking-tight">Welcome Back</h1>
-            <p className="text-cyber-muted">Sign in to access your secure dashboard</p>
+            <h1 className="text-3xl font-bold text-black mb-2 tracking-tight">Welcome Back</h1>
+            <p className="text-black">Sign in to access your secure dashboard</p>
           </div>
 
           {error && (
