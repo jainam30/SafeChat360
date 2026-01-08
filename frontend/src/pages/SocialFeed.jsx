@@ -392,14 +392,14 @@ const SocialFeed = () => {
             </div>
 
             {/* Share Box */}
-            <div className="glass-card p-6 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px]">
+            <div className="glass-card p-4 md:p-6 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex gap-3 md:gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px] shrink-0">
                         <div className="w-full h-full rounded-full border-2 border-black/20 overflow-hidden">
                             <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover" />
                         </div>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         <textarea
                             className="w-full bg-black/20 border border-white/10 rounded-xl p-3 focus:ring-2 focus:ring-cyber-primary/50 focus:border-cyber-primary outline-none transition-all resize-none h-24 text-white placeholder-cyber-muted"
                             placeholder={`What's on your mind, ${user?.username}?`}
