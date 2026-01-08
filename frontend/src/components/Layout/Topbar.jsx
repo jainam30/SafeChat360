@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Bell, Search, User, X, Check, UserPlus } from 'lucide-react'
+import { Bell, Search, User, X, Check, UserPlus, Menu } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import logoImg from '../../assets/safechat_logo.png'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth()
   const { notifications } = useNotifications()
   const [showNotifications, setShowNotifications] = useState(false)
@@ -30,8 +30,16 @@ export default function Topbar() {
   }
 
   return (
-    <header className="h-16 border-b border-white/20 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]">
-      <div className="flex items-center gap-4">
+    <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10 shadow-sm bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]">
+      <div className="flex items-center gap-3">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-1.5 rounded-lg text-white hover:bg-white/20 transition-colors"
+        >
+          <Menu size={24} />
+        </button>
+
         <div className="flex items-center gap-2">
           <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
           <h1 className="hidden sm:block text-xl font-bold text-white header-glow drop-shadow-md">
