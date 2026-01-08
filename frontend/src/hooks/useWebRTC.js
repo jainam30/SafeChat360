@@ -4,12 +4,15 @@ const SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
     ]
 };
 
 export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUser, offerData, onClose }) => {
     // State
-    const [status, setStatus] = useState('idle'); // idle, calling, ringing, connecting, connected, ended, rejected, busy
+    const [status, setStatus] = useState('idle');
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [micEnabled, setMicEnabled] = useState(true);
@@ -21,22 +24,16 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
     const candidatesQueue = useRef([]);
     const noAnswerTimeout = useRef(null);
 
-    // Audio Context for Beeps/Ringing (No external files needed)
+    // Audio Context
     const audioCtxRef = useRef(null);
     const oscillatorRef = useRef(null);
-    const gainNodeRef = useRef(null);
     const toneIntervalRef = useRef(null);
 
     // Watch for call start
     useEffect(() => {
-        if (isIncoming === true) {
-            setStatus('incoming');
-        } else if (isIncoming === false) {
-            setStatus('calling');
-        } else {
-            setStatus('idle');
-            stopAudio();
-        }
+        if (isIncoming === true) setStatus('incoming');
+        else if (isIncoming === false) setStatus('calling');
+        else { setStatus('idle'); stopAudio(); }
     }, [isIncoming]);
 
     // --- Sound Generators ---
@@ -50,96 +47,71 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         stopAudio();
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
-
         audioCtxRef.current = new AudioContext();
 
         const playBeep = () => {
-            // Only play if still in calling state
             if (status !== 'calling') return;
-
             const osc = audioCtxRef.current.createOscillator();
             const gain = audioCtxRef.current.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(440, audioCtxRef.current.currentTime); // A4
+            osc.className = 'sine'; // type
+            osc.frequency.setValueAtTime(440, audioCtxRef.current.currentTime);
             gain.gain.setValueAtTime(0.1, audioCtxRef.current.currentTime);
-
             osc.connect(gain);
             gain.connect(audioCtxRef.current.destination);
-
             osc.start();
-            osc.stop(audioCtxRef.current.currentTime + 0.8); // Beep duration
+            osc.stop(audioCtxRef.current.currentTime + 0.8);
         };
-
-        playBeep(); // First one
-        toneIntervalRef.current = setInterval(playBeep, 2000); // Loop every 2s
+        playBeep();
+        toneIntervalRef.current = setInterval(playBeep, 2000);
     };
 
     const playIncomingRing = () => {
         stopAudio();
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
-
         audioCtxRef.current = new AudioContext();
 
         const playRing = () => {
-            // Only play if still in incoming state
             if (status !== 'incoming') return;
-
-            // Trill effect
             const now = audioCtxRef.current.currentTime;
             const osc = audioCtxRef.current.createOscillator();
             const gain = audioCtxRef.current.createGain();
-
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(600, now);
             osc.frequency.linearRampToValueAtTime(800, now + 0.1);
             osc.frequency.linearRampToValueAtTime(600, now + 0.2);
-
             gain.gain.setValueAtTime(0.1, now);
-            gain.gain.linearRampToValueAtTime(0, now + 2); // Fade out
-
+            gain.gain.linearRampToValueAtTime(0, now + 2);
             osc.connect(gain);
             gain.connect(audioCtxRef.current.destination);
-
             osc.start();
             osc.stop(now + 2.5);
         };
-
         playRing();
-        toneIntervalRef.current = setInterval(playRing, 3000); // Loop
+        toneIntervalRef.current = setInterval(playRing, 3000);
     };
 
-    // --- Sound Effect Trigger ---
     useEffect(() => {
-        if (status === 'calling') {
-            playCallingBeep();
-        } else if (status === 'incoming') {
-            playIncomingRing();
-        } else {
-            stopAudio(); // Stop sounds on connect, end, etc.
-        }
+        if (status === 'calling') playCallingBeep();
+        else if (status === 'incoming') playIncomingRing();
+        else stopAudio();
         return () => stopAudio();
     }, [status]);
 
-    // --- 20s Timeout ---
     useEffect(() => {
         if (status === 'calling') {
             noAnswerTimeout.current = setTimeout(() => {
-                console.log("Call timed out (20s)");
+                console.log("Call timed out");
                 setError("No answer.");
-                endCall(true); // Send hangup
+                endCall(true);
             }, 20000);
-        } else {
-            if (noAnswerTimeout.current) clearTimeout(noAnswerTimeout.current);
-        }
+        } else if (noAnswerTimeout.current) clearTimeout(noAnswerTimeout.current);
         return () => { if (noAnswerTimeout.current) clearTimeout(noAnswerTimeout.current); };
     }, [status]);
-
 
     // Initialize PeerConnection
     const createPeerConnection = useCallback(() => {
         if (peerConnection.current) return peerConnection.current;
-
         console.log("Creating RTCPeerConnection");
         const pc = new RTCPeerConnection(SERVERS);
 
@@ -154,7 +126,6 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         };
 
         pc.oniceconnectionstatechange = () => {
-            console.log("ICE State:", pc.iceConnectionState);
             if (pc.iceConnectionState === 'failed') {
                 setError("Connection failed");
                 endCall();
@@ -162,7 +133,6 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         };
 
         pc.connectionstatechange = () => {
-            console.log("Connection State:", pc.connectionState);
             if (pc.connectionState === 'connected') {
                 setStatus('connected');
                 stopAudio();
@@ -171,21 +141,12 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
         pc.ontrack = (event) => {
             console.log("Remote track received", event.track.kind);
-
-            // FIX: Ensure we have a stream to render
             let stream = event.streams[0];
             if (!stream) {
                 stream = new MediaStream();
                 stream.addTrack(event.track);
             }
-
-            // FIX: Create a NEW MediaStream object reference to force React to re-render the <video> element
-            // We use the tracks from the received stream (or new one)
             const newStreamRef = new MediaStream(stream.getTracks());
-
-            // If the track is new but not in stream yet (rare), add it?
-            // Usually stream.getTracks() has it.
-
             setRemoteStream(newStreamRef);
         };
 
@@ -193,11 +154,9 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         return pc;
     }, [isIncoming, caller, targetUser, socket]);
 
-    // Cleanup on unmount
+    // Cleanup
     useEffect(() => {
-        return () => {
-            endCall(false); // Clean exit
-        };
+        return () => { endCall(false); };
     }, []);
 
     // Get Local Media
@@ -205,18 +164,21 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         let mounted = true;
 
         const startMedia = async () => {
-            // 1. Guard: If we are idle/incoming, we don't start outgoing media automatically.
-            //    (Incoming calls start media in acceptCall)
             if (status === 'idle' || status === 'incoming') return;
-
-            // 2. Guard: If we ALREADY have a stream, DO NOT fetch a new one.
-            //    This prevents orphaned streams when status changes (calling -> connecting).
             if (localStreamRef.current) return;
+
+            // HTTPS Check
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                setError("Get Media Failed: HTTPS Required");
+                console.error("getUserMedia requires HTTPS!");
+                return;
+            }
 
             try {
                 console.log("Acquiring local media...");
+                // Attempt high quality first
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: isVideo,
+                    video: isVideo ? { facingMode: 'user' } : false, // facingMode for mobile
                     audio: {
                         echoCancellation: true,
                         noiseSuppression: true,
@@ -224,28 +186,43 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                     }
                 });
 
-                if (!mounted) {
-                    // Component unmounted during await, cleanup immediately
-                    stream.getTracks().forEach(t => t.stop());
-                    return;
-                }
+                if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
 
-                console.log("Got local media", stream.id);
+                console.log("Got local media (HQ)", stream.id);
                 setLocalStream(stream);
                 localStreamRef.current = stream;
-
                 // Sync initial toggle states (in case they were toggled before media was ready)
                 stream.getAudioTracks().forEach(t => t.enabled = micEnabled);
                 stream.getVideoTracks().forEach(t => t.enabled = videoEnabled);
 
-                // If this is the OFFENSIVE start (calling), trigger offer
-                if (status === 'calling') {
-                    createOffer(stream);
-                }
+                if (status === 'calling') createOffer(stream);
 
             } catch (err) {
-                console.error("Media Error:", err);
-                setError("Could not access camera/microphone.");
+                console.warn("HQ Media Failed, trying basic...", err);
+                try {
+                    // Fallback to basic constraints
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: isVideo,
+                        audio: true
+                    });
+
+                    if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
+
+                    console.log("Got local media (Basic)", stream.id);
+                    setLocalStream(stream);
+                    localStreamRef.current = stream;
+                    stream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+                    stream.getVideoTracks().forEach(t => t.enabled = videoEnabled);
+
+                    if (status === 'calling') createOffer(stream);
+
+                } catch (fallbackErr) {
+                    console.error("Media Error:", fallbackErr);
+                    // More specific error messages
+                    if (fallbackErr.name === 'NotAllowedError') setError("Permission denied. Allow Camera/Mic.");
+                    else if (fallbackErr.name === 'NotFoundError') setError("No camera/mic found.");
+                    else setError("Could not access media.");
+                }
             }
         };
 
