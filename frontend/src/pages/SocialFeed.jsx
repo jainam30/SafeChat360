@@ -422,101 +422,104 @@ const SocialFeed = () => {
                             </div>
                         )}
 
-                        {/* Privacy Selector */}
-                        <div className="flex flex-wrap gap-4 items-center mt-4">
-                            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
-                                {['public', 'friends', 'private'].map(type => (
-                                    <button
-                                        key={type}
-                                        onClick={() => setPrivacy(type)}
-                                        className={`capitalize px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-2 transition-all ${privacy === type ? 'bg-white/20 text-cyber-primary shadow-sm' : 'text-cyber-muted hover:text-white'}`}
-                                    >
-                                        {type === 'public' && <Share2 size={16} />}
-                                        {type === 'friends' && <User size={16} />}
-                                        {type === 'private' && <Shield size={16} />}
-                                        {type}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {privacy === 'private' && (
-                                <div className="flex-1 min-w-[200px]">
-                                    <button
-                                        onClick={() => setShowUserSelector(!showUserSelector)}
-                                        className="w-full text-left px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm flex justify-between items-center hover:bg-white/20 transition-colors text-white"
-                                    >
-                                        <span className="truncate">
-                                            {selectedUsers.length === 0 ? "Select Friends..." : `${selectedUsers.length} friends selected`}
-                                        </span>
-                                        <Users size={16} className="text-cyber-muted" />
-                                    </button>
-
-                                    {showUserSelector && (
-                                        <div className="absolute z-10 mt-2 w-full max-w-sm bg-cyber-bg border border-cyber-border rounded-xl shadow-xl p-2 max-h-60 overflow-y-auto">
-                                            {friends.length === 0 ? (
-                                                <p className="text-center text-cyber-muted text-sm py-2">No friends found.</p>
-                                            ) : (
-                                                friends.map(friend => (
-                                                    <div
-                                                        key={friend.id}
-                                                        onClick={() => toggleUserSelection(friend.id)}
-                                                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedUsers.includes(friend.id) ? 'bg-cyber-primary/20 border border-cyber-primary' : 'hover:bg-white/10'}`}
-                                                    >
-                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedUsers.includes(friend.id) ? 'bg-cyber-primary border-cyber-primary' : 'border-cyber-muted'}`}>
-                                                            {selectedUsers.includes(friend.id) && <Check size={10} className="text-white" />}
-                                                        </div>
-                                                        {/* Avatar */}
-                                                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text overflow-hidden">
-                                                            {friend.profile_photo ? <img src={friend.profile_photo} alt={friend.username} className="w-full h-full object-cover" /> : (friend.username || "U").charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div className="text-sm font-medium text-white truncate">{friend.username}</div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    )}
+                        {/* Privacy Selector & Actions */}
+                        <div className="flex flex-col gap-3 mt-4">
+                            <div className="flex flex-wrap gap-2 items-center">
+                                <div className="flex flex-wrap items-center gap-1 bg-white/10 rounded-lg p-1">
+                                    {['public', 'friends', 'private'].map(type => (
+                                        <button
+                                            key={type}
+                                            onClick={() => setPrivacy(type)}
+                                            className={`capitalize px-2 py-1.5 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all ${privacy === type ? 'bg-white/20 text-cyber-primary shadow-sm' : 'text-cyber-muted hover:text-white'}`}
+                                        >
+                                            {type === 'public' && <Share2 size={14} />}
+                                            {type === 'friends' && <User size={14} />}
+                                            {type === 'private' && <Shield size={14} />}
+                                            {type}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
-                            <div className="flex gap-2">
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-cyber-primary transition-colors tooltip" title="Photo/Video">
-                                    <Image size={20} />
-                                </button>
-                                <button className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-pink-500 transition-colors tooltip" title="Live Video">
-                                    <Video size={20} />
-                                </button>
-                                <button className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-yellow-500 transition-colors tooltip" title="Feeling/Activity">
-                                    <Smile size={20} />
-                                </button>
+                                {privacy === 'private' && (
+                                    <div className="flex-1 min-w-[150px]">
+                                        <button
+                                            onClick={() => setShowUserSelector(!showUserSelector)}
+                                            className="w-full text-left px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs sm:text-sm flex justify-between items-center hover:bg-white/20 transition-colors text-white"
+                                        >
+                                            <span className="truncate mr-2">
+                                                {selectedUsers.length === 0 ? "Select Friends..." : `${selectedUsers.length} selected`}
+                                            </span>
+                                            <Users size={14} className="text-cyber-muted shrink-0" />
+                                        </button>
+
+                                        {showUserSelector && (
+                                            <div className="absolute z-10 mt-2 w-full max-w-[250px] bg-cyber-bg border border-cyber-border rounded-xl shadow-xl p-2 max-h-60 overflow-y-auto">
+                                                {friends.length === 0 ? (
+                                                    <p className="text-center text-cyber-muted text-sm py-2">No friends found.</p>
+                                                ) : (
+                                                    friends.map(friend => (
+                                                        <div
+                                                            key={friend.id}
+                                                            onClick={() => toggleUserSelection(friend.id)}
+                                                            className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedUsers.includes(friend.id) ? 'bg-cyber-primary/20 border border-cyber-primary' : 'hover:bg-white/10'}`}
+                                                        >
+                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${selectedUsers.includes(friend.id) ? 'bg-cyber-primary border-cyber-primary' : 'border-cyber-muted'}`}>
+                                                                {selectedUsers.includes(friend.id) && <Check size={10} className="text-white" />}
+                                                            </div>
+                                                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-cyber-text overflow-hidden shrink-0">
+                                                                {friend.profile_photo ? <img src={friend.profile_photo} alt={friend.username} className="w-full h-full object-cover" /> : (friend.username || "U").charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div className="text-sm font-medium text-white truncate min-w-0 flex-1">{friend.username}</div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept="image/*,video/*"
-                                onChange={handleFileChange}
-                            />
-                            <button
-                                className="text-cyber-primary hover:text-cyber-primary_hover text-sm flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors font-medium"
-                            >
-                                <Camera size={18} /> Add Photo/Video
-                            </button>
-                        </div>
 
-                        <button
-                            onClick={handlePost}
-                            disabled={submitting || (!newPost.trim() && !mediaFile)}
-                            className="glass-button-primary disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {submitting ? (
-                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            ) : (
-                                <Send size={18} />
-                            )}
-                            Post
-                        </button>
+                            <div className="flex flex-wrap justify-between items-center pt-3 border-t border-white/10 gap-3">
+                                <div className="flex gap-1 sm:gap-2">
+                                    <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-cyber-primary transition-colors tooltip" title="Photo/Video">
+                                        <Image size={18} />
+                                    </button>
+                                    <button className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-pink-500 transition-colors tooltip" title="Live Video">
+                                        <Video size={18} />
+                                    </button>
+                                    <button className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-yellow-500 transition-colors tooltip" title="Feeling/Activity">
+                                        <Smile size={18} />
+                                    </button>
+                                </div>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*,video/*"
+                                    onChange={handleFileChange}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="text-cyber-primary hover:text-cyber-primary_hover text-xs sm:text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors font-medium sm:flex hidden"
+                                    >
+                                        <Camera size={16} /> Add Media
+                                    </button>
+                                    <button
+                                        onClick={handlePost}
+                                        disabled={submitting || (!newPost.trim() && !mediaFile)}
+                                        className="glass-button-primary disabled:opacity-50 flex items-center gap-2 px-4 py-1.5 text-sm"
+                                    >
+                                        {submitting ? (
+                                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                        ) : (
+                                            <Send size={16} />
+                                        )}
+                                        Post
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -583,6 +586,7 @@ const SocialFeed = () => {
 
 
                         <div className={`space-y-4 ${post.is_flagged ? 'blur-[2px] opacity-50 hover:blur-none hover:opacity-100 transition-all cursor-pointer' : ''}`}>
+
                             {post.content && (
                                 <div className="text-cyber-text whitespace-pre-wrap leading-relaxed break-words">{post.content}</div>
                             )}
