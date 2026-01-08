@@ -524,7 +524,7 @@ const SocialFeed = () => {
             {/* Feed */}
             <div className="space-y-6">
                 {posts.map(post => (
-                    <div key={post.id} className={`glass-card p-6 relative group bg-white/70 hover:bg-white transition-colors shadow-sm hover:shadow-md ${post.is_flagged ? 'border-red-500/30 bg-red-50/50' : ''}`}>
+                    <div key={post.id} className={`glass-card p-4 md:p-6 relative group bg-white/70 hover:bg-white transition-colors shadow-sm hover:shadow-md ${post.is_flagged ? 'border-red-500/30 bg-red-50/50' : ''}`}>
                         {/* ... Flags ... */}
                         {post.is_flagged && (
                             <div className="absolute top-4 right-4 text-red-500 flex items-center gap-2 bg-red-100 px-3 py-1 rounded-full text-xs font-bold border border-red-200">
@@ -534,8 +534,8 @@ const SocialFeed = () => {
                         )}
 
                         <div className="flex items-center gap-3 mb-4 relative">
-                            <Link to={`/profile/${post.user_id}`} className="flex items-center gap-3 group/author">
-                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text overflow-hidden group-hover/author:scale-105 transition-transform shadow-sm border border-cyber-border">
+                            <Link to={`/profile/${post.user_id}`} className="flex items-center gap-3 group/author min-w-0 flex-1">
+                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text overflow-hidden group-hover/author:scale-105 transition-transform shadow-sm border border-cyber-border shrink-0">
                                     {post.author_photo ? (
                                         <img src={post.author_photo} alt={post.username} className="w-full h-full object-cover" />
                                     ) : (
@@ -544,9 +544,9 @@ const SocialFeed = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div>
-                                    <div className="text-cyber-text font-bold group-hover/author:text-cyber-primary transition-colors">{post.username || "Unknown"}</div>
-                                    <div className="text-cyber-muted text-xs flex items-center gap-1">
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-cyber-text font-bold group-hover/author:text-cyber-primary transition-colors truncate">{post.username || "Unknown"}</div>
+                                    <div className="text-cyber-muted text-xs flex items-center gap-1 flex-wrap">
                                         <Clock size={12} />
                                         {formatDate(post.created_at)}
                                         <span className="mx-1">•</span>
@@ -558,38 +558,24 @@ const SocialFeed = () => {
                             </Link>
 
                             {/* Options Menu */}
-                            <div className="ml-auto relative">
+                            <div className="ml-auto relative shrink-0">
                                 <button
                                     onClick={() => setActiveMenuPostId(activeMenuPostId === post.id ? null : post.id)}
                                     className="text-cyber-muted hover:text-cyber-text p-2 rounded-full hover:bg-slate-100 transition-colors"
                                 >
                                     <MoreHorizontal size={18} />
                                 </button>
-
+                                {/* ... Menu ... */}
                                 {activeMenuPostId === post.id && (
                                     <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-cyber-border rounded-xl shadow-xl z-10 py-1 overflow-hidden animate-fade-in-up">
+                                        {/* ... */}
                                         {(post.user_id === user?.id || user?.role === 'admin') && (
                                             <>
-                                                <button
-                                                    onClick={() => initiateEdit(post)}
-                                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-cyber-text group/item"
-                                                >
-                                                    <Edit2 size={16} className="text-cyber-muted group-hover/item:text-cyber-primary" /> Edit Post
-                                                </button>
-                                                <button
-                                                    onClick={() => deletePost(post.id)}
-                                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600 group/item"
-                                                >
-                                                    <Trash2 size={16} /> Delete
-                                                </button>
+                                                <button onClick={() => initiateEdit(post)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-cyber-text group/item"><Edit2 size={16} className="text-cyber-muted group-hover/item:text-cyber-primary" /> Edit Post</button>
+                                                <button onClick={() => deletePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600 group/item"><Trash2 size={16} /> Delete</button>
                                             </>
                                         )}
-                                        <button
-                                            onClick={() => sharePost(post.id)}
-                                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-cyber-text group/item border-t border-gray-100"
-                                        >
-                                            <LinkIcon size={16} className="text-cyber-muted group-hover/item:text-blue-500" /> Share Link
-                                        </button>
+                                        <button onClick={() => sharePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-cyber-text group/item border-t border-gray-100"><LinkIcon size={16} className="text-cyber-muted group-hover/item:text-blue-500" /> Share Link</button>
                                     </div>
                                 )}
                             </div>
@@ -598,7 +584,7 @@ const SocialFeed = () => {
 
                         <div className={`space-y-4 ${post.is_flagged ? 'blur-[2px] opacity-50 hover:blur-none hover:opacity-100 transition-all cursor-pointer' : ''}`}>
                             {post.content && (
-                                <div className="text-cyber-text whitespace-pre-wrap leading-relaxed">{post.content}</div>
+                                <div className="text-cyber-text whitespace-pre-wrap leading-relaxed break-words">{post.content}</div>
                             )}
 
                             {post.media_url && (
@@ -616,24 +602,26 @@ const SocialFeed = () => {
                             <p className="text-xs text-red-500 mt-2 italic font-medium">*Content hidden due to community guidelines. Hover to view.*</p>
                         )}
 
-                        <div className="mt-4 pt-4 border-t border-cyber-border flex items-center gap-6">
+                        <div className="mt-4 pt-4 border-t border-cyber-border flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
                             <button
                                 onClick={() => handleLike(post)}
-                                className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn ${post.has_liked ? 'text-red-500' : 'text-cyber-muted hover:text-red-500'}`}
+                                className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn shrink-0 ${post.has_liked ? 'text-red-500' : 'text-cyber-muted hover:text-red-500'}`}
                             >
                                 <Heart size={18} className={`group-hover/btn:scale-110 transition-transform ${post.has_liked ? 'fill-current' : ''}`} />
                                 {post.likes_count > 0 ? post.likes_count : 'Like'}
                             </button>
-                            <button
-                                onClick={() => toggleComments(post.id)}
-                                className="flex items-center gap-2 text-cyber-muted hover:text-blue-500 transition-colors text-sm font-medium group/btn"
-                            >
-                                <MessageCircle size={18} className="group-hover/btn:scale-110 transition-transform" />
-                                {post.comments_count > 0 ? post.comments_count : ''} Comment
-                            </button>
-                            <button className="flex items-center gap-2 text-cyber-muted hover:text-green-500 transition-colors text-sm font-medium group/btn ml-auto">
-                                <Share2 size={18} className="group-hover/btn:scale-110 transition-transform" /> Share
-                            </button>
+                            <div className="flex gap-4 shrink-0">
+                                <button
+                                    onClick={() => toggleComments(post.id)}
+                                    className="flex items-center gap-2 text-cyber-muted hover:text-blue-500 transition-colors text-sm font-medium group/btn"
+                                >
+                                    <MessageCircle size={18} className="group-hover/btn:scale-110 transition-transform" />
+                                    {post.comments_count > 0 ? post.comments_count : ''} <span className="hidden xs:inline">Comment</span>
+                                </button>
+                                <button className="flex items-center gap-2 text-cyber-muted hover:text-green-500 transition-colors text-sm font-medium group/btn">
+                                    <Share2 size={18} className="group-hover/btn:scale-110 transition-transform" /> <span className="hidden xs:inline">Share</span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Comments Section */}
@@ -645,7 +633,7 @@ const SocialFeed = () => {
                                             <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text shrink-0">
                                                 {comment.username.charAt(0).toUpperCase()}
                                             </div>
-                                            <div className="bg-slate-50 rounded-2xl rounded-tl-none p-3 text-sm flex-1">
+                                            <div className="bg-slate-50 rounded-2xl rounded-tl-none p-3 text-sm flex-1 break-words min-w-0">
                                                 <div className="font-bold text-xs text-cyber-text mb-1">{comment.username}</div>
                                                 <div className="text-gray-700">{comment.content}</div>
                                             </div>
@@ -659,14 +647,14 @@ const SocialFeed = () => {
                                     <input
                                         type="text"
                                         placeholder="Write a comment..."
-                                        className="flex-1 bg-slate-50 border border-cyber-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-cyber-primary"
+                                        className="flex-1 bg-slate-50 border border-cyber-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-cyber-primary min-w-0"
                                         value={newComment}
                                         onChange={(e) => setNewComment(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && submitComment(post.id)}
                                     />
                                     <button
                                         onClick={() => submitComment(post.id)}
-                                        className="bg-cyber-primary text-white p-2 rounded-full hover:bg-cyber-primary_hover transition-colors shadow-sm"
+                                        className="bg-cyber-primary text-white p-2 rounded-full hover:bg-cyber-primary_hover transition-colors shadow-sm shrink-0"
                                     >
                                         <Send size={16} />
                                     </button>

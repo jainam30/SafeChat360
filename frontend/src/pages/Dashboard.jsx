@@ -252,7 +252,7 @@ const Dashboard = () => {
                 />
 
                 {mediaUrl && (
-                  <div className="relative mt-3 rounded-lg overflow-hidden aspect-square w-full max-w-[400px] bg-black/20 mx-auto border border-white/10 shadow-inner">
+                  <div className="relative mt-3 rounded-lg overflow-hidden aspect-square w-full max-w-full md:max-w-[400px] bg-black/20 mx-auto border border-white/10 shadow-inner">
                     <button
                       onClick={() => {
                         setMediaUrl('');
