@@ -153,8 +153,12 @@ export default function Friends() {
                             friends.map(friend => (
                                 <div key={friend.id} className="glass-card p-4 flex items-center gap-4">
                                     <Link to={`/profile/${friend.id}`} className="flex items-center gap-4 flex-1 group">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                                            {friend.username.charAt(0).toUpperCase()}
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-sm overflow-hidden shrink-0">
+                                            {friend.profile_photo ? (
+                                                <img src={friend.profile_photo} alt={friend.username} className="w-full h-full object-cover" />
+                                            ) : (
+                                                friend.username.charAt(0).toUpperCase()
+                                            )}
                                         </div>
                                         <div>
                                             <h3 className="text-cyber-text font-bold group-hover:text-cyber-primary transition-colors">{friend.full_name || friend.username}</h3>
@@ -192,8 +196,12 @@ export default function Friends() {
                             {searchResults.map(user => (
                                 <div key={user.id} className="glass-card p-4 flex items-center gap-4">
                                     <Link to={`/profile/${user.id}`} className="flex-1 flex items-center gap-4 group">
-                                        <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-cyber-text font-bold text-lg">
-                                            {user.username.charAt(0).toUpperCase()}
+                                        <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-cyber-text font-bold text-lg overflow-hidden shrink-0">
+                                            {user.profile_photo ? (
+                                                <img src={user.profile_photo} alt={user.username} className="w-full h-full object-cover" />
+                                            ) : (
+                                                user.username.charAt(0).toUpperCase()
+                                            )}
                                         </div>
                                         <div>
                                             <h3 className="text-cyber-text font-bold group-hover:text-cyber-primary transition-colors">{user.full_name || user.username}</h3>
