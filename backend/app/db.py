@@ -29,7 +29,7 @@ if DATABASE_URL.startswith("sqlite"):
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,
     **engine_args
 )
 
