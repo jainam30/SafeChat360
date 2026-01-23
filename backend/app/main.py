@@ -83,6 +83,9 @@ app.include_router(friends.router)
 app.include_router(groups.router)
 app.include_router(notifications.router)
 
+from app.routes import debug
+app.include_router(debug.router)
+
 from fastapi import WebSocket
 
 # MANUAL FIX: Register WebSocket explicitly in main app to bypass Router issues
