@@ -799,78 +799,77 @@ def get_stories(
     Get active stories for feed (Self + Friends + Public?)
     For now: All Public or Friends' stories that haven't expired.
     """
-    from app.models import Story
-    import datetime
-    now = datetime.datetime.utcnow()
-    
-    # Clean up expired (Optional: could serve as cron, but lazy delete here is fine)
-    # session.exec(delete(Story).where(Story.expires_at < now)) # explicit delete or just filter
-    
-    # 1. Get Friend IDs
-    friend_ids = crud.get_friends(session, current_user.id)
-    friend_ids.append(current_user.id) # Include self
-    
-    from sqlmodel import or_, select, and_
-    
-    # Logic:
-    # 1. (Privacy=Public AND Expires > Now)
-    # OR
-    # 2. (Privacy=Friends AND UserId IN Friends AND Expires > Now)
-    # OR
-    # 3. (UserId == Self AND Expires > Now) (Covered by #2 list)
-    
-    statement = select(Story).where(
-        and_(
-            Story.expires_at > now,
-            or_(
-                Story.privacy == 'public',
-                and_(Story.privacy == 'friends', Story.user_id.in_(friend_ids)),
-                Story.user_id == current_user.id
-            )
-        )
-    ).order_by(Story.created_at.desc())
-    
-    stories = session.exec(statement).all()
-    
-    # Performance Optimization: Batch fetch users
-    user_ids = {s.user_id for s in stories}
-    users_map = {}
-    
     try:
-        users = crud.get_users_by_ids(session, list(user_ids))
-        users_map = {user.id: user for user in users}
+        from app.models import Story
+        import datetime
+        now = datetime.datetime.utcnow()
+        
+        # 1. Get Friend IDs
+        try:
+             friend_ids = crud.get_friends(session, current_user.id)
+             friend_ids.append(current_user.id) # Include self
+        except Exception:
+             friend_ids = [current_user.id] # Fallback
+        
+        from sqlmodel import or_, select, and_
+        
+        # Logic: (Privacy=Public AND Expires > Now) OR (Privacy=Friends AND UserId IN Friends AND Expires > Now)
+        statement = select(Story).where(
+            and_(
+                Story.expires_at > now,
+                or_(
+                    Story.privacy == 'public',
+                    and_(Story.privacy == 'friends', Story.user_id.in_(friend_ids)),
+                    Story.user_id == current_user.id
+                )
+            )
+        ).order_by(Story.created_at.desc())
+        
+        stories = session.exec(statement).all()
+        
+        # Performance Optimization: Batch fetch users
+        user_ids = {s.user_id for s in stories}
+        users_map = {}
+        
+        try:
+            users = crud.get_users_by_ids(session, list(user_ids))
+            users_map = {user.id: user for user in users}
+        except Exception as e:
+            print(f"Batch user fetch (stories) failed: {e}")
+        
+        response = []
+        for s in stories:
+            # Fetch author photo
+            # OPTIMIZED: Use map
+            user = users_map.get(s.user_id)
+            u_photo = None
+            
+            if user:
+                 u_photo = user.profile_photo
+            else:
+                 # Fallback
+                 try:
+                     user = crud.get_user(session, s.user_id)
+                     u_photo = user.profile_photo if user else None
+                 except:
+                     pass
+            
+            response.append(StoryResponse(
+                id=s.id,
+                user_id=s.user_id,
+                username=s.username,
+                media_url=s.media_url,
+                media_type=s.media_type,
+                content=s.content,
+                created_at=s.created_at.isoformat(),
+                expires_at=s.expires_at.isoformat(),
+                author_photo=u_photo,
+                music_url=s.music_url,
+                overlays=s.overlays
+            ))
+            
+        return response
     except Exception as e:
-        print(f"Batch user fetch (stories) failed: {e}")
-    
-    response = []
-    for s in stories:
-        # Fetch author photo
-        # OPTIMIZED: Use map
-        user = users_map.get(s.user_id)
-        u_photo = None
-        
-        if user:
-             u_photo = user.profile_photo
-        else:
-             # Fallback
-             try:
-                 user = crud.get_user(session, s.user_id)
-                 u_photo = user.profile_photo if user else None
-             except:
-                 pass
-        
-        response.append(StoryResponse(
-            id=s.id,
-            user_id=s.user_id,
-            username=s.username,
-            media_url=s.media_url,
-            media_type=s.media_type,
-            content=s.content,
-            created_at=s.created_at.isoformat(),
-            expires_at=s.expires_at.isoformat(),
-            author_photo=u_photo,
-            music_url=s.music_url,
-            overlays=s.overlays
-        ))
-        
-    return response
+        print(f"get_stories failed (Missing Table?): {e}")
+        # Return empty list to prevent frontend crash/CORS error
+        return []

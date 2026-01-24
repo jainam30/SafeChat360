@@ -189,6 +189,7 @@ export default function Friends() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onSubmit={handleSearch}
+                                onFilterClick={() => alert("Filter functionality coming soon!")}
                                 placeholder="Search by username or email..."
                             />
                         </div>

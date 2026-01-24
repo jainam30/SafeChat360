@@ -87,8 +87,15 @@ export function AuthProvider({ children }) {
 
   // To handle login explicitly so UI updates fast:
   const login = (newToken) => {
+    // 1. Set Token State
     setToken(newToken);
-    // optional: setUser(decodeToken(newToken)); // The effect will catch this, but explicit set is faster.
+
+    // 2. IMMEDIATE: Set Axios Header (Fixes Race Condition where redirects fire before useEffect)
+    axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+    localStorage.setItem("token", newToken);
+
+    // 3. Decode user immediately for UI
+    setUser(decodeToken(newToken));
   };
 
   const logout = () => {

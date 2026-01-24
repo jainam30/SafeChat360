@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import logoImg from '../../assets/safechat_logo.png'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
+import CyberSearchInput from '../UI/CyberSearchInput'
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth()
@@ -51,12 +52,11 @@ export default function Topbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative group hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4 group-focus-within:text-slate-900 transition-colors" />
-          <input
-            type="text"
+        <div className="hidden md:block transform scale-75 origin-left w-[240px] -my-2">
+          {/* Scaled down CyberSearch to fit header */}
+          <CyberSearchInput
             placeholder="Search..."
-            className="glass-input !rounded-full !py-1.5 !bg-white/30 focus:!bg-white/50 border-white/20 pl-10 pr-4 text-sm w-64 text-slate-900 placeholder-slate-600"
+          // value/onChange not strictly needed if just UI demo, but good practice
           />
         </div>
 
