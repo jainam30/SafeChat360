@@ -90,6 +90,8 @@ const StyledWrapper = styled.div`
     justify-content: center;
     position: relative;
     height: 80px; /* Ensure container has height */
+    width: 314px; /* Fixed width to ensure children 100% matches input area exactly */
+    margin: 0 auto; /* Center it if parent is wider */
   }
   .input::placeholder {
     color: #c0b9c0;
