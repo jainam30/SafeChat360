@@ -25,7 +25,7 @@ BLOCKED_KEYWORDS = {
     r'\b(cocaine|heroin|meth|weed|drugs|dealer|marijuana|lsd|ecstasy)\b',
     
     # Hindi / Hinglish
-    r'\b(madarchod|bhenchod|bc|mc|chutiya|kamina|kutta|saala|harami|bhosdike|gand|lund|choot|randi|bhadwa|launda|loda)\b',
+    r'\b(madarchod|bhenchod|benchod|bc|mc|bkl|mkc|tmkc|mkm|chutiya|kamina|kutta|kutti|saala|sale|harami|bhosdike|bhosda|gand|gaand|gandu|lund|loda|lawda|lavde|choot|chut|randi|raand|bhadwa|launda|suwar|chinaal|betichod|jhant)\b',
     
     # Spanish
     r'\b(puta|mierda|cabron|pendejo|coño|gilipollas|zorra|maricon|chinga)\b',
@@ -108,12 +108,18 @@ def moderate_text(text: str, additional_keywords: list = None) -> Dict:
         return {"is_flagged": False, "flags": []}
     
     try:
+        # 0. Check ORIGINAL text for Hinglish/Specific keywords (Best for exact matches like 'madarchod')
+        keyword_result_original = _check_keywords(text, additional_keywords)
+        if keyword_result_original["is_flagged"]:
+             keyword_result_original["original_language"] = "original_match"
+             return keyword_result_original
+
         # 1. Translate to English
         trans_res = _translate_to_english(text)
         text_to_check = trans_res["text"]
         original_lang = trans_res["original_language"]
 
-        # 2. Keywork Check
+        # 2. Keywork Check on TRANSLATED text
         keyword_result = _check_keywords(text_to_check, additional_keywords)
         if keyword_result["is_flagged"]:
             keyword_result["original_language"] = original_lang
