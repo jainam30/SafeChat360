@@ -10,6 +10,7 @@ export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth()
   const { notifications } = useNotifications()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const notificationRef = useRef(null)
   const navigate = useNavigate()
 
@@ -52,13 +53,27 @@ export default function Topbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Mobile Search Toggle */}
+        <button
+          className="md:hidden text-slate-200 hover:text-white"
+          onClick={() => setShowSearch(!showSearch)}
+        >
+          {showSearch ? <X size={20} /> : <Search size={20} />}
+        </button>
+
+        {/* Desktop Search */}
         <div className="hidden md:block transform scale-75 origin-left w-[390px] -my-2">
-          {/* Scaled down CyberSearch to fit header */}
-          <CyberSearchInput
-            placeholder="Search..."
-          // value/onChange not strictly needed if just UI demo, but good practice
-          />
+          <CyberSearchInput placeholder="Search..." />
         </div>
+
+        {/* Mobile Search Overlay */}
+        {showSearch && (
+          <div className="absolute top-16 left-0 right-0 bg-cyber-background/95 backdrop-blur-md p-4 border-b border-white/10 md:hidden z-50 flex justify-center animate-in slide-in-from-top-2">
+            <div className="w-full max-w-sm">
+              <CyberSearchInput placeholder="Search..." />
+            </div>
+          </div>
+        )}
 
         {/* Notifications */}
         <div className="relative" ref={notificationRef}>

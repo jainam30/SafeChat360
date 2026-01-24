@@ -55,27 +55,26 @@ const CyberSearchInput = ({ value, onChange, onSubmit, onFilterClick, placeholde
 const StyledWrapper = styled.div`
   /* Removed .grid to avoid messy full-page background overlap */
   
+  /* Responsive Adjustments */
   .white,
   .border,
   .darkBorderBg,
   .glow {
     max-height: 70px;
-    max-width: 514px;
+    max-width: 100%; /* Changed from fixed px to 100% */
     height: 100%;
     width: 100%;
     position: absolute;
     overflow: hidden;
     z-index: 0; 
-    /* Changed z-index from -1 to 0 relative to parent container, parent will handle stacking */
-    /* Border Radius */
     border-radius: 12px;
     filter: blur(3px);
   }
   .input {
     background-color: #010201;
     border: none;
-    /* padding:7px; */
-    width: 501px;
+    width: 100%; /* Fluid width */
+    max-width: 501px; /* Max constraint */
     height: 56px;
     border-radius: 10px;
     color: white;
@@ -89,9 +88,10 @@ const StyledWrapper = styled.div`
     align-items: center;
     justify-content: center;
     position: relative;
-    height: 80px; /* Ensure container has height */
-    width: 514px; /* Fixed width to ensure children 100% matches input area exactly */
-    margin: 0 auto; /* Center it if parent is wider */
+    height: 80px; 
+    width: 100%; /* Fluid container */
+    max-width: 514px; /* Max width constraint */
+    margin: 0 auto; 
   }
   .input::placeholder {
     color: #c0b9c0;
@@ -145,7 +145,7 @@ const StyledWrapper = styled.div`
 
   .border {
     max-height: 59px;
-    max-width: 503px;
+    max-width: 98%; /* Relative to container */
     border-radius: 11px;
     filter: blur(0.5px);
   }
@@ -153,7 +153,7 @@ const StyledWrapper = styled.div`
 // ...
   .darkBorderBg {
     max-height: 65px;
-    max-width: 512px;
+    max-width: 100%;
   }
   .darkBorderBg::before {
     content: "";
@@ -225,7 +225,7 @@ const StyledWrapper = styled.div`
     filter: blur(30px);
     opacity: 0.4;
     max-height: 130px;
-    max-width: 554px;
+    max-width: 110%; /* Slightly wider for glow */
   }
   .glow:before {
     content: "";
