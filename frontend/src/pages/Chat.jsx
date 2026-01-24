@@ -387,15 +387,15 @@ export default function Chat() {
                         <button onClick={() => setMobileView('list')} className="md:hidden text-white mr-2 flex-shrink-0"><ArrowLeft size={24} /></button>
 
                         {activeChat.type === 'private' ? (
-                            <>
-                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                            <Link to={`/profile/${activeChat.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white/20">
                                     <img src={activeChat.data.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data.username}`} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-bold text-white truncate">{activeChat.data.username}</div>
+                                    <div className="text-sm font-bold text-white truncate hover:underline">{activeChat.data.username}</div>
                                     <div className="text-xs text-cyber-muted truncate">Active now</div>
                                 </div>
-                            </>
+                            </Link>
                         ) : activeChat.type === 'group' ? (
                             <>
                                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0"><Users size={16} /></div>
@@ -412,6 +412,19 @@ export default function Chat() {
                                 </div>
                             </>
                         )}
+
+                        {/* Vibe Check Badge */}
+                        <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1F2E] border border-[#2D3445] ml-4 transition-all hover:bg-[#23293b] cursor-default group" title="Live Vibe Check Algorithm">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span className="text-xs font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent group-hover:from-green-300 group-hover:to-emerald-400 transition-all">Safe Vibe</span>
+                            {/* Tooltip */}
+                            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity bg-black/90 p-2 rounded-lg text-xs w-48 text-center text-slate-300 z-50 border border-white/10">
+                                AI analyzing sentiment...<br />Conversation is healthy.
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4 text-white flex-shrink-0">

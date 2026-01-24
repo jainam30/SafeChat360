@@ -72,14 +72,13 @@ const Dashboard = () => {
   };
 
   const handleFileUpload = async (e, isStory = false) => {
-    /* Import compressor dynamically */
-    const { compressImage } = await import('../utils/imageCompressor');
-
     const file = e.target.files[0];
     if (!file) return;
 
     // Immediate local preview
     const localUrl = URL.createObjectURL(file);
+
+    // Set preview state immediately so UI updates INSTANTLY
     if (!isStory) {
       setMediaUrl(localUrl);
       setMediaType(file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'text');
@@ -94,27 +93,28 @@ const Dashboard = () => {
       return;
     }
 
-    /* Compress Image if needed */
-    let finalFile = file;
-    if (file.type.startsWith('image/')) {
-      try {
-        const compressedDataUrl = await compressImage(file);
-        // Convert back to File if needed for FormData upload, OR just send base64 if api supports it.
-        // The current /api/upload expects a file in FormData.
-        // We need to convert DataURL -> Blob -> File.
-        const res = await fetch(compressedDataUrl);
-        const blob = await res.blob();
-        finalFile = new File([blob], file.name, { type: 'image/jpeg' });
-      } catch (err) {
-        console.error("Compression failed, using original", err);
-      }
-    }
-
-    const formData = new FormData();
-    formData.append('file', finalFile);
+    setIsUploading(true);
 
     try {
-      setIsUploading(true);
+      /* Import compressor dynamically ONLY when needed for upload */
+      const { compressImage } = await import('../utils/imageCompressor');
+
+      /* Compress Image if needed */
+      let finalFile = file;
+      if (file.type.startsWith('image/')) {
+        try {
+          const compressedDataUrl = await compressImage(file);
+          const res = await fetch(compressedDataUrl);
+          const blob = await res.blob();
+          finalFile = new File([blob], file.name, { type: 'image/jpeg' });
+        } catch (err) {
+          console.error("Compression failed, using original", err);
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('file', finalFile);
+
       const res = await fetch(getApiUrl('/api/upload'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -131,10 +131,12 @@ const Dashboard = () => {
           setMediaUrl(data.url);
           setMediaType(data.type);
         }
+      } else {
+        console.error("Upload server error");
+        // Don't alert here to avoid disturbing flow, just let local preview stay or handle error
       }
     } catch (error) {
       console.error("Upload failed", error);
-      alert("Upload failed");
     } finally {
       setIsUploading(false);
     }
@@ -409,9 +411,39 @@ const Dashboard = () => {
                   />
                 </div>
               </div>
+              {/* Trust Badge */}
+              <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-md ${(user?.trust_score || 100) >= 90 ? 'bg-cyber-primary text-white' :
+                (user?.trust_score || 100) >= 70 ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
+                }`} title="Trust Score">
+                <Shield size={16} fill="currentColor" />
+              </div>
             </div>
-            <h2 className="mt-4 text-xl font-bold text-slate-800 tracking-tight">{user?.username}</h2>
+
+            <h2 className="mt-4 text-xl font-bold text-slate-800 tracking-tight flex items-center justify-center gap-2">
+              {user?.username}
+              {(user?.trust_score || 100) >= 90 && <Check size={16} className="text-cyber-primary" strokeWidth={4} />}
+            </h2>
             <p className="text-sm text-slate-500">{user?.email}</p>
+
+            {/* Gamified Trust Bar */}
+            <div className="mt-4 px-4">
+              <div className="flex justify-between text-xs font-bold mb-1">
+                <span className="text-slate-500">Reputation</span>
+                <span className={`${(user?.trust_score || 100) >= 90 ? 'text-cyber-primary' : 'text-slate-700'
+                  }`}>{user?.trust_score || 100}%</span>
+              </div>
+              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-1000 ${(user?.trust_score || 100) >= 90 ? 'bg-gradient-to-r from-cyber-primary to-blue-500' :
+                    (user?.trust_score || 100) >= 70 ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}
+                  style={{ width: `${user?.trust_score || 100}%` }}
+                ></div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {(user?.trust_score || 100) >= 90 ? "✨ Elite SafeChatter Status" : "Keep verified interactions high to boost score."}
+              </p>
+            </div>
 
             <div className="flex justify-center gap-6 mt-6 border-t border-gray-200 pt-4">
               <div className="text-center">
@@ -452,7 +484,24 @@ const Dashboard = () => {
                         </div>
                       </div>
                     </div>
-                    <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary">Follow</button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(getApiUrl(`/api/friends/request/${u.id}`), {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          if (res.ok || res.status === 400) { // 400 usually means already sent
+                            // Remove from list or show "Sent"
+                            setUsers(users.map(user => user.id === u.id ? { ...user, is_sent: true } : user));
+                          }
+                        } catch (e) { console.error(e); }
+                      }}
+                      disabled={u.is_sent}
+                      className="text-xs font-bold text-cyber-primary hover:text-cyber-primary_hover disabled:text-gray-500 disabled:cursor-default"
+                    >
+                      {u.is_sent ? 'Sent' : 'Add Friend'}
+                    </button>
                   </div>
                 ))
               ) : (
