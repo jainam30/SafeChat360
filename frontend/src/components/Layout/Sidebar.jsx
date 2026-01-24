@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, MessageSquare, Clock, Settings, Info, Users, AlertTriangle, UserPlus, Globe } from 'lucide-react'
+import { Home, MessageSquare, Clock, Settings, Info, Users, AlertTriangle, UserPlus, Globe, Shield } from 'lucide-react'
 import SidebarSwitch from './SidebarSwitch'
 import { useNotifications } from '../../context/NotificationContext';
 // Added utility to hide text on mobile if needed
@@ -13,6 +13,7 @@ const items = [
   { to: '/friends', label: 'Friends', icon: UserPlus },
   { to: '/history', label: 'History', icon: Clock },
   { to: '/review', label: 'Review Queue', icon: AlertTriangle },
+  { to: '/moderation', label: 'Mod Tools', icon: Shield },
   { to: '/settings', label: 'Settings', icon: Settings },
   { to: '/about', label: 'About', icon: Info },
 ]

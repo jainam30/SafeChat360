@@ -15,6 +15,7 @@ import Register from './pages/Register';
 import Account from './pages/Account';
 import ForgotPassword from './pages/ForgotPassword';
 import ReviewQueue from './pages/ReviewQueue';
+import ModerationTools from './pages/ModerationTools';
 import LandingPage from './pages/LandingPage';
 import UserProfile from './pages/UserProfile';
 import Chat from './pages/Chat';
@@ -92,6 +93,7 @@ export default function App() {
                   <Route path="/friends" element={<ProtectedRoute><Layout><Friends /></Layout></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
                   <Route path="/review" element={<ProtectedRoute><Layout><ReviewQueue /></Layout></ProtectedRoute>} />
+                  <Route path="/moderation" element={<ProtectedRoute><Layout><ModerationTools /></Layout></ProtectedRoute>} />
                   <Route path="/about" element={<ProtectedRoute><Layout><About /></Layout></ProtectedRoute>} />
 
                   <Route path="*" element={<Navigate to="/" replace />} />
