@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { Users, UserPlus, Search, UserCheck, Clock, Check, X, MessageSquare, UserX } from 'lucide-react';
+import CyberSearchInput from '../components/UI/CyberSearchInput';
 
 export default function Friends() {
     const { token } = useAuth();
@@ -183,18 +184,14 @@ export default function Friends() {
                 {/* FIND PEOPLE TAB */}
                 {activeTab === 'find' && (
                     <div>
-                        <form onSubmit={handleSearch} className="flex gap-2 mb-8">
-                            <input
-                                type="text"
+                        <div className="mb-8 flex justify-center">
+                            <CyberSearchInput
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                onSubmit={handleSearch}
                                 placeholder="Search by username or email..."
-                                className="glass-input flex-1"
                             />
-                            <button type="submit" className="glass-button-primary">
-                                <Search size={20} />
-                            </button>
-                        </form>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {searchResults.map(user => (

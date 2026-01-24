@@ -55,13 +55,31 @@ export function AuthProvider({ children }) {
       };
 
       fetchUserData();
-
     } else {
       localStorage.removeItem("token");
       delete axios.defaults.headers.common["Authorization"];
       setUser(null);
     }
   }, [token]);
+
+  // NEW: Global Axios Interceptor to catch 401s from ANY request (chat, friends, etc)
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          console.warn("Global 401 Interceptor: Session expired/invalid. Logging out.");
+          logout(); // Reuse the existing logout function
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Cleanup interceptor on unmount to practice good hygiene
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []); // Run once on mount (logout is stable)
 
   // However, the above useEffect for setUser creates a second render again if token changes.
   // The synchronous init handles the RELOAD case.
