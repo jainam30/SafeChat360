@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile, Bookmark } from 'lucide-react';
+import ChatBotCard from '../components/UI/ChatBotCard';
 
 const SocialFeed = () => {
     const [posts, setPosts] = useState([]);
@@ -430,137 +431,24 @@ const SocialFeed = () => {
                 <p className="text-white">Post updates, photos, and videos.</p>
             </div>
 
-            {/* Share Box */}
-            <div className="glass-card p-4 md:p-6 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex gap-3 md:gap-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px] shrink-0">
-                        <div className="w-full h-full rounded-full border-2 border-black/20 overflow-hidden">
-                            <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover" />
-                        </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <textarea
-                            className="w-full bg-black/20 border border-white/10 rounded-xl p-3 focus:ring-2 focus:ring-black focus:border-black outline-none transition-all resize-none h-24 text-black placeholder-cyber-muted"
-                            placeholder={`What's on your mind, ${user?.username}?`}
-                            value={newPost}
-                            onChange={(e) => setNewPost(e.target.value)}
-                        />
-                        {mediaPreview && (
-                            <div className="relative mt-3 w-fit">
-                                {mediaType === 'image' ? (
-                                    <img src={mediaPreview} alt="Preview" className="w-full aspect-square object-cover rounded-lg border border-white/10 shadow-md" />
-                                ) : (
-                                    <video src={mediaPreview} className="w-full aspect-square object-cover rounded-lg border border-white/10 shadow-md" controls />
-                                )}
-                                <button
-                                    onClick={() => { setMediaFile(null); setMediaPreview(''); setMediaType(''); }}
-                                    className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white hover:bg-red-600 shadow-md"
-                                >
-                                    <AlertTriangle size={12} />
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Privacy Selector & Actions */}
-                        <div className="flex flex-col gap-3 mt-4">
-                            <div className="flex flex-wrap gap-2 items-center">
-                                <div className="flex flex-wrap items-center gap-1 bg-white/10 rounded-lg p-1">
-                                    {['public', 'friends', 'private'].map(type => (
-                                        <button
-                                            key={type}
-                                            onClick={() => setPrivacy(type)}
-                                            className={`capitalize px-2 py-1.5 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all ${privacy === type ? 'bg-white/20 text-cyber-primary shadow-sm' : 'text-cyber-muted hover:text-white'}`}
-                                        >
-                                            {type === 'public' && <Share2 size={14} />}
-                                            {type === 'friends' && <User size={14} />}
-                                            {type === 'private' && <Shield size={14} />}
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {privacy === 'private' && (
-                                    <div className="flex-1 min-w-[150px]">
-                                        <button
-                                            onClick={() => setShowUserSelector(!showUserSelector)}
-                                            className="w-full text-left px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs sm:text-sm flex justify-between items-center hover:bg-white/20 transition-colors text-white"
-                                        >
-                                            <span className="truncate mr-2">
-                                                {selectedUsers.length === 0 ? "Select Friends..." : `${selectedUsers.length} selected`}
-                                            </span>
-                                            <Users size={14} className="text-cyber-muted shrink-0" />
-                                        </button>
-
-                                        {showUserSelector && (
-                                            <div className="absolute z-10 mt-2 w-full max-w-[250px] bg-cyber-bg border border-cyber-border rounded-xl shadow-xl p-2 max-h-60 overflow-y-auto">
-                                                {friends.length === 0 ? (
-                                                    <p className="text-center text-cyber-muted text-sm py-2">No friends found.</p>
-                                                ) : (
-                                                    friends.map(friend => (
-                                                        <div
-                                                            key={friend.id}
-                                                            onClick={() => toggleUserSelection(friend.id)}
-                                                            className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedUsers.includes(friend.id) ? 'bg-cyber-primary/20 border border-cyber-primary' : 'hover:bg-white/10'}`}
-                                                        >
-                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${selectedUsers.includes(friend.id) ? 'bg-cyber-primary border-cyber-primary' : 'border-cyber-muted'}`}>
-                                                                {selectedUsers.includes(friend.id) && <Check size={10} className="text-white" />}
-                                                            </div>
-                                                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-cyber-text overflow-hidden shrink-0">
-                                                                {friend.profile_photo ? <img src={friend.profile_photo} alt={friend.username} className="w-full h-full object-cover" /> : (friend.username || "U").charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <div className="text-sm font-medium text-white truncate min-w-0 flex-1">{friend.username}</div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex flex-wrap justify-between items-center pt-3 border-t border-white/10 gap-3">
-                                <div className="flex gap-1 sm:gap-2">
-                                    <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-cyber-primary transition-colors tooltip" title="Photo/Video">
-                                        <Image size={18} />
-                                    </button>
-                                    <button className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-pink-500 transition-colors tooltip" title="Live Video">
-                                        <Video size={18} />
-                                    </button>
-                                    <button className="p-2 hover:bg-white/10 rounded-full text-cyber-muted hover:text-yellow-500 transition-colors tooltip" title="Feeling/Activity">
-                                        <Smile size={18} />
-                                    </button>
-                                </div>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    accept="image/*,video/*"
-                                    onChange={handleFileChange}
-                                />
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="text-cyber-primary hover:text-cyber-primary_hover text-xs sm:text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors font-medium sm:flex hidden"
-                                    >
-                                        <Camera size={16} /> Add Media
-                                    </button>
-                                    <button
-                                        onClick={handlePost}
-                                        disabled={submitting || (!newPost.trim() && !mediaFile)}
-                                        className="glass-button-primary disabled:opacity-50 flex items-center gap-2 px-4 py-1.5 text-sm"
-                                    >
-                                        {submitting ? (
-                                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                        ) : (
-                                            <Send size={16} />
-                                        )}
-                                        Post
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {/* Share Box / Chat Bot Interface */}
+            <div className="w-full mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <ChatBotCard
+                    content={newPost}
+                    onChange={(e) => setNewPost(e.target.value)}
+                    onFileSelect={handleFileChange}
+                    onSubmit={handlePost}
+                    loading={submitting}
+                    mediaPreview={mediaPreview}
+                    privacy={privacy}
+                    onPrivacyToggle={() => {
+                        const next = privacy === 'public' ? 'friends' : privacy === 'friends' ? 'private' : 'public';
+                        setPrivacy(next);
+                        if (next === 'private') setShowUserSelector(true);
+                        else setShowUserSelector(false);
+                    }}
+                    onClearMedia={() => { setMediaFile(null); setMediaPreview(''); setMediaType(''); }}
+                />
             </div>
 
             {/* Feed */}

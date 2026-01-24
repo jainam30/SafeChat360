@@ -154,12 +154,12 @@ export default function Friends() {
                             friends.map(friend => (
                                 <div key={friend.id} className="glass-card p-4 flex items-center gap-4">
                                     <Link to={`/profile/${friend.id}`} className="flex items-center gap-4 flex-1 group">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-primary to-purple-500 p-[2px] shrink-0">
-                                            <div className="w-full h-full rounded-full bg-slate-900 border-2 border-transparent overflow-hidden flex items-center justify-center">
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-primary to-cyber-secondary p-[2px] shrink-0">
+                                            <div className="w-full h-full rounded-full bg-cyber-background border-2 border-transparent overflow-hidden flex items-center justify-center">
                                                 {friend.profile_photo ? (
                                                     <img src={friend.profile_photo} alt={friend.username} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-cyber-primary to-purple-500 text-white font-bold text-lg">
+                                                    <div className="w-full h-full flex items-center justify-center bg-cyber-primary/20 text-cyber-primary font-bold text-lg">
                                                         {friend.username.charAt(0).toUpperCase()}
                                                     </div>
                                                 )}
@@ -171,7 +171,7 @@ export default function Friends() {
                                         </div>
                                     </Link>
                                     <div className="ml-auto">
-                                        <Link to={`/chat`} className="p-2 hover:bg-slate-100 rounded-full text-cyber-primary transition-colors block" title="Message">
+                                        <Link to={`/chat`} className="p-2 hover:bg-white/10 rounded-full text-cyber-primary transition-colors block" title="Message">
                                             <MessageSquare size={20} />
                                         </Link>
                                     </div>
@@ -198,12 +198,12 @@ export default function Friends() {
                             {searchResults.map(user => (
                                 <div key={user.id} className="glass-card p-4 flex items-center gap-4">
                                     <Link to={`/profile/${user.id}`} className="flex-1 flex items-center gap-4 group">
-                                        <div className="w-12 h-12 rounded-full bg-slate-200 p-[2px] shrink-0">
-                                            <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center">
+                                        <div className="w-12 h-12 rounded-full bg-white/10 p-[2px] shrink-0">
+                                            <div className="w-full h-full rounded-full bg-cyber-background overflow-hidden flex items-center justify-center">
                                                 {user.profile_photo ? (
                                                     <img src={user.profile_photo} alt={user.username} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-slate-200 text-cyber-text font-bold text-lg">
+                                                    <div className="w-full h-full flex items-center justify-center bg-white/5 text-cyber-text font-bold text-lg">
                                                         {user.username.charAt(0).toUpperCase()}
                                                     </div>
                                                 )}
@@ -224,17 +224,17 @@ export default function Friends() {
                                             </button>
                                         )}
                                         {user.friendship_status === 'outgoing_request' && (
-                                            <span className="text-xs text-cyber-muted flex items-center gap-1 bg-slate-100 px-2 py-1 rounded">
+                                            <span className="text-xs text-cyber-muted flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/10">
                                                 <Clock size={14} /> Pending
                                             </span>
                                         )}
                                         {user.friendship_status === 'incoming_request' && (
-                                            <span className="text-xs text-amber-500 flex items-center gap-1 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                            <span className="text-xs text-cyber-secondary flex items-center gap-1 bg-cyber-secondary/10 px-2 py-1 rounded border border-cyber-secondary/20">
                                                 <UserPlus size={14} /> Invited You
                                             </span>
                                         )}
                                         {user.friendship_status === 'accepted' && (
-                                            <span className="text-xs text-green-600 flex items-center gap-1 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                            <span className="text-xs text-cyber-primary flex items-center gap-1 bg-cyber-primary/10 px-2 py-1 rounded border border-cyber-primary/20">
                                                 <UserCheck size={14} /> Friend
                                             </span>
                                         )}
@@ -256,7 +256,7 @@ export default function Friends() {
                             requests.map(req => (
                                 <div key={req.id} className="glass-card p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg border border-amber-200">
+                                        <div className="w-12 h-12 rounded-full bg-cyber-secondary/10 text-cyber-secondary flex items-center justify-center font-bold text-lg border border-cyber-secondary/20">
                                             {req.requester_name.charAt(0).toUpperCase()}
                                         </div>
                                         <div>
@@ -267,13 +267,13 @@ export default function Friends() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => acceptRequest(req.id)}
-                                            className="px-4 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm flex items-center gap-1 text-sm font-medium"
+                                            className="px-4 py-1.5 bg-cyber-primary text-cyber-background rounded-lg hover:bg-cyber-primary_hover transition-colors shadow-sm flex items-center gap-1 text-sm font-bold"
                                         >
                                             <Check size={16} /> Accept
                                         </button>
                                         <button
                                             // Reject not implemented yet
-                                            className="px-2 py-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-colors border border-slate-200"
+                                            className="px-2 py-1.5 bg-white/5 text-cyber-muted rounded-lg hover:bg-white/10 transition-colors border border-white/10"
                                         >
                                             <X size={16} />
                                         </button>

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { getApiUrl } from '../config';
 import FlaggedContentCard from '../components/FlaggedContentCard';
 import { useAuth } from '../context/AuthContext';
-import { Image as ImageIcon, Upload, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Image as ImageIcon, Upload, Zap, ArrowLeft } from 'lucide-react';
 
 const ImageModeration = () => {
   const [imageFile, setImageFile] = useState(null);
@@ -50,6 +51,10 @@ const ImageModeration = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      <Link to="/moderation" className="inline-flex items-center gap-2 text-cyber-muted hover:text-white mb-6 transition-colors">
+        <ArrowLeft size={20} />
+        Back to Tools
+      </Link>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 drop-shadow-md">
           <ImageIcon className="text-white" />

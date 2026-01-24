@@ -32,12 +32,12 @@ export default function Topbar({ onMenuClick }) {
   }
 
   return (
-    <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10 shadow-sm bg-[linear-gradient(to_top,#5ee7df_0%,#b490ca_100%)]">
+    <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10 shadow-sm bg-cyber-background">
       <div className="flex items-center gap-3">
         {/* Mobile Menu Button */}
         <button
           onClick={onMenuClick}
-          className="md:hidden p-1.5 rounded-lg text-white hover:bg-white/20 transition-colors"
+          className="md:hidden p-1.5 rounded-lg text-white hover:bg-white/10 transition-colors"
         >
           <Menu size={24} />
         </button>
@@ -49,7 +49,7 @@ export default function Topbar({ onMenuClick }) {
           </h1>
         </div>
         <div className="h-4 w-px bg-white/20 hidden sm:block"></div>
-        <div className="text-sm font-medium text-slate-800 hidden sm:block">Dashboard</div>
+        <div className="text-sm font-medium text-cyber-muted hidden sm:block">Dashboard</div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -79,11 +79,11 @@ export default function Topbar({ onMenuClick }) {
         <div className="relative" ref={notificationRef}>
           <button
             onClick={handleNotificationClick}
-            className="p-2 rounded-full hover:bg-white/20 text-slate-800 hover:text-slate-900 transition-colors relative"
+            className="p-2 rounded-full hover:bg-white/10 text-cyber-text hover:text-white transition-colors relative"
           >
             <Bell size={20} />
             {notifications.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-cyber-accent rounded-full animate-pulse"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-cyber-accent rounded-full animate-pulse shadow-lg shadow-cyber-accent/50"></span>
             )}
           </button>
 
@@ -116,7 +116,7 @@ export default function Topbar({ onMenuClick }) {
                         <div className="flex gap-3">
                           <div className="mt-1">
                             {notif.type === 'friend_request' ? (
-                              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                              <div className="w-8 h-8 rounded-full bg-cyber-primary/20 flex items-center justify-center text-cyber-primary">
                                 <UserPlus size={16} />
                               </div>
                             ) : (
@@ -150,15 +150,14 @@ export default function Topbar({ onMenuClick }) {
           )}
         </div>
 
-        <div className="h-8 w-px bg-cyber-border"></div>
+        <div className="h-8 w-px bg-white/10"></div>
 
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <div className="text-sm font-medium text-cyber-text">{user?.email?.split('@')[0]}</div>
-            {/* <div className="text-xs text-cyber-muted">Admin</div> */}
           </div>
-          <Link to="/account" className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[2px] cursor-pointer hover:scale-105 transition-transform">
-            <div className="h-full w-full rounded-full bg-black/20 flex items-center justify-center overflow-hidden border border-white/10">
+          <Link to="/account" className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyber-secondary to-cyber-accent p-[2px] cursor-pointer hover:scale-105 transition-transform shadow-lg shadow-cyber-accent/20">
+            <div className="h-full w-full rounded-full bg-cyber-background flex items-center justify-center overflow-hidden border border-transparent">
               <img
                 src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`}
                 alt={user?.username}
@@ -172,7 +171,7 @@ export default function Topbar({ onMenuClick }) {
           </Link>
           <button
             onClick={logout}
-            className="ml-2 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-all font-medium flex items-center justify-center"
+            className="ml-2 px-3 py-1.5 rounded-lg border border-cyber-danger/30 text-cyber-danger hover:bg-cyber-danger/10 hover:border-cyber-danger/50 transition-all font-medium flex items-center justify-center"
             title="Logout"
           >
             <span className="hidden sm:inline">Logout</span>

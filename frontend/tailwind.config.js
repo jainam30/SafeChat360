@@ -9,15 +9,16 @@ module.exports = {
     extend: {
       colors: {
         cyber: {
-          background: 'transparent', // Let body gradient show through
-          surface: '#ffffff', // White surface for glass effect
-          text: '#ffffff', // White (Global text for dark gradient background)
-          muted: '#cbd5e1', // Slate 300 (Visible muted text on dark bg)
-          primary: '#12c2e9', // JShine Blue (Navbar/Actions)
-          primary_hover: '#0ea5e9', // Darker Blue
-          secondary: '#c471ed', // JShine Purple
-          accent: '#f64f59', // JShine Red
-          border: '#e2e8f0', // Slate 200 (Light border)
+          background: '#264653', // Charcoal (New Bg)
+          surface: '#ffffff', // Keep white surface for contrast or maybe adjust? keeping white for now
+          text: '#ffffff', // White
+          muted: '#cbd5e1',
+          primary: '#2A9D8F', // Teal
+          primary_hover: '#248a7d', // Darker Teal
+          secondary: '#E9C46A', // Yellow
+          accent: '#F4A261', // Orange
+          danger: '#E76F51', // Red/Salmon
+          border: '#e2e8f0',
         }
       },
     },

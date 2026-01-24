@@ -165,3 +165,81 @@ def search_users(
         with open("error.log", "w") as f:
             f.write(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+@router.get("/suggestions")
+def get_friend_suggestions(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Suggest friends based on Mutual Connections (Friends of Friends).
+    Strictly prevents showing random users to ensure privacy safety.
+    """
+    # 1. Get my friends
+    my_friend_ids = crud.get_friends(session, current_user.id)
+    
+    if not my_friend_ids:
+        return [] # No network, no suggestions (Stay filtered)
+
+    # 2. Find candidates: Friends of my friends
+    # We want Friendship entries where user_id is in my_friend_ids (or friend_id is in my_friend_ids)
+    # But crud.get_friends abstracts the relationship structure.
+    # Let's query raw friendships.
+    
+    # Candidates list
+    candidate_ids = set()
+    
+    # Find friendships where one party is in my_friend_ids
+    statement = select(Friendship).where(
+        (col(Friendship.user_id).in_(my_friend_ids)) | 
+        (col(Friendship.friend_id).in_(my_friend_ids))
+    ).where(Friendship.status == "accepted")
+    
+    network_links = session.exec(statement).all()
+    
+    for link in network_links:
+        # Determine the "other" person who is NOT the mutual friend
+        # Link involves MutualFriend (in my_friend_ids) and Candidate
+        
+        c_id = None
+        if link.user_id in my_friend_ids:
+            c_id = link.friend_id
+        elif link.friend_id in my_friend_ids:
+            c_id = link.user_id
+            
+        # Filter exclusions
+        if c_id:
+             if c_id == current_user.id: continue # Self
+             if c_id in my_friend_ids: continue # Already friend
+             candidate_ids.add(c_id)
+             
+    if not candidate_ids:
+        return []
+
+    # 3. Fetch Candidate User Objects (limit 10)
+    # Exclude any that I have PENDING requests with (outgoing or incoming)
+    # Optimization: Fetch friendship status for candidates is safer
+    
+    suggestions = []
+    candidates_list = list(candidate_ids)[:10] # Limit query size
+    
+    for mid in candidates_list:
+        # Double check "Not Pending"
+        existing_link = session.exec(select(Friendship).where(
+            ((Friendship.user_id == current_user.id) & (Friendship.friend_id == mid)) |
+            ((Friendship.user_id == mid) & (Friendship.friend_id == current_user.id))
+        )).first()
+        
+        if existing_link:
+            continue # Skip pending or blocked
+            
+        u = crud.get_user(session, mid)
+        if u:
+            suggestions.append({
+                "id": u.id,
+                "username": u.username,
+                "full_name": u.full_name,
+                "profile_photo": u.profile_photo,
+                "mutual_count": 1 # Placeholder, could calculate exact count later
+            })
+            
+    return suggestions

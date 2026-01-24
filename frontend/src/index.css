@@ -12,9 +12,10 @@
     @apply bg-cyber-background text-cyber-text antialiased;
     position: relative;
     min-height: 100dvh;
-    /* JShine Gradient Background (Purple to Red/Salmon only) */
-    /* Updated JShine Gradient Background (Teal to Deep Purple) */
-    background-image: linear-gradient(to top, #30cfd0 0%, #330867 100%);
+    /* Solid Background for Cosmic/Earth Theme */
+    background-color: #264653;
+    background-image: none;
+    /* Removed JShine Gradient */
   }
 
   /* Refined Scrollbar (Light Theme) */
@@ -44,16 +45,16 @@
     @apply absolute opacity-40 text-cyber-primary drop-shadow-lg pointer-events-none z-0;
   }
 
-  /* JShine Glass Card - Opaque White */
+  /* JShine Glass Card - Dark/Transparent for Cosmic Theme */
   .glass-card {
-    @apply bg-white/90 backdrop-blur-md border border-white/50 rounded-2xl shadow-lg transition-all duration-300 text-black;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-    /* Soft shadow + Dark Text */
+    @apply bg-cyber-background/60 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg transition-all duration-300 text-white;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    /* Soft shadow + Light Text */
   }
 
   .glass-card:hover {
-    @apply bg-white border-white/60;
-    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
+    @apply bg-cyber-background/70 border-white/20;
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
   }
 
   /* JShine Input */
@@ -64,13 +65,14 @@
   /* JShine Button */
   .glass-button {
     @apply text-white font-medium rounded-xl shadow-lg hover:shadow-black/10 hover:brightness-105 active:scale-95 transition-all duration-200;
-    background-color: #12c2e9;
+    background-color: #2A9D8F;
     /* Navbar/Action color */
   }
 
   /* Primary Button Overlay */
   .glass-button-primary {
-    @apply bg-cyber-primary text-white font-bold px-6 py-2.5 rounded-xl hover:bg-cyber-primary_hover shadow-lg shadow-cyber-primary/40 transition-all transform hover:-translate-y-0.5 border border-white/20;
+    @apply text-cyber-background font-bold px-6 py-2.5 rounded-xl hover:brightness-110 shadow-lg shadow-cyber-primary/40 transition-all transform hover:-translate-y-0.5 border border-white/20;
+    background-image: linear-gradient(to right, theme('colors.cyber.primary'), theme('colors.cyber.secondary'));
   }
 
   .glass-panel {

@@ -50,7 +50,7 @@ const Dashboard = () => {
       const results = await Promise.allSettled([
         fetch(getApiUrl('/api/social/posts'), { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(getApiUrl('/api/social/stories'), { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(getApiUrl('/api/chat/users'), { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(getApiUrl('/api/friends/suggestions'), { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       const [postsRes, storiesRes, usersRes] = results;
@@ -430,6 +430,7 @@ const Dashboard = () => {
           </div>
 
           {/* Suggested Friends */}
+          {/* Suggested Friends */}
           <div className="glass-card p-6">
             <div className="flex justify-between items-center mb-4">
               <div className="text-sm font-bold text-slate-800">Suggested for you</div>
@@ -437,20 +438,28 @@ const Dashboard = () => {
             </div>
 
             <div className="space-y-3">
-              {users.sort(() => 0.5 - Math.random()).slice(0, 5).map(u => (
-                <div key={u.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
-                      <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" alt={u.username} />
+              {users.length > 0 ? (
+                users.slice(0, 5).map(u => (
+                  <div key={u.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
+                        <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" alt={u.username} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-slate-800 hover:underline cursor-pointer">{u.username}</div>
+                        <div className="text-xs text-slate-500 truncate w-32">
+                          {u.mutual_count ? 'Mutual Friend' : 'Suggested for you'}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-bold text-sm text-slate-800 hover:underline cursor-pointer">{u.username}</div>
-                      <div className="text-xs text-slate-500 truncate w-32">New Member</div>
-                    </div>
+                    <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary">Follow</button>
                   </div>
-                  <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary">Follow</button>
+                ))
+              ) : (
+                <div className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
+                  No suggestions found within your network.
                 </div>
-              ))}
+              )}
             </div>
           </div>
 

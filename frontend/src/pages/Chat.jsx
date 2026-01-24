@@ -9,6 +9,7 @@ import {
     Smile, Heart, Info
 } from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
+import CosmicInput from '../components/UI/CosmicInput';
 
 import { useCall } from '../context/CallContext';
 
@@ -112,6 +113,12 @@ export default function Chat() {
                         if (isRelevant) return [...prev, data];
                         return prev;
                     });
+                } else if (data.type === 'message_update') {
+                    setMessages(prev => prev.map(msg =>
+                        msg.id === data.id
+                            ? { ...msg, ...data, content: "Message unsent" }
+                            : msg
+                    ));
                 }
             } catch (e) {
                 console.error("WS Parse error", e);
@@ -284,16 +291,16 @@ export default function Chat() {
     if (!user) return <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>;
 
     return (
-        <div className="flex h-full w-full mx-auto bg-white border border-gray-200 rounded-none md:rounded-lg overflow-hidden shadow-sm lg:border-x-0 lg:border-t-0">
+        <div className="flex h-full w-full mx-auto bg-cyber-background/30 border border-white/10 rounded-none md:rounded-lg overflow-hidden shadow-sm lg:border-x-0 lg:border-t-0">
             {/* LEFT SIDEBAR (Chat List) */}
             <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[320px] lg:w-[360px] flex-col border-r border-white/10 glass-panel md:rounded-l-lg`}>
 
                 {/* Header */}
-                <div className="h-16 border-b border-gray-200 flex items-center justify-between px-5">
-                    <div className="font-bold text-xl flex items-center gap-2 text-slate-900">
+                <div className="h-16 border-b border-white/10 flex items-center justify-between px-5">
+                    <div className="font-bold text-xl flex items-center gap-2 text-white">
                         {user.username} <span className="text-xs text-cyber-muted font-normal">▼</span>
                     </div>
-                    <button onClick={() => setShowGroupModal(true)} className="text-slate-600 hover:text-cyber-primary transition-colors">
+                    <button onClick={() => setShowGroupModal(true)} className="text-cyber-muted hover:text-cyber-primary transition-colors">
                         <Plus size={24} strokeWidth={1.5} />
                     </button>
                 </div>
@@ -303,32 +310,32 @@ export default function Chat() {
                     {/* Global Chat Item */}
                     <div
                         onClick={() => { setActiveChat({ type: 'global', id: null, data: null }); setMobileView('chat'); }}
-                        className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'global' ? 'bg-gray-50' : ''}`}
+                        className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-white/5 transition-colors ${activeChat.type === 'global' ? 'bg-cyber-primary/10 border-l-2 border-cyber-primary' : ''}`}
                     >
                         <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-white">
                             <Hash size={24} />
                         </div>
                         <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-900">Global Chat</div>
-                            <div className="text-xs text-gray-500 truncate">Public community channel</div>
+                            <div className="text-sm font-medium text-white">Global Chat</div>
+                            <div className="text-xs text-cyber-muted truncate">Public community channel</div>
                         </div>
                     </div>
 
-                    <div className="px-5 py-2 text-xs font-bold text-gray-400 mt-2">Messages</div>
+                    <div className="px-5 py-2 text-xs font-bold text-cyber-muted mt-2">Messages</div>
 
                     {/* Groups */}
                     {groups.map(g => (
                         <div
                             key={g.id}
                             onClick={() => { setActiveChat({ type: 'group', id: g.id, data: g }); setMobileView('chat'); }}
-                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'group' && activeChat.id === g.id ? 'bg-gray-50' : ''}`}
+                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-white/5 transition-colors ${activeChat.type === 'group' && activeChat.id === g.id ? 'bg-cyber-primary/10 border-l-2 border-cyber-primary' : ''}`}
                         >
                             <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                                 <Users size={24} />
                             </div>
                             <div className="flex-1">
-                                <div className="text-sm font-medium text-gray-900">{g.name}</div>
-                                <div className="text-xs text-gray-500 truncate">{g.member_count} members</div>
+                                <div className="text-sm font-medium text-white">{g.name}</div>
+                                <div className="text-xs text-cyber-muted truncate">{g.member_count} members</div>
                             </div>
                         </div>
                     ))}
@@ -338,14 +345,14 @@ export default function Chat() {
                         <div
                             key={u.id}
                             onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
-                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-gray-50' : ''}`}
+                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-white/5 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-cyber-primary/10 border-l-2 border-cyber-primary' : ''}`}
                         >
                             <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100">
                                 <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-1">
-                                <div className="text-sm font-medium text-gray-900">{u.username}</div>
-                                <div className="text-xs text-gray-500 truncate flex items-center gap-1">
+                                <div className="text-sm font-medium text-white">{u.username}</div>
+                                <div className="text-xs text-cyber-muted truncate flex items-center gap-1">
                                     <span className="w-2 h-2 rounded-full bg-green-500"></span> Active now
                                 </div>
                             </div>
@@ -353,19 +360,19 @@ export default function Chat() {
                     ))}
 
                     {/* Suggestions */}
-                    <div className="px-5 py-2 text-xs font-bold text-gray-400 mt-4">Suggestions</div>
+                    <div className="px-5 py-2 text-xs font-bold text-cyber-muted mt-4">Suggestions</div>
                     {users.filter(u => !friends.find(f => f.id === u.id)).map(u => (
                         <div
                             key={u.id}
                             onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
-                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-gray-50' : ''}`}
+                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-white/5 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-cyber-primary/10 border-l-2 border-cyber-primary' : ''}`}
                         >
                             <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 opacity-60">
                                 <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-1">
-                                <div className="text-sm font-medium text-gray-900">{u.username}</div>
-                                <div className="text-xs text-gray-400">Suggested for you</div>
+                                <div className="text-sm font-medium text-white">{u.username}</div>
+                                <div className="text-xs text-cyber-muted">Suggested for you</div>
                             </div>
                         </div>
                     ))}
@@ -377,7 +384,7 @@ export default function Chat() {
                 {/* Chat Header */}
                 <div className="h-16 border-b border-white/10 flex items-center justify-between px-5 sticky top-0 bg-white/5 backdrop-blur-sm z-10">
                     <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => setMobileView('list')} className="md:hidden text-gray-900 mr-2 flex-shrink-0"><ArrowLeft size={24} /></button>
+                        <button onClick={() => setMobileView('list')} className="md:hidden text-white mr-2 flex-shrink-0"><ArrowLeft size={24} /></button>
 
                         {activeChat.type === 'private' ? (
                             <>
@@ -385,29 +392,29 @@ export default function Chat() {
                                     <img src={activeChat.data.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data.username}`} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-bold text-gray-900 truncate">{activeChat.data.username}</div>
-                                    <div className="text-xs text-gray-500 truncate">Active now</div>
+                                    <div className="text-sm font-bold text-white truncate">{activeChat.data.username}</div>
+                                    <div className="text-xs text-cyber-muted truncate">Active now</div>
                                 </div>
                             </>
                         ) : activeChat.type === 'group' ? (
                             <>
                                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0"><Users size={16} /></div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-bold text-gray-900 truncate">{activeChat.data.name}</div>
+                                    <div className="text-sm font-bold text-white truncate">{activeChat.data.name}</div>
                                 </div>
                             </>
                         ) : (
                             <>
                                 <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0"><Hash size={16} /></div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-bold text-gray-900 truncate">Global Chat</div>
-                                    <div className="text-xs text-gray-500 truncate">Public</div>
+                                    <div className="text-sm font-bold text-white truncate">Global Chat</div>
+                                    <div className="text-xs text-cyber-muted truncate">Public</div>
                                 </div>
                             </>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-4 text-gray-900 flex-shrink-0">
+                    <div className="flex items-center gap-2 md:gap-4 text-white flex-shrink-0">
                         <Phone size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" onClick={() => startCall(false)} />
                         <Video size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" onClick={() => startCall(true)} />
                         <Info size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" />
@@ -417,8 +424,8 @@ export default function Chat() {
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-1" onClick={() => setActiveMessageMenu(null)}>
                     {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                            <div className="w-20 h-20 rounded-full border-2 border-gray-200 flex items-center justify-center">
+                        <div className="flex flex-col items-center justify-center h-full text-cyber-muted gap-2">
+                            <div className="w-20 h-20 rounded-full border-2 border-white/10 flex items-center justify-center">
                                 {activeChat.type === 'global' ? <Hash size={40} /> : <UserIcon size={40} />}
                             </div>
                             <p>Say hello!</p>
@@ -450,29 +457,15 @@ export default function Chat() {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 bg-gray-900/50 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-10">
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
+                <div className="p-4 bg-transparent border-t border-white/10 sticky bottom-0 z-10">
+                    <CosmicInput
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onSend={(e) => {
+                            if (e) e.preventDefault();
                             sendMessage();
                         }}
-                        className="flex items-center gap-2"
-                    >
-                        <input
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Type a message..."
-                            className="flex-1 bg-white/5 border border-white/10 rounded-full px-6 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-cyber-primary focus:ring-1 focus:ring-cyber-primary transition-all"
-                        />
-                        <button
-                            type="submit"
-                            disabled={!inputValue.trim()}
-                            className="p-3 rounded-full bg-gradient-to-r from-cyber-primary to-purple-600 text-white shadow-lg shadow-cyber-primary/20 hover:shadow-cyber-primary/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
-                        >
-                            <Send size={20} />
-                        </button>
-                    </form>
+                    />
                 </div>
             </div>
 
@@ -521,18 +514,28 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
                 </div>
             )}
             <div
+                style={isOwn ? { background: 'linear-gradient(to right, #E9C46A, #F4A261)', color: '#264653' } : {}}
                 className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative break-words ${isOwn
-                    ? 'bg-cyber-primary text-white rounded-br-md'
-                    : 'bg-slate-100 text-slate-900 rounded-bl-md'}`}
+                    ? 'font-medium rounded-br-md shadow-md shadow-cyber-accent/20'
+                    : 'bg-white/10 text-white border border-white/10 rounded-bl-md'}`}
             >
                 {/* Sender Name in Group/Global */}
                 {!isOwn && activeChatType !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== message.sender_id) && (
                     <div className="text-xs text-cyber-secondary mb-1 ml-1">{message.sender_username}</div>
                 )}
 
-                {message.content}
+                {message.is_unsent ? (
+                    <span className="italic opacity-60 text-sm flex items-center gap-1">
+                        <span className="inline-block w-3 h-3 border border-current rounded-full relative">
+                            <span className="absolute inset-0 m-auto w-3/4 h-[1px] bg-current rotate-45"></span>
+                        </span>
+                        Message unsent
+                    </span>
+                ) : (
+                    message.content
+                )}
 
-                <div className={`text-[10px] mt-1 opacity-70 flex items-center justify-end gap-1 font-medium ${isOwn ? 'text-blue-100' : 'text-gray-400'}`}>
+                <div className={`text-[10px] mt-1 opacity-70 flex items-center justify-end gap-1 font-medium ${isOwn ? 'text-cyber-background/70' : 'text-cyber-muted'}`}>
                     {formatTime(message.created_at)}
                 </div>
 
@@ -545,9 +548,9 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
 
                 {/* Context Menu */}
                 {activeMessageMenu === message.id && (
-                    <div className="absolute top-full mt-2 z-50 bg-white shadow-lg rounded-lg border border-gray-100 p-1 min-w-[120px]">
-                        {isOwn && <button onClick={() => handleDeleteMessage(message.id, 'everyone')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-red-50 text-red-500 rounded">Unsend</button>}
-                        <button onClick={() => handleDeleteMessage(message.id, 'me')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 text-gray-700 rounded">Delete for me</button>
+                    <div className="absolute top-full mt-2 z-50 bg-gray-800 shadow-lg rounded-lg border border-white/10 p-1 min-w-[120px]">
+                        {isOwn && <button onClick={() => handleDeleteMessage(message.id, 'everyone')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 text-red-500 rounded">Unsend</button>}
+                        <button onClick={() => handleDeleteMessage(message.id, 'me')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 text-gray-200 rounded">Delete for me</button>
                     </div>
                 )}
             </div>

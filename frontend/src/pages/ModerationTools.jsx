@@ -4,10 +4,10 @@ import { MessageSquare, Image, Mic, Film, Shield } from 'lucide-react';
 
 export default function ModerationTools() {
     const tools = [
-        { label: 'Text Moderation', icon: MessageSquare, path: '/text', color: 'black', desc: 'Scan text for hate speech, violence, and abuse.' },
-        { label: 'Image Moderation', icon: Image, path: '/image', color: 'black', desc: 'Analyze images for explicit content and gore.' },
-        { label: 'Audio Analysis', icon: Mic, path: '/audio', color: 'black', desc: 'Transcribe and flag audio content.' },
-        { label: 'Video Analysis', icon: Film, path: '/video', color: 'black', desc: 'Process video frames for safety violations.' },
+        { label: 'Text Moderation', icon: MessageSquare, path: '/text', color: 'from-blue-500 to-cyan-500', desc: 'Scan text for hate speech, violence, and abuse.' },
+        { label: 'Image Moderation', icon: Image, path: '/image', color: 'from-purple-500 to-pink-500', desc: 'Analyze images for explicit content and gore.' },
+        { label: 'Audio Analysis', icon: Mic, path: '/audio', color: 'from-amber-400 to-orange-500', desc: 'Transcribe and flag audio content.' },
+        { label: 'Video Analysis', icon: Film, path: '/video', color: 'from-emerald-400 to-green-600', desc: 'Process video frames for safety violations.' },
     ];
 
     return (
@@ -17,7 +17,7 @@ export default function ModerationTools() {
                     <Shield className="text-cyber-primary" />
                     Moderation Tools
                 </h1>
-                <p className="text-gray-400">Select a tool to test moderation capabilities manually.</p>
+                <p className="text-cyber-muted">Select a tool to test moderation capabilities manually.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -32,7 +32,7 @@ export default function ModerationTools() {
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-white mb-1 group-hover:text-cyber-primary transition-colors">{tool.label}</h3>
-                            <p className="text-gray-400 text-sm leading-relaxed">{tool.desc}</p>
+                            <p className="text-cyber-muted text-sm leading-relaxed">{tool.desc}</p>
                         </div>
                     </Link>
                 ))}
