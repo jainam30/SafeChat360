@@ -62,7 +62,7 @@ export default function Topbar({ onMenuClick }) {
         </button>
 
         {/* Desktop Search */}
-        <div className="hidden md:block transform scale-75 origin-left w-[390px] -my-2">
+        <div className="hidden md:block transform scale-75 origin-left w-[350px] -my-2">
           <CyberSearchInput placeholder="Search..." />
         </div>
 
