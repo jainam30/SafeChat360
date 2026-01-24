@@ -4,10 +4,10 @@ import { MessageSquare, Image, Mic, Film, Shield } from 'lucide-react';
 
 export default function ModerationTools() {
     const tools = [
-        { label: 'Text Moderation', icon: MessageSquare, path: '/text', color: 'from-blue-500 to-cyan-500', desc: 'Scan text for hate speech, violence, and abuse.' },
-        { label: 'Image Moderation', icon: Image, path: '/image', color: 'from-purple-500 to-pink-500', desc: 'Analyze images for explicit content and gore.' },
-        { label: 'Audio Analysis', icon: Mic, path: '/audio', color: 'from-yellow-500 to-orange-500', desc: 'Transcribe and flag audio content.' },
-        { label: 'Video Analysis', icon: Film, path: '/video', color: 'from-red-500 to-rose-500', desc: 'Process video frames for safety violations.' },
+        { label: 'Text Moderation', icon: MessageSquare, path: '/text', color: 'black', desc: 'Scan text for hate speech, violence, and abuse.' },
+        { label: 'Image Moderation', icon: Image, path: '/image', color: 'black', desc: 'Analyze images for explicit content and gore.' },
+        { label: 'Audio Analysis', icon: Mic, path: '/audio', color: 'black', desc: 'Transcribe and flag audio content.' },
+        { label: 'Video Analysis', icon: Film, path: '/video', color: 'black', desc: 'Process video frames for safety violations.' },
     ];
 
     return (

@@ -60,7 +60,7 @@ const StyledWrapper = styled.div`
   .darkBorderBg,
   .glow {
     max-height: 70px;
-    max-width: 314px;
+    max-width: 514px;
     height: 100%;
     width: 100%;
     position: absolute;
@@ -75,7 +75,7 @@ const StyledWrapper = styled.div`
     background-color: #010201;
     border: none;
     /* padding:7px; */
-    width: 301px;
+    width: 501px;
     height: 56px;
     border-radius: 10px;
     color: white;
@@ -90,7 +90,7 @@ const StyledWrapper = styled.div`
     justify-content: center;
     position: relative;
     height: 80px; /* Ensure container has height */
-    width: 314px; /* Fixed width to ensure children 100% matches input area exactly */
+    width: 514px; /* Fixed width to ensure children 100% matches input area exactly */
     margin: 0 auto; /* Center it if parent is wider */
   }
   .input::placeholder {
@@ -136,68 +136,24 @@ const StyledWrapper = styled.div`
 
   .white {
     max-height: 63px;
-    max-width: 307px;
+    max-width: 507px;
     border-radius: 10px;
     filter: blur(2px);
   }
 
-  .white::before {
-    content: "";
-    z-index: -2;
-    text-align: center;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(83deg);
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    background-repeat: no-repeat;
-    background-position: 0 0;
-    filter: brightness(1.4);
-    background-image: conic-gradient(
-      rgba(0, 0, 0, 0) 0%,
-      #a099d8,
-      rgba(0, 0, 0, 0) 8%,
-      rgba(0, 0, 0, 0) 50%,
-      #dfa2da,
-      rgba(0, 0, 0, 0) 58%
-    );
-    //  animation: rotate 4s linear infinite;
-    transition: all 2s;
-  }
+// ...
+
   .border {
     max-height: 59px;
-    max-width: 303px;
+    max-width: 503px;
     border-radius: 11px;
     filter: blur(0.5px);
   }
-  .border::before {
-    content: "";
-    z-index: -2;
-    text-align: center;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(70deg);
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    filter: brightness(1.3);
-    background-repeat: no-repeat;
-    background-position: 0 0;
-    background-image: conic-gradient(
-      #1c191c,
-      #402fb5 5%,
-      #1c191c 14%,
-      #1c191c 50%,
-      #cf30aa 60%,
-      #1c191c 64%
-    );
-    // animation: rotate 4s 0.1s linear infinite;
-    transition: all 2s;
-  }
+
+// ...
   .darkBorderBg {
     max-height: 65px;
-    max-width: 312px;
+    max-width: 512px;
   }
   .darkBorderBg::before {
     content: "";
@@ -269,7 +225,7 @@ const StyledWrapper = styled.div`
     filter: blur(30px);
     opacity: 0.4;
     max-height: 130px;
-    max-width: 354px;
+    max-width: 554px;
   }
   .glow:before {
     content: "";

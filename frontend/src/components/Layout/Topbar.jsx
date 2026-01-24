@@ -52,7 +52,7 @@ export default function Topbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="hidden md:block transform scale-75 origin-left w-[240px] -my-2">
+        <div className="hidden md:block transform scale-75 origin-left w-[390px] -my-2">
           {/* Scaled down CyberSearch to fit header */}
           <CyberSearchInput
             placeholder="Search..."
