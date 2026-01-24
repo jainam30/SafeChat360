@@ -195,6 +195,16 @@ export default function Chat() {
             });
 
             if (!res.ok) {
+                if (res.status === 401) {
+                    alert("Session expired. Please log in again.");
+                    // Force logout or redirect
+                    // Since we have logout from useAuth(), let's use it? 
+                    // But logout() is not destructured in the first line of Chat component yet.
+                    // Let's reload to be safe and force auth check
+                    window.location.href = '/login';
+                    return;
+                }
+
                 let errorMsg = "Failed to send message";
                 try {
                     const err = await res.json();

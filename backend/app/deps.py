@@ -18,11 +18,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("email")
         if email is None:
+            print("AUTH DEBUG: Email missing in token payload")
             raise credentials_exception
-    except JWTError:
+    except jwt.ExpiredSignatureError:
+        print("AUTH DEBUG: Token Expired")
+        raise credentials_exception
+    except JWTError as e:
+        print(f"AUTH DEBUG: JWT Error: {e}")
         raise credentials_exception
     
     user = crud.get_user_by_email(session, email=email)
     if user is None:
+        print(f"AUTH DEBUG: User not found for email {email}")
         raise credentials_exception
     return user
