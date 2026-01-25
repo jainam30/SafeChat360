@@ -20,6 +20,8 @@ export const CallProvider = ({ children }) => {
     const [callData, setCallData] = useState(null);
     const [isMinimized, setIsMinimized] = useState(false);
 
+    const reconnectAttempts = useRef(0);
+
     // Socket Connection Logic (Hoisted from Chat.jsx)
     useEffect(() => {
         if (!user || !token) {
@@ -55,19 +57,32 @@ export const CallProvider = ({ children }) => {
                 setIsConnected(true);
                 setSocket(newSocket);
                 ws.current = newSocket;
+                reconnectAttempts.current = 0; // Reset attempts on success
                 if (reconnectTimeout.current) {
                     clearTimeout(reconnectTimeout.current);
                     reconnectTimeout.current = null;
                 }
             };
 
-            newSocket.onclose = () => {
-                console.log("Global WS Disconnected");
+            newSocket.onclose = (event) => {
+                console.log("Global WS Disconnected", event.code, event.reason);
                 setIsConnected(false);
                 setSocket(null);
                 ws.current = null;
-                // Auto reconnect
-                reconnectTimeout.current = setTimeout(connect, 3000);
+
+                // Don't reconnect if auth failed (4001 or 4003 or similar likely used by backend)
+                // or if closed cleanly (1000)
+                if (event.code === 4001 || event.code === 1008) {
+                    console.error("WS Auth Failed, not reconnecting.");
+                    return;
+                }
+
+                // Exponential Backoff
+                const delay = Math.min(3000 * Math.pow(2, reconnectAttempts.current), 30000);
+                console.log(`Reconnecting in ${delay}ms (Attempt ${reconnectAttempts.current + 1})`);
+                reconnectAttempts.current += 1;
+
+                reconnectTimeout.current = setTimeout(connect, delay);
             };
 
             newSocket.onerror = (err) => {

@@ -342,8 +342,10 @@ const StyledWrapper = styled.div`
   #search-icon {
     position: absolute;
     left: 20px;
-    top: 15px;
-    z-index: 3;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    pointer-events: none; /* Let clicks pass through if needed, though it's a submit button */
   }`;
 
 export default CyberSearchInput;

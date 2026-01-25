@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -24,7 +24,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { CallProvider, useCall } from './context/CallContext';
 import { NotificationProvider } from './context/NotificationContext';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import AnimatedBackground from './components/AnimatedBackground';
 import PostView from './pages/PostView';
 
@@ -54,6 +54,19 @@ const GlobalCallUI = () => {
 };
 
 export default function App() {
+  useEffect(() => {
+    const handleOffline = () => toast.error("You are offline. Check your internet connection.");
+    const handleOnline = () => toast.success("Back online!");
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>

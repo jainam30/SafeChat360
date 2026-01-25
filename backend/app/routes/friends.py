@@ -116,12 +116,15 @@ def search_users(
     current_user: User = Depends(get_current_user)
 ):
     from sqlmodel import select # Explicit import to fix reported NameError
+    print(f"DEBUG: Searching users with query: '{q}'")
     try:
         if not q:
+            print("DEBUG: Empty query, returning empty list")
             return []
         
         # Search users by username or full name
         # Use ilike for case-insensitive search
+        print("DEBUG: Constructing query...")
         statement = select(User).where(
             or_(
                 col(User.username).ilike(f"%{q}%"), 
@@ -130,7 +133,10 @@ def search_users(
             )
         ).where(User.id != current_user.id).limit(20)
         
+        print("DEBUG: Executing query...")
         users = session.exec(statement).all()
+        print(f"DEBUG: Query executed. Found {len(users)} users. Processing results...")
+        
         results = []
         
         for u in users:
@@ -159,9 +165,12 @@ def search_users(
                 "friendship_id": request_id
             })
             
+        print(f"DEBUG: Processing complete. Returning {len(results)} results.")
         return results
     except Exception as e:
         import traceback
+        trace = traceback.format_exc()
+        print(f"ERROR in search_friends: {trace}")
         with open("error.log", "w") as f:
             f.write(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

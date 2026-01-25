@@ -135,9 +135,9 @@ export default function Chat() {
     }, [messages]);
 
 
-    // Polling
+    // Polling (Fallback when WS is disconnected)
     useEffect(() => {
-        if (!token) return;
+        if (!token || isConnected) return;
 
         const pollMessages = async () => {
             if (!activeChat.id && activeChat.type !== 'global') return;
@@ -169,9 +169,9 @@ export default function Chat() {
             } catch (e) { console.error("Poll err", e); }
         };
 
-        const intervalId = setInterval(pollMessages, 3000);
+        const intervalId = setInterval(pollMessages, 5000);
         return () => clearInterval(intervalId);
-    }, [activeChat, token]);
+    }, [activeChat, token, isConnected]);
 
     const startCall = (isVideo) => {
         if (!isConnected) {

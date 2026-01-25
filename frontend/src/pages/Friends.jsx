@@ -55,17 +55,30 @@ export default function Friends() {
         }
     };
 
+    const [hasSearched, setHasSearched] = useState(false);
+
     const handleSearch = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!searchQuery.trim()) return;
+
         setLoading(true);
+        setHasSearched(true);
+        setSearchResults([]); // Clear previous results
+
         try {
             const res = await fetch(getApiUrl(`/api/friends/search?q=${encodeURIComponent(searchQuery.trim())}`), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (res.ok) setSearchResults(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                setSearchResults(Array.isArray(data) ? data : []);
+            } else {
+                setSearchResults([]);
+                console.error("Search failed with status:", res.status);
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Search error:", e);
+            setSearchResults([]);
         } finally {
             setLoading(false);
         }
@@ -193,6 +206,14 @@ export default function Friends() {
                                 placeholder="Search by username or email..."
                             />
                         </div>
+
+                        {hasSearched && searchResults.length === 0 && !loading && (
+                            <div className="text-center py-10 text-cyber-muted glass-card border border-white/5">
+                                <Search size={48} className="mx-auto mb-4 opacity-30" />
+                                <p className="text-lg font-medium text-white mb-1">No users found</p>
+                                <p className="text-sm">Try searching for a different username or email.</p>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {searchResults.map(user => (
