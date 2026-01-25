@@ -21,6 +21,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
     const peerConnection = useRef(null);
     const localStreamRef = useRef(null);
+    const remoteStreamRef = useRef(null);
     const candidatesQueue = useRef([]);
     const noAnswerTimeout = useRef(null);
 
@@ -140,14 +141,32 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         };
 
         pc.ontrack = (event) => {
-            console.log("Remote track received", event.track.kind);
-            let stream = event.streams[0];
-            if (!stream) {
-                stream = new MediaStream();
-                stream.addTrack(event.track);
+            console.log("Remote track received", event.track.kind, event.streams[0]?.id);
+
+            // If the browser provides a stream, use it as the source of truth
+            const incomingStream = event.streams[0];
+
+            if (incomingStream) {
+                // Update state with this stream (ensuring all tracks are present)
+                // Tricky part: React might not re-render if the object ref is same.
+                // But we need to update the VIDEO element. 
+                // Best practice: Set state to a CLONE or ensure srcObject is updated.
+
+                // Let's rely on the incoming stream being populated.
+                incomingStream.onaddtrack = () => {
+                    console.log("Track added to incoming stream, updating state");
+                    setRemoteStream(new MediaStream(incomingStream.getTracks()));
+                };
+
+                setRemoteStream(incomingStream);
+            } else {
+                // Fallback for browsers not sending streams
+                if (!remoteStreamRef.current) {
+                    remoteStreamRef.current = new MediaStream();
+                }
+                remoteStreamRef.current.addTrack(event.track);
+                setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
             }
-            const newStreamRef = new MediaStream(stream.getTracks());
-            setRemoteStream(newStreamRef);
         };
 
         peerConnection.current = pc;

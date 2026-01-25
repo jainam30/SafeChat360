@@ -102,17 +102,28 @@ export default function Chat() {
                 if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) return;
 
                 if (data.type === 'message' || !data.type) {
-                    setMessages(prev => {
-                        if (prev.find(m => m.id === data.id)) return prev;
-                        const currentActive = activeChatRef.current;
-                        const isRelevant =
-                            (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
-                            (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
-                            (currentActive.type === 'group' && data.group_id === currentActive.id);
+                    const currentActive = activeChatRef.current;
+                    const isRelevant =
+                        (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
+                        (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
+                        (currentActive.type === 'group' && data.group_id === currentActive.id);
 
-                        if (isRelevant) return [...prev, data];
-                        return prev;
-                    });
+                    if (isRelevant) {
+                        setMessages(prev => {
+                            if (prev.find(m => m.id === data.id)) return prev;
+                            return [...prev, data];
+                        });
+                    } else {
+                        // Background Notification Logic
+                        if (data.sender_id && !data.group_id) {
+                            setFriends(prev => prev.map(f => {
+                                if (f.id === data.sender_id) {
+                                    return { ...f, unread_count: (f.unread_count || 0) + 1, last_message: data.content };
+                                }
+                                return f;
+                            }));
+                        }
+                    }
                 } else if (data.type === 'message_update') {
                     setMessages(prev => prev.map(msg =>
                         msg.id === data.id
@@ -340,20 +351,39 @@ export default function Chat() {
                         </div>
                     ))}
 
-                    {/* Friends/DMs */}
                     {friends.map(u => (
                         <div
                             key={u.id}
-                            onClick={() => { setActiveChat({ type: 'private', id: u.id, data: u }); setMobileView('chat'); }}
+                            onClick={() => {
+                                setActiveChat({ type: 'private', id: u.id, data: u });
+                                setMobileView('chat');
+                                setFriends(prev => prev.map(f => f.id === u.id ? { ...f, unread_count: 0 } : f));
+                            }}
                             className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-white/5 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-cyber-primary/10 border-l-2 border-cyber-primary' : ''}`}
                         >
-                            <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100">
+                            <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 relative">
                                 <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
                             </div>
-                            <div className="flex-1">
-                                <div className="text-sm font-medium text-white">{u.username}</div>
-                                <div className="text-xs text-cyber-muted truncate flex items-center gap-1">
-                                    <span className="w-2 h-2 rounded-full bg-green-500"></span> Active now
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <div className="text-sm font-medium text-white truncate">{u.username}</div>
+                                    <span className="text-[10px] text-cyber-muted opacity-60">
+                                        {/* Timestamp could go here if available */}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <div className={`text-xs truncate ${u.unread_count > 0 ? 'text-white font-bold' : 'text-cyber-muted'}`}>
+                                        {u.unread_count > 0 ? (
+                                            u.last_message || "New message"
+                                        ) : (
+                                            u.last_message || <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Active now</span>
+                                        )}
+                                    </div>
+                                    {u.unread_count > 0 && (
+                                        <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                                            {u.unread_count}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
