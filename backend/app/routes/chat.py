@@ -61,12 +61,16 @@ class ConnectionManager:
             # Private message
             # Send to receiver
             if receiver_id in self.active_connections:
-                for connection in self.active_connections[receiver_id]:
+                connections = self.active_connections[receiver_id]
+                print(f"WS BROADCAST: Sending to receiver {receiver_id} on {len(connections)} sockets. Message: {message[:50]}...")
+                for connection in connections:
                     try:
                         await connection.send_text(message)
-                    except:
-                        pass
-            
+                    except Exception as e:
+                        print(f"WS BROADCAST ERROR: {e}")
+            else:
+                print(f"WS BROADCAST: Receiver {receiver_id} NOT CONNECTED or not in active_connections.")
+
             # Send back to sender
             if sender_id and sender_id != receiver_id and sender_id in self.active_connections:
                  for connection in self.active_connections[sender_id]:

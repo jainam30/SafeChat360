@@ -58,7 +58,10 @@ const CallModal = ({ onClose, onMinimize }) => {
 
     // Attach Streams
     useEffect(() => {
-        if (localStream && localVideoRef.current) localVideoRef.current.srcObject = localStream;
+        if (localStream && localVideoRef.current) {
+            localVideoRef.current.srcObject = localStream;
+            localVideoRef.current.muted = true; // Force mute to prevent local echo/feedback
+        }
     }, [localStream]);
 
     useEffect(() => {
