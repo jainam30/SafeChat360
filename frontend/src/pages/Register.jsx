@@ -8,6 +8,7 @@ import { auth } from '../firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { parsePhoneNumber } from 'libphonenumber-js';
 import { User, Phone, Globe } from 'lucide-react'; // Using Lucide for extra fields
+import logoImg from '../assets/safechat_logo.png';
 
 const rotate = keyframes`
   0% { transform: rotate(0deg); }
@@ -160,6 +161,11 @@ const Register = () => {
       <StyledWrapper $borderColor={borderColor}>
         <div className="card-wrapper">
           <form className="form" onSubmit={handleSubmit}>
+            <div className="flex-column" style={{ alignItems: 'center', marginBottom: '10px' }}>
+              <Link to="/">
+                <img src={logoImg} alt="SafeChat360" style={{ height: '60px', width: '60px', borderRadius: '15px' }} />
+              </Link>
+            </div>
 
             {/* Full Name */}
             <div className="flex-column">

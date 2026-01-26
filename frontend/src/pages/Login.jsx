@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import logoImg from '../assets/safechat_logo.png';
 
 const rotate = keyframes`
   0% { transform: rotate(0deg); }
@@ -102,6 +103,11 @@ const Login = () => {
       <StyledWrapper $borderColor={borderColor}>
         <div className="card-wrapper">
           <form className="form" onSubmit={handleSubmit}>
+            <div className="flex-column" style={{ alignItems: 'center', marginBottom: '10px' }}>
+              <Link to="/">
+                <img src={logoImg} alt="SafeChat360" style={{ height: '60px', width: '60px', borderRadius: '15px' }} />
+              </Link>
+            </div>
             <div className="flex-column">
               <label>Email </label>
             </div>
