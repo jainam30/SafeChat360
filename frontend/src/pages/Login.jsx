@@ -208,6 +208,7 @@ const StyledWrapper = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
+    margin: 0 20px;
   }
 
   .card-wrapper::before {
@@ -246,9 +247,16 @@ const StyledWrapper = styled.div`
     gap: 10px;
     background-color: #ffffff;
     padding: 30px;
-    width: 450px;
+    width: 100%;
+    max-width: 450px;
     border-radius: 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  @media (max-width: 480px) {
+    .form {
+      padding: 20px;
+    }
   }
 
   ::placeholder {
