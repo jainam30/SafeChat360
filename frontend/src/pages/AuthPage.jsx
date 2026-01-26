@@ -193,9 +193,9 @@ const AuthPage = () => {
 
     return (
         <PageContainer>
-            <div style={{ margin: 'auto' }}> {/* Center content if it fits, scroll if it overflows */}
-                <div className={`logo-container`} style={{ marginBottom: '30px', zIndex: 2, textAlign: 'center' }}>
-                    <Link to="/">
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div className={`logo-container`} style={{ marginBottom: '30px', zIndex: 2, display: 'flex', justifyContent: 'center', width: '100%' }}>
+                    <Link to="/" style={{ display: 'flex' }}>
                         <motion.img
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -357,14 +357,16 @@ const googleAndAppleButtons = (googleHandler) => (
 );
 
 const PageContainer = styled.div`
-  min-height: 100vh;
+  min-height: 100dvh; /* Mobile viewport height fix */
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* justify-content: center;  <-- Removed to prevent jumping */
+  /* Using margin-top/bottom auto on the child is safer for scrollable content than justify-content: center */
+  justify-content: center; 
   background-color: #1a1a2e;
   overflow-x: hidden;
-  padding: 40px 0; /* Add vertical padding for spacing */
+  padding: 40px 20px;
 `;
 
 const StyledWrapper = styled.div`
