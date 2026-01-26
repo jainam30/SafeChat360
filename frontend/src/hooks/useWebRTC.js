@@ -266,11 +266,30 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 if (data.type === 'hang-up') {
                     console.log("Peer hung up");
                     setError("Call Ended");
-                    setTimeout(() => onClose(), 1000);
                     stopAudio();
-                    // Don't recurse endCall, just close local
-                    if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
-                    if (pc) pc.close();
+
+                    // Stop Local Stream immediately
+                    if (localStreamRef.current) {
+                        localStreamRef.current.getTracks().forEach(t => {
+                            t.stop();
+                            t.enabled = false;
+                        });
+                        localStreamRef.current = null;
+                        setLocalStream(null);
+                    }
+
+                    // Close PC immediately
+                    if (pc) {
+                        pc.close();
+                        peerConnection.current = null;
+                    }
+                    remoteStreamRef.current = null;
+                    setRemoteStream(null);
+
+                    // Delay UI close for user feedback
+                    setTimeout(() => {
+                        onClose();
+                    }, 1000);
                 }
 
                 else if (data.type === 'call-response') {
@@ -435,12 +454,14 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 t.stop();
                 t.enabled = false;
             });
+            localStreamRef.current = null;
         }
 
         if (peerConnection.current) {
             peerConnection.current.close();
             peerConnection.current = null;
         }
+        remoteStreamRef.current = null;
 
         // Notify Peer
         if (notifyPeer && socket && socket.readyState === WebSocket.OPEN) {
