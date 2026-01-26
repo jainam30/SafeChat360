@@ -193,7 +193,7 @@ const AuthPage = () => {
 
     return (
         <PageContainer>
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 'auto' }}>
                 <div className={`logo-container`} style={{ marginBottom: '30px', zIndex: 2, display: 'flex', justifyContent: 'center', width: '100%' }}>
                     <Link to="/" style={{ display: 'flex' }}>
                         <motion.img
@@ -357,16 +357,15 @@ const googleAndAppleButtons = (googleHandler) => (
 );
 
 const PageContainer = styled.div`
-  min-height: 100dvh; /* Mobile viewport height fix */
+  height: 100dvh; /* Fixed height to match viewport */
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  /* Using margin-top/bottom auto on the child is safer for scrollable content than justify-content: center */
-  justify-content: center; 
+  /* margin: auto on key child centers it */
   background-color: #1a1a2e;
+  overflow-y: auto; /* Allow internal scrolling if needed */
   overflow-x: hidden;
-  padding: 40px 20px;
+  padding: 20px; /* Minimal padding to prevent edge touches */
 `;
 
 const StyledWrapper = styled.div`
