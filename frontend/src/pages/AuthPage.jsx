@@ -193,150 +193,152 @@ const AuthPage = () => {
 
     return (
         <PageContainer>
-            <div className={`logo-container`} style={{ marginBottom: '30px', zIndex: 2 }}>
-                <Link to="/">
-                    <motion.img
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        src={logoImg}
-                        alt="SafeChat360"
-                        style={{ height: '100px', width: '100px', borderRadius: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}
-                    />
-                </Link>
-            </div>
-
-            <StyledWrapper $borderColor={borderColor}>
-                <div className="card-wrapper">
-                    <motion.div
-                        className="form-container"
-                        layout // Smooth size transitions
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        style={{ width: '100%', maxWidth: '450px', backgroundColor: '#fff', borderRadius: '20px', overflow: 'hidden' }}
-                    >
-                        <AnimatePresence initial={false} mode='wait' custom={direction}>
-                            {isLogin ? (
-                                <motion.form
-                                    key="login"
-                                    custom={direction}
-                                    variants={variants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={{
-                                        x: { type: "spring", stiffness: 300, damping: 30 },
-                                        opacity: { duration: 0.2 }
-                                    }}
-                                    className="form-content"
-                                    onSubmit={handleLoginSubmit}
-                                >
-                                    {/* LOGIN FORM CONTENT */}
-                                    <h2 className="text-center font-bold text-xl mb-4 text-black">Welcome Back</h2>
-
-                                    <div className="flex-column"><label>Email</label></div>
-                                    <div className="inputForm">
-                                        <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg"><g id="Layer_3"><path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" /></g></svg>
-                                        <input type="text" className="input" placeholder="Enter your Email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
-                                    </div>
-
-                                    <div className="flex-column"><label>Password</label></div>
-                                    <div className="inputForm">
-                                        <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
-                                        <input type={showLoginPassword ? "text" : "password"} className="input" placeholder="Enter your Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
-                                        <svg viewBox="0 0 576 512" height="1em" onClick={() => setShowLoginPassword(!showLoginPassword)} style={{ cursor: 'pointer', fill: showLoginPassword ? '#2d79f3' : 'black' }}><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM144 256a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm144-64c0 35.3-28.7 64-64 64c-7.1 0-13.9-1.2-20.3-3.3c-5.5-1.8-11.9 1.6-11.7 7.4c.3 6.9 1.3 13.8 3.2 20.7c13.7 51.2 66.4 81.6 117.6 67.9s81.6-66.4 67.9-117.6c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.2 6.1-7.4 11.7c2.1 6.4 3.3 13.2 3.3 20.3z" /></svg>
-                                    </div>
-
-                                    <div className="flex-row">
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <input type="checkbox" id="remember" />
-                                            <label htmlFor="remember">Remember me</label>
-                                        </div>
-                                        <span className="span" onClick={() => navigate('/forgot-password')}>Forgot password?</span>
-                                    </div>
-
-                                    <button className="button-submit" type="submit" disabled={loading}>{loading ? 'Signing In...' : 'Sign In'}</button>
-
-                                    <div className="flex-row" style={{ justifyContent: 'center', marginTop: '10px' }}>
-                                        <p className="p">Don't have an account?</p>
-                                        {/* Use replace to keep history clean or push to animate */}
-                                        <span className="span" onClick={() => navigate('/register')}>Sign Up</span>
-                                    </div>
-                                    <p className="p line">Or With</p>
-                                    {googleAndAppleButtons(handleGoogleLogin)}
-                                </motion.form>
-                            ) : (
-                                <motion.form
-                                    key="register"
-                                    custom={direction}
-                                    variants={variants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={{
-                                        x: { type: "spring", stiffness: 300, damping: 30 },
-                                        opacity: { duration: 0.2 }
-                                    }}
-                                    className="form-content"
-                                    onSubmit={handleRegisterSubmit}
-                                >
-                                    {/* REGISTER FORM CONTENT */}
-                                    <h2 className="text-center font-bold text-xl mb-4 text-black">Create Account</h2>
-
-                                    <div className="flex-column"><label>Full Name</label></div>
-                                    <div className="inputForm">
-                                        <User size={20} color="black" />
-                                        <input type="text" className="input" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                                    </div>
-
-                                    <div className="flex-column"><label>Username</label></div>
-                                    <div className="inputForm">
-                                        <User size={20} color="black" />
-                                        <input type="text" className="input" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-                                    </div>
-
-                                    <div className="flex-column"><label>Email</label></div>
-                                    <div className="inputForm">
-                                        <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg"><g id="Layer_3"><path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" /></g></svg>
-                                        <input type="email" className="input" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
-                                    </div>
-
-                                    <div className="flex-column"><label>Phone Number</label></div>
-                                    <div className="inputForm">
-                                        <div style={{ display: 'flex', alignItems: 'center', borderRight: '1px solid #ddd', paddingRight: '5px', marginRight: '5px' }}>
-                                            <Globe size={16} color="black" style={{ marginRight: '5px' }} />
-                                            <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '14px', outline: 'none', width: '60px' }}>
-                                                {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                                            </select>
-                                        </div>
-                                        <Phone size={18} color="black" />
-                                        <input type="tel" className="input" placeholder="9876543210" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} style={{ width: '60%' }} required />
-                                    </div>
-
-                                    <div className="flex-column"><label>Password</label></div>
-                                    <div className="inputForm">
-                                        <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
-                                        <input type="password" className="input" placeholder="Create Password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
-                                    </div>
-
-                                    <div className="flex-column"><label>Confirm</label></div>
-                                    <div className="inputForm">
-                                        <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
-                                        <input type="password" className="input" placeholder="Confirm" value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} required />
-                                    </div>
-
-                                    <button className="button-submit" type="submit" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>
-
-                                    <div className="flex-row" style={{ justifyContent: 'center', marginTop: '10px' }}>
-                                        <p className="p">Already have an account?</p>
-                                        <span className="span" onClick={() => navigate('/login')}>Sign In</span>
-                                    </div>
-                                    <p className="p line">Or With</p>
-                                    {googleAndAppleButtons(handleGoogleLogin)}
-                                </motion.form>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
+            <div style={{ margin: 'auto' }}> {/* Center content if it fits, scroll if it overflows */}
+                <div className={`logo-container`} style={{ marginBottom: '30px', zIndex: 2, textAlign: 'center' }}>
+                    <Link to="/">
+                        <motion.img
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            src={logoImg}
+                            alt="SafeChat360"
+                            style={{ height: '100px', width: '100px', borderRadius: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}
+                        />
+                    </Link>
                 </div>
-            </StyledWrapper>
+
+                <StyledWrapper $borderColor={borderColor}>
+                    <div className="card-wrapper">
+                        <motion.div
+                            className="form-container"
+                            layout // Smooth size transitions
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            style={{ width: '100%', maxWidth: '450px', backgroundColor: '#fff', borderRadius: '20px', overflow: 'hidden' }}
+                        >
+                            <AnimatePresence initial={false} mode='wait' custom={direction}>
+                                {isLogin ? (
+                                    <motion.form
+                                        key="login"
+                                        custom={direction}
+                                        variants={variants}
+                                        initial="enter"
+                                        animate="center"
+                                        exit="exit"
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        className="form-content"
+                                        onSubmit={handleLoginSubmit}
+                                    >
+                                        {/* LOGIN FORM CONTENT */}
+                                        <h2 className="text-center font-bold text-xl mb-4 text-black">Welcome Back</h2>
+
+                                        <div className="flex-column"><label>Email</label></div>
+                                        <div className="inputForm">
+                                            <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg"><g id="Layer_3"><path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" /></g></svg>
+                                            <input type="text" className="input" placeholder="Enter your Email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
+                                        </div>
+
+                                        <div className="flex-column"><label>Password</label></div>
+                                        <div className="inputForm">
+                                            <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
+                                            <input type={showLoginPassword ? "text" : "password"} className="input" placeholder="Enter your Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
+                                            <svg viewBox="0 0 576 512" height="1em" onClick={() => setShowLoginPassword(!showLoginPassword)} style={{ cursor: 'pointer', fill: showLoginPassword ? '#2d79f3' : 'black' }}><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM144 256a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm144-64c0 35.3-28.7 64-64 64c-7.1 0-13.9-1.2-20.3-3.3c-5.5-1.8-11.9 1.6-11.7 7.4c.3 6.9 1.3 13.8 3.2 20.7c13.7 51.2 66.4 81.6 117.6 67.9s81.6-66.4 67.9-117.6c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.2 6.1-7.4 11.7c2.1 6.4 3.3 13.2 3.3 20.3z" /></svg>
+                                        </div>
+
+                                        <div className="flex-row">
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <input type="checkbox" id="remember" />
+                                                <label htmlFor="remember">Remember me</label>
+                                            </div>
+                                            <span className="span" onClick={() => navigate('/forgot-password')}>Forgot password?</span>
+                                        </div>
+
+                                        <button className="button-submit" type="submit" disabled={loading}>{loading ? 'Signing In...' : 'Sign In'}</button>
+
+                                        <div className="flex-row" style={{ justifyContent: 'center', marginTop: '10px' }}>
+                                            <p className="p">Don't have an account?</p>
+                                            {/* Use replace to keep history clean or push to animate */}
+                                            <span className="span" onClick={() => navigate('/register')}>Sign Up</span>
+                                        </div>
+                                        <p className="p line">Or With</p>
+                                        {googleAndAppleButtons(handleGoogleLogin)}
+                                    </motion.form>
+                                ) : (
+                                    <motion.form
+                                        key="register"
+                                        custom={direction}
+                                        variants={variants}
+                                        initial="enter"
+                                        animate="center"
+                                        exit="exit"
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        className="form-content"
+                                        onSubmit={handleRegisterSubmit}
+                                    >
+                                        {/* REGISTER FORM CONTENT */}
+                                        <h2 className="text-center font-bold text-xl mb-4 text-black">Create Account</h2>
+
+                                        <div className="flex-column"><label>Full Name</label></div>
+                                        <div className="inputForm">
+                                            <User size={20} color="black" />
+                                            <input type="text" className="input" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                                        </div>
+
+                                        <div className="flex-column"><label>Username</label></div>
+                                        <div className="inputForm">
+                                            <User size={20} color="black" />
+                                            <input type="text" className="input" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                                        </div>
+
+                                        <div className="flex-column"><label>Email</label></div>
+                                        <div className="inputForm">
+                                            <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg"><g id="Layer_3"><path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" /></g></svg>
+                                            <input type="email" className="input" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
+                                        </div>
+
+                                        <div className="flex-column"><label>Phone Number</label></div>
+                                        <div className="inputForm">
+                                            <div style={{ display: 'flex', alignItems: 'center', borderRight: '1px solid #ddd', paddingRight: '5px', marginRight: '5px' }}>
+                                                <Globe size={16} color="black" style={{ marginRight: '5px' }} />
+                                                <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '14px', outline: 'none', width: '60px' }}>
+                                                    {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                                                </select>
+                                            </div>
+                                            <Phone size={18} color="black" />
+                                            <input type="tel" className="input" placeholder="9876543210" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} style={{ width: '60%' }} required />
+                                        </div>
+
+                                        <div className="flex-column"><label>Password</label></div>
+                                        <div className="inputForm">
+                                            <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
+                                            <input type="password" className="input" placeholder="Create Password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
+                                        </div>
+
+                                        <div className="flex-column"><label>Confirm</label></div>
+                                        <div className="inputForm">
+                                            <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
+                                            <input type="password" className="input" placeholder="Confirm" value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} required />
+                                        </div>
+
+                                        <button className="button-submit" type="submit" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>
+
+                                        <div className="flex-row" style={{ justifyContent: 'center', marginTop: '10px' }}>
+                                            <p className="p">Already have an account?</p>
+                                            <span className="span" onClick={() => navigate('/login')}>Sign In</span>
+                                        </div>
+                                        <p className="p line">Or With</p>
+                                        {googleAndAppleButtons(handleGoogleLogin)}
+                                    </motion.form>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    </div>
+                </StyledWrapper>
+            </div>
         </PageContainer>
     );
 };
@@ -359,9 +361,10 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* justify-content: center;  <-- Removed to prevent jumping */
   background-color: #1a1a2e;
   overflow-x: hidden;
+  padding: 40px 0; /* Add vertical padding for spacing */
 `;
 
 const StyledWrapper = styled.div`
