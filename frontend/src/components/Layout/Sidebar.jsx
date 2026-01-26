@@ -11,9 +11,9 @@ const items = [
   { to: '/chat', label: 'Global Chat', icon: MessageSquare },
   { to: '/social', label: 'Social Feed', icon: Globe },
   { to: '/friends', label: 'Friends', icon: UserPlus },
+  { to: '/moderation', label: 'Mod Tools', icon: Shield },
   { to: '/history', label: 'History', icon: Clock },
   { to: '/review', label: 'Review Queue', icon: AlertTriangle },
-  { to: '/moderation', label: 'Mod Tools', icon: Shield },
   { to: '/settings', label: 'Settings', icon: Settings },
   { to: '/about', label: 'About', icon: Info },
 ]
