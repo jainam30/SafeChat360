@@ -18,6 +18,7 @@ const rotate = keyframes`
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -71,6 +72,12 @@ const Register = () => {
 
     if (password.length < 6) {
       toast.error('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match.');
       setLoading(false);
       return;
     }
@@ -158,14 +165,14 @@ const Register = () => {
 
   return (
     <PageContainer>
+      <div className="flex-column" style={{ alignItems: 'center', marginBottom: '30px', zIndex: 2 }}>
+        <Link to="/">
+          <img src={logoImg} alt="SafeChat360" style={{ height: '100px', width: '100px', borderRadius: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }} />
+        </Link>
+      </div>
       <StyledWrapper $borderColor={borderColor}>
         <div className="card-wrapper">
           <form className="form" onSubmit={handleSubmit}>
-            <div className="flex-column" style={{ alignItems: 'center', marginBottom: '10px' }}>
-              <Link to="/">
-                <img src={logoImg} alt="SafeChat360" style={{ height: '60px', width: '60px', borderRadius: '15px' }} />
-              </Link>
-            </div>
 
             {/* Full Name */}
             <div className="flex-column">
@@ -269,6 +276,25 @@ const Register = () => {
               />
             </div>
 
+            {/* Confirm Password */}
+            <div className="flex-column">
+              <label>Confirm Password</label>
+            </div>
+            <div className="inputForm">
+              <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg">
+                <path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" />
+                <path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" />
+              </svg>
+              <input
+                type="password"
+                className="input"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+
             <button className="button-submit" type="submit" disabled={loading}>
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
@@ -301,6 +327,7 @@ const Register = () => {
 const PageContainer = styled.div`
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: #1a1a2e;
@@ -394,6 +421,9 @@ const StyledWrapper = styled.div`
     width: 85%;
     height: 100%;
     outline: none;
+    background-color: transparent;
+    color: #151717; /* Use dark color for visibility on white bg */
+    font-size: 15px;
   }
 
   .input:focus {

@@ -100,14 +100,14 @@ const Login = () => {
 
   return (
     <PageContainer>
+      <div className="flex-column" style={{ alignItems: 'center', marginBottom: '30px', zIndex: 2 }}>
+        <Link to="/">
+          <img src={logoImg} alt="SafeChat360" style={{ height: '100px', width: '100px', borderRadius: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }} />
+        </Link>
+      </div>
       <StyledWrapper $borderColor={borderColor}>
         <div className="card-wrapper">
           <form className="form" onSubmit={handleSubmit}>
-            <div className="flex-column" style={{ alignItems: 'center', marginBottom: '10px' }}>
-              <Link to="/">
-                <img src={logoImg} alt="SafeChat360" style={{ height: '60px', width: '60px', borderRadius: '15px' }} />
-              </Link>
-            </div>
             <div className="flex-column">
               <label>Email </label>
             </div>
@@ -200,6 +200,7 @@ const Login = () => {
 const PageContainer = styled.div`
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: #1a1a2e; /* Dark background to make the white card pop */
@@ -294,7 +295,10 @@ const StyledWrapper = styled.div`
     border: none;
     width: 85%;
     height: 100%;
-    outline: none; /* Removed default outline */
+    outline: none;
+    background-color: transparent;
+    color: #151717; /* Use dark color for visibility on white bg */
+    font-size: 15px;
   }
 
   .input:focus {
