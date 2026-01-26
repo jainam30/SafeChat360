@@ -86,8 +86,8 @@ export default function App() {
                 }} />
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                  <Route path="/login" element={<AuthPage />} />
+                  <Route path="/register" element={<AuthPage />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
 
                   <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
