@@ -143,22 +143,21 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
         pc.ontrack = (event) => {
             console.log("Remote track received", event.track.kind, event.streams[0]?.id);
 
-            // If the browser provides a stream, use it as the source of truth
+            // Always create a new MediaStream to ensure React detects the state change
+            // event.streams[0] might be the same reference for multiple tracks (audio + video)
             const incomingStream = event.streams[0];
 
             if (incomingStream) {
-                // Update state with this stream (ensuring all tracks are present)
-                // Tricky part: React might not re-render if the object ref is same.
-                // But we need to update the VIDEO element. 
-                // Best practice: Set state to a CLONE or ensure srcObject is updated.
+                // Determine tracks from the incoming stream
+                const newStream = new MediaStream(incomingStream.getTracks());
 
-                // Let's rely on the incoming stream being populated.
+                // Add listener for future tracks (though ontrack usually covers this)
                 incomingStream.onaddtrack = () => {
-                    console.log("Track added to incoming stream, updating state");
+                    console.log("Track added to incoming stream later, updating state");
                     setRemoteStream(new MediaStream(incomingStream.getTracks()));
                 };
 
-                setRemoteStream(incomingStream);
+                setRemoteStream(newStream);
             } else {
                 // Fallback for browsers not sending streams
                 if (!remoteStreamRef.current) {

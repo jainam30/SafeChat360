@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import styled, { keyframes } from 'styled-components';
 import toast from 'react-hot-toast';
-import GradientButton from '../components/GradientButton';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Shield, User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 import { auth } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import logoImg from '../assets/safechat_logo.png';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { parsePhoneNumber } from 'libphonenumber-js';
+import { User, Phone, Globe } from 'lucide-react'; // Using Lucide for extra fields
 
-export default function Register() {
+const rotate = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const Register = () => {
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [countryCode, setCountryCode] = useState('+91');
+
+  // Custom color for Register page (Purple)
+  const borderColor = '#9d00ff';
 
   const COUNTRY_CODES = [
     { code: '+91', country: 'India' },
@@ -39,16 +46,11 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
-    // Validate Phone Number
-    // Validate Phone Number with Strict Country Code
+    // Validate Phone
     const fullPhoneNumber = countryCode + phoneNumber.trim();
-
     if (!phoneNumber.trim()) {
-      const msg = 'Please enter your mobile number.';
-      setError(msg);
-      toast.error(msg);
+      toast.error('Please enter your mobile number.');
       setLoading(false);
       return;
     }
@@ -56,32 +58,23 @@ export default function Register() {
     try {
       const parsedNumber = parsePhoneNumber(fullPhoneNumber);
       if (!parsedNumber || !parsedNumber.isValid()) {
-        const msg = `Invalid Phone Number for ${COUNTRY_CODES.find(c => c.code === countryCode)?.country || 'selected country'}. Please check again.`;
-        setError(msg);
-        toast.error(msg);
+        toast.error(`Invalid Phone Number for ${COUNTRY_CODES.find(c => c.code === countryCode)?.country || 'selected country'}.`);
         setLoading(false);
         return;
       }
     } catch (parseError) {
-      // If parsing throws (e.g. nonsense input), it's invalid
-      const msg = `Invalid Phone Number format. We checked: ${fullPhoneNumber}`;
-      setError(msg);
-      toast.error(msg);
+      toast.error(`Invalid Phone Number format.`);
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      const msg = 'Password must be at least 6 characters long.';
-      setError(msg);
-      toast.error(msg);
+      toast.error('Password must be at least 6 characters long.');
       setLoading(false);
       return;
     }
 
     try {
-      console.log("Submitting registration...");
-
       // 1. Create User in Firebase
       let firebaseUser;
       let token;
@@ -90,19 +83,12 @@ export default function Register() {
         firebaseUser = userCredential.user;
         token = await firebaseUser.getIdToken();
       } catch (firebaseErr) {
-        console.error("Firebase Registration Error Details:", firebaseErr);
         if (firebaseErr.code === 'auth/email-already-in-use') {
           toast.success("Account already exists! Redirecting to Login...");
           setTimeout(() => navigate('/login'), 2000);
           return;
         }
-        if (firebaseErr.code === 'auth/weak-password') {
-          throw new Error("Password is too weak. Please use at least 6 characters.");
-        }
-        if (firebaseErr.code === 'auth/invalid-email') {
-          throw new Error("The email address is badly formatted.");
-        }
-        throw new Error("Security check failed: " + (firebaseErr.message || firebaseErr.code));
+        throw new Error(firebaseErr.message);
       }
 
       // 2. Register in Backend
@@ -115,162 +101,366 @@ export default function Register() {
           phone_number: fullPhoneNumber,
           password,
           full_name: fullName,
-          firebase_token: token // Send token to backend
+          firebase_token: token
         }),
       });
 
-      let data;
-      try {
-        data = await res.json();
-      } catch (jsonErr) {
-        console.error("JSON Parse Error:", jsonErr);
-        throw new Error("Invalid server response");
-      }
+      const data = await res.json();
 
       if (res.ok) {
         toast.success('Registration successful! Logging you in...');
-
-        // AUTO-LOGIN Logic
         if (data.data && data.data.access_token) {
           login(data.data.access_token);
           navigate('/dashboard');
         } else {
-          // Fallback if no token returned
           setTimeout(() => navigate('/login'), 1500);
         }
       } else {
-        const msg = data.detail || 'Registration failed';
-        setError(msg);
-        toast.error(msg);
+        toast.error(data.detail || 'Registration failed');
       }
     } catch (err) {
       console.error("Registration Error:", err);
-      const msg = err.message || 'Request failed';
-      setError(msg);
-      toast.error(msg);
+      toast.error(err.message || 'Request failed');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const token = await result.user.getIdToken();
+
+      // Use verify-identity for existing users or handle registration if new (backend dependency)
+      // For simplicity reusing verify logic or might need a specific google-register endpoint if data tracking is strict
+      const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
+      });
+
+      const verifyData = await verifyRes.json();
+
+      if (verifyRes.ok && verifyData.access_token) {
+        toast.success("Google Login successful!");
+        login(verifyData.access_token);
+        navigate('/dashboard');
+      } else {
+        throw new Error(verifyData.detail || "Google Login failed.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Google sign in failed");
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cyber-background">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-300/20 rounded-full blur-[120px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-300/20 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
-      </div>
+    <PageContainer>
+      <StyledWrapper $borderColor={borderColor}>
+        <div className="card-wrapper">
+          <form className="form" onSubmit={handleSubmit}>
 
-      <div className="w-full max-w-md relative z-10 p-4">
-        <div className="glass-card p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyber-primary to-cyber-secondary p-[1px] mb-4 shadow-lg shadow-cyber-primary/20 hover:scale-105 transition-transform">
-              <img src={logoImg} alt="SafeChat360" className="w-full h-full rounded-2xl object-cover" />
-            </Link>
-            <h1 className="text-3xl font-bold text-black mb-2 tracking-tight">Create Account</h1>
-            <p className="text-black">Join the secure communication platform</p>
-          </div>
-
-          {error && (
-            <div className="p-4 mb-6 bg-red-900/10 border border-red-500/50 text-red-600 rounded-lg text-sm whitespace-pre-wrap break-words">
-              <strong>REGISTRATION FAILED:</strong><br />
-              {error}
+            {/* Full Name */}
+            <div className="flex-column">
+              <label>Full Name</label>
             </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative group">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
+            <div className="inputForm">
+              <User size={20} color="black" />
               <input
                 type="text"
-                placeholder="Full Name"
+                className="input"
+                placeholder="Enter your Full Name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="glass-input pl-10"
               />
             </div>
 
-            <div className="relative group">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
+            {/* Username */}
+            <div className="flex-column">
+              <label>Username</label>
+            </div>
+            <div className="inputForm">
+              <User size={20} color="black" />
               <input
                 type="text"
-                placeholder="Username"
+                className="input"
+                placeholder="Enter your Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="glass-input pl-10"
               />
             </div>
 
-            <div className="relative group">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
+            {/* Email */}
+            <div className="flex-column">
+              <label>Email</label>
+            </div>
+            <div className="inputForm">
+              <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg">
+                <g id="Layer_3" data-name="Layer 3">
+                  <path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" />
+                </g>
+              </svg>
               <input
                 type="email"
-                placeholder="Email Address"
+                className="input"
+                placeholder="Enter your Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="glass-input pl-10"
               />
             </div>
 
-            <div className="flex gap-2 relative group">
-              <div className="relative w-1/3">
+            {/* Phone Number with Country Code */}
+            <div className="flex-column">
+              <label>Phone Number</label>
+            </div>
+            <div className="inputForm">
+              {/* Country Code Select acting as icon/prefix */}
+              <div style={{ display: 'flex', alignItems: 'center', height: '100%', borderRight: '1px solid #ddd', paddingRight: '5px', marginRight: '5px' }}>
+                <Globe size={16} color="black" style={{ marginRight: '5px' }} />
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="glass-input pl-2 pr-8 appearance-none w-full text-sm"
-                  style={{ backgroundImage: 'none' }} // Remove default arrow if needed or keep standard
+                  style={{ border: 'none', background: 'transparent', fontSize: '14px', outline: 'none', width: '60px' }}
                 >
                   {COUNTRY_CODES.map((c) => (
-                    <option key={c.code} value={c.code} className="text-black">
-                      {c.code} ({c.country})
+                    <option key={c.code} value={c.code}>
+                      {c.code}
                     </option>
                   ))}
                 </select>
-                {/* Custom Arrow */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-cyber-muted">
-                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
               </div>
-
-              <div className="relative w-2/3">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
-                <input
-                  type="tel"
-                  placeholder="9876543210"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  required
-                  className="glass-input pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="relative group">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted w-5 h-5 group-focus-within:text-cyber-primary transition-colors" />
+              <Phone size={18} color="black" style={{ flexShrink: 0 }} />
               <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="tel"
+                className="input"
+                placeholder="9876543210"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                style={{ width: '65%' }}
                 required
-                className="glass-input pl-10"
               />
             </div>
 
-            <div className="flex justify-center mt-6">
-              <GradientButton text="Sign Up" type="submit" disabled={loading} />
+            {/* Password */}
+            <div className="flex-column">
+              <label>Password</label>
+            </div>
+            <div className="inputForm">
+              <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg">
+                <path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" />
+                <path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" />
+              </svg>
+              <input
+                type="password"
+                className="input"
+                placeholder="Create Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <button className="button-submit" type="submit" disabled={loading}>
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </button>
+
+            <p className="p">Already have an account? <span className="span" onClick={() => navigate('/login')}>Sign In</span></p>
+            <p className="p line">Or With</p>
+
+            <div className="flex-row">
+              <button className="btn google" type="button" onClick={handleGoogleLogin}>
+                <svg version="1.1" width={20} id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512" style={{ enableBackground: 'new 0 0 512 512' }} xmlSpace="preserve">
+                  <path style={{ fill: '#FBBB00' }} d="M113.47,309.408L95.648,375.94l-65.139,1.378C11.042,341.211,0,299.9,0,256c0-42.451,10.324-82.483,28.624-117.732h0.014l57.992,10.632l25.404,57.644c-5.317,15.501-8.215,32.141-8.215,49.456C103.821,274.792,107.225,292.797,113.47,309.408z" />
+                  <path style={{ fill: '#518EF8' }} d="M507.527,208.176C510.467,223.662,512,239.655,512,256c0,18.328-1.927,36.206-5.598,53.451c-12.462,58.683-45.025,109.925-90.134,146.187l-0.014-0.014l-73.044-3.727l-10.338-64.535c29.932-17.554,53.324-45.025,65.646-77.911h-136.89V208.176h138.887L507.527,208.176L507.527,208.176z" />
+                  <path style={{ fill: '#28B446' }} d="M416.253,455.624l0.014,0.014C372.396,490.901,316.666,512,256,512c-97.491,0-182.252-54.491-225.491-134.681l82.961-67.91c21.619,57.698,77.278,98.771,142.53,98.771c28.047,0,54.323-7.582,76.87-20.818L416.253,455.624z" />
+                  <path style={{ fill: '#F14336' }} d="M419.404,58.936l-82.933,67.896c-23.335-14.586-50.919-23.012-80.471-23.012c-66.729,0-123.429,42.957-143.965,102.724l-83.397-68.276h-0.014C71.23,56.123,157.06,0,256,0C318.115,0,375.068,22.126,419.404,58.936z" />
+                </svg>
+                Google
+              </button>
+              <button className="btn apple" type="button" onClick={() => toast('Apple Sign Up coming soon')}>
+                <svg version="1.1" height={20} width={20} id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 22.773 22.773" style={{ enableBackground: 'new 0 0 22.773 22.773' }} xmlSpace="preserve"> <g> <g> <path d="M15.769,0c0.053,0,0.106,0,0.162,0c0.13,1.606-0.483,2.806-1.228,3.675c-0.731,0.863-1.732,1.7-3.351,1.573 c-0.108-1.583,0.506-2.694,1.25-3.561C13.292,0.879,14.557,0.16,15.769,0z" /> <path d="M20.67,16.716c0,0.016,0,0.03,0,0.045c-0.455,1.378-1.104,2.559-1.896,3.655c-0.723,0.995-1.609,2.334-3.191,2.334 c-1.367,0-2.275-0.879-3.676-0.903c-1.482-0.024-2.297,0.735-3.652,0.926c-0.155,0-0.31,0-0.462,0 c-0.995-0.144-1.798-0.932-2.383-1.642c-1.725-2.098-3.058-4.808-3.306-8.276c0-0.34,0-0.679,0-1.019 c0.105-2.482,1.311-4.5,2.914-5.478c0.846-0.52,2.009-0.963,3.304-0.765c0.555,0.086,1.122,0.276,1.619,0.464 c0.471,0.181,1.06,0.502,1.618,0.485c0.378-0.011,0.754-0.208,1.135-0.347c1.116-0.403,2.21-0.865,3.652-0.648 c1.733,0.262,2.963,1.032,3.723,2.22c-1.466,0.933-2.625,2.339-2.427,4.74C17.818,14.688,19.086,15.964,20.67,16.716z" /> </g></g></svg>
+                Apple
+              </button>
             </div>
           </form>
-
-          <div className="mt-6 text-center text-sm text-cyber-muted">
-            Already have an account? <a href="/login" className="text-cyber-primary hover:text-cyber-secondary transition-colors font-medium">Sign in</a>
-          </div>
         </div>
-      </div>
-    </div>
+      </StyledWrapper>
+    </PageContainer>
   );
 }
+
+const PageContainer = styled.div`
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1a1a2e;
+`;
+
+const StyledWrapper = styled.div`
+  .card-wrapper {
+    position: relative;
+    border-radius: 24px;
+    padding: 3px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .card-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 250%; /* Larger to cover rotations */
+    height: 250%;
+    left: -75%;
+    top: -75%;
+    background: conic-gradient(
+      transparent 0deg, 
+      transparent 320deg, 
+      ${props => props.$borderColor} 330deg, 
+      ${props => props.$borderColor} 360deg
+    );
+    animation: ${rotate} 4s linear infinite;
+    z-index: 0;
+  }
+
+  .card-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: #ffffff;
+    border-radius: 20px;
+    z-index: 0;
+  }
+
+  .form {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #ffffff;
+    padding: 30px;
+    width: 450px;
+    border-radius: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  ::placeholder {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  .form button {
+    align-self: flex-end;
+  }
+
+  .flex-column > label {
+    color: #151717;
+    font-weight: 600;
+  }
+
+  .inputForm {
+    border: 1.5px solid #ecedec;
+    border-radius: 10px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    transition: 0.2s ease-in-out;
+  }
+
+  .input {
+    margin-left: 10px;
+    border-radius: 10px;
+    border: none;
+    width: 85%;
+    height: 100%;
+    outline: none;
+  }
+
+  .input:focus {
+    outline: none;
+  }
+
+  .inputForm:focus-within {
+    border: 1.5px solid ${props => props.$borderColor};
+  }
+
+  .flex-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .flex-row > div > label {
+    font-size: 14px;
+    color: black;
+    font-weight: 400;
+  }
+
+  .span {
+    font-size: 14px;
+    margin-left: 5px;
+    color: ${props => props.$borderColor};
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .button-submit {
+    margin: 20px 0 10px 0;
+    background-color: #151717;
+    border: none;
+    color: white;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+    height: 50px;
+    width: 100%;
+    cursor: pointer;
+    transition: 0.2s ease-in-out;
+  }
+
+  .button-submit:hover {
+    background-color: #252727;
+  }
+  
+  .button-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .p {
+    text-align: center;
+    color: black;
+    font-size: 14px;
+    margin: 5px 0;
+  }
+
+  .btn {
+    margin-top: 10px;
+    width: 100%;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 500;
+    gap: 10px;
+    border: 1px solid #ededef;
+    background-color: white;
+    cursor: pointer;
+    transition: 0.2s ease-in-out;
+  }
+
+  .btn:hover {
+    border: 1px solid ${props => props.$borderColor};
+  }
+`;
+
+export default Register;

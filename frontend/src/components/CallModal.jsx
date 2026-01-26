@@ -65,7 +65,10 @@ const CallModal = ({ onClose, onMinimize }) => {
     }, [localStream]);
 
     useEffect(() => {
-        if (remoteStream && remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+        if (remoteStream && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch(e => console.error("Auto-play failed:", e));
+        }
     }, [remoteStream]);
 
     const getStatusText = () => {
