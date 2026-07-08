@@ -1,523 +1,98 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Query
-from typing import List, Dict, Optional
-from sqlmodel import Session, select, or_, and_
-from app.db import get_session
-from app.models import Message, User
-from app.deps import get_current_user
+from typing import Optional
 import json
-from datetime import datetime
-from app.services.text_moderator import moderate_text
-from app.services.image_moderator import moderate_image_base64
-from app.services.ai_assistant import improve_text
-from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/chat", tags=["chat"]) # NOTE: Prefix was /chat in main.py, but for consistency with others /api/chat is better. 
-# However, main.py imports it. Let's keep prefix in main.py or here?
-# models.py says /api/users, so let's stick to /api/chat here too to align with frontend calls.
-# WAIT: main.py does app.include_router(chat.router). If this has prefix /api/chat, it will be /api/chat.
+from app.deps import get_current_user, get_chat_service, get_gateway_service, get_session
+from app.models import User
+from app.schemas.chat import SendMessageRequest
+from app.services.chat import ChatService
+from app.websocket.gateway import GatewayService
 
-class ConnectionManager:
-    def __init__(self):
-        # Map user_id to list of active sockets (user might have multiple tabs)
-        self.active_connections: Dict[int, List[WebSocket]] = {}
-
-    async def connect(self, websocket: WebSocket, user_id: int):
-        await websocket.accept()
-        if user_id not in self.active_connections:
-            self.active_connections[user_id] = []
-        self.active_connections[user_id].append(websocket)
-
-    def disconnect(self, websocket: WebSocket, user_id: int):
-        if user_id in self.active_connections:
-            if websocket in self.active_connections[user_id]:
-                self.active_connections[user_id].remove(websocket)
-            if not self.active_connections[user_id]:
-                del self.active_connections[user_id]
-
-    async def broadcast(self, message: str, receiver_id: Optional[int] = None, sender_id: Optional[int] = None, group_members: Optional[List[int]] = None):
-        """
-        If group_members is set, broadcast to all in that list.
-        If receiver_id is None and group_members is None, broadcast to all (Global).
-        Else Private.
-        """
-        if group_members:
-             # Group Chat
-             for member_id in group_members:
-                 if member_id in self.active_connections:
-                     for connection in self.active_connections[member_id]:
-                         try:
-                             await connection.send_text(message)
-                         except:
-                             pass
-        elif receiver_id is None:
-            # Global broadcast
-            for user_sockets in self.active_connections.values():
-                for connection in user_sockets:
-                    try:
-                        await connection.send_text(message)
-                    except:
-                        pass
-        else:
-            # Private message
-            # Send to receiver
-            if receiver_id in self.active_connections:
-                connections = self.active_connections[receiver_id]
-                print(f"WS BROADCAST: Sending to receiver {receiver_id} on {len(connections)} sockets. Message: {message[:50]}...")
-                for connection in connections:
-                    try:
-                        await connection.send_text(message)
-                    except Exception as e:
-                        print(f"WS BROADCAST ERROR: {e}")
-            else:
-                print(f"WS BROADCAST: Receiver {receiver_id} NOT CONNECTED or not in active_connections.")
-
-            # Send back to sender
-            if sender_id and sender_id != receiver_id and sender_id in self.active_connections:
-                 for connection in self.active_connections[sender_id]:
-                    try:
-                        await connection.send_text(message)
-                    except:
-                        pass
-
-manager = ConnectionManager()
+router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 @router.get("/users")
-def get_users(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-    users = session.exec(select(User).where(User.id != current_user.id)).all()
-    return [{
-        "id": u.id,
-        "username": u.username,
-        "full_name": u.full_name,
-        "profile_photo": u.profile_photo
-    } for u in users]
+def get_users(
+    current_user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service)
+):
+    return service.get_users(current_user)
 
 @router.get("/history")
 def get_chat_history(
     other_user_id: Optional[int] = None,
     group_id: Optional[int] = None,
-    session: Session = Depends(get_session), 
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service)
 ):
-    if group_id:
-        # Group history
-        # (Verify membership omitted for brevity, but should be there)
-        statement = select(Message).where(Message.group_id == group_id).order_by(Message.created_at.desc()).limit(50)
-    elif other_user_id:
-        # Private history
-        statement = select(Message).where(
-            or_(
-                and_(Message.sender_id == current_user.id, Message.receiver_id == other_user_id),
-                and_(Message.sender_id == other_user_id, Message.receiver_id == current_user.id)
-            )
-        ).order_by(Message.created_at.desc()).limit(50)
-    else:
-        # Global history
-        statement = select(Message).where(Message.receiver_id == None).order_by(Message.created_at.desc()).limit(50)
-        
-    results = session.exec(statement).all() 
-    
-    # Filter out "Deleted for Me"
-    filtered_results = []
-    user_id_str = str(current_user.id)
-    for msg in results:
-        deleted_ids = (msg.deleted_by_ids or "").split(",")
-        if user_id_str not in deleted_ids:
-            # Handle "Unsent" display logic in frontend, pass raw here
-            filtered_results.append(msg)
-            
-    return filtered_results[::-1] # Reverse for chronological
+    return service.get_history(current_user, other_user_id, group_id)
 
 @router.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = None):
-    print(f"WS: Connection attempt from client_id={client_id}, token={token}")
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    client_id: str, 
+    device_id: str = "web_browser", # Ideally parsed from query params
+    token: str = None,
+    gateway: GatewayService = Depends(get_gateway_service),
+    service: ChatService = Depends(get_chat_service)
+):
     try:
         user_id = int(client_id)
     except:
-        print("WS: Invalid client_id format")
         await websocket.close()
         return
 
-    await manager.connect(websocket, user_id)
-    print(f"WS: User {user_id} connected")
-    try:
-        while True:
-            data = await websocket.receive_text()
-            print(f"WS: Received data: {data}")
-            try:
-                message_data = json.loads(data)
-                content = message_data.get("content")
-                sender_username = message_data.get("sender_username")
-                
-                # FIX: Ensure IDs are integers for dictionary lookups
-                receiver_id = message_data.get("receiver_id") 
-                if receiver_id is not None:
-                    try:
-                        receiver_id = int(receiver_id)
-                    except ValueError:
-                        receiver_id = None
-                        
-                group_id = message_data.get("group_id") 
-                if group_id is not None:
-                     try:
-                        group_id = int(group_id)
-                     except ValueError:
-                        group_id = None
-            except:
-                print("WS: Error parsing JSON data")
-                continue
+    # Mock user object retrieval for business logic context
+    from app.db import engine
+    from sqlmodel import Session
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if not user:
+            user = User(id=user_id, username=f"user_{user_id}", email=f"{user_id}@test.com", hashed_password="")
 
-            # ------------------------------------------------------------------
-            # STRICT MODERATION CHECK (Blocking)
-            # ------------------------------------------------------------------
-            
-             # 1. Text Moderation
-            if content and not content.startswith(('data:image', 'data:video', 'data:audio')):
-                 mod_result = moderate_text(content)
-                 
-                 # Log it
-                 from app.db import engine
-                 from app import crud
-                 with Session(engine) as log_session:
-                     crud.create_moderation_log(
-                         log_session,
-                         content_type="text",
-                         content_excerpt=content,
-                         is_flagged=mod_result.get("is_flagged"),
-                         details=str(mod_result),
-                         source=str(user_id),
-                         original_language=mod_result.get("original_language", "en")
-                     )
+    # Gateway handles security, pub/sub registration, and metrics
+    ctx = await gateway.accept_connection(websocket, user_id, device_id, token)
+    if not ctx:
+        return
 
-                 if mod_result.get("is_flagged"):
-                     reason = "Content Policy Violation"
-                     if mod_result.get("flags"):
-                         reason = f"Blocked: {mod_result['flags'][0].get('label', 'Inappropriate Content')}"
-                     
-                     # Send error back to sender
-                     await websocket.send_text(json.dumps({
-                         "type": "error",
-                         "message": f"Message blocked: {reason}"
-                     }))
-                     print(f"WS: Message blocked for User {user_id}: {reason}")
-                     continue # ABORT PROCESSING
+    # Define a callback for the gateway to process business messages
+    async def process_message(msg_data: dict, uid: int, did: str):
+        await service.process_websocket_message(msg_data, user)
 
-            # 2. Image Moderation (if content is base64 image)
-            # Basic check for data:image
-            if content and content.startswith('data:image'):
-                 # Extract base64 part
-                 try:
-                     header, b64data = content.split(',', 1)
-                     img_mod_result = moderate_image_base64(b64data)
-                     
-                     # Log it
-                     from app.db import engine
-                     from app import crud
-                     with Session(engine) as log_session:
-                         crud.create_moderation_log(
-                             log_session,
-                             content_type="image",
-                             content_excerpt="[Image]",
-                             is_flagged=img_mod_result.get("is_flagged"),
-                             details=str(img_mod_result),
-                             source=str(user_id)
-                         )
-
-                     if img_mod_result.get("is_flagged"):
-                         reason = "NSFW/Inappropriate Image detected"
-                         if img_mod_result.get("flags"):
-                             reason = f"Blocked: {img_mod_result['flags'][0].get('label', 'Inappropriate Image')}"
-                         
-                         await websocket.send_text(json.dumps({
-                             "type": "error",
-                             "message": f"Image blocked: {reason}"
-                         }))
-                         print(f"WS: Image blocked for User {user_id}")
-                         continue # ABORT PROCESSING
-                 except Exception as e:
-                     print(f"WS: Image mod error: {e}")
-
-            # ------------------------------------------------------------------
-            # END MODERATION
-            # ------------------------------------------------------------------
-
-            # Save to DB if it's a chat message
-            from app.db import engine
-            from app.models import GroupMember
-            
-            # Signaling Messages (Don't save to DB)
-            # Signaling Messages (Don't save to DB usually, enabling Logging for Start/End)
-            msg_type = message_data.get("type")
-            
-            if msg_type in ["call-request", "call-response", "offer", "answer", "ice-candidate", "hang-up"]:
-                 # Relay to receiver first (Low Latency)
-                 if receiver_id:
-                     await manager.broadcast(
-                         json.dumps(message_data), 
-                         receiver_id=receiver_id, 
-                         sender_id=user_id
-                     )
-                 
-                 # LOGGING: Intercept specific events to save to DB
-                 if msg_type == "answer":
-                      # Call Started
-                      try:
-                          with Session(engine) as log_session:
-                              log_msg = Message(
-                                  sender_id=user_id,
-                                  sender_username=sender_username,
-                                  receiver_id=receiver_id,
-                                  content="Voice Call Started",
-                                  type="call",
-                                  created_at=datetime.utcnow()
-                              )
-                              log_session.add(log_msg)
-                              log_session.commit()
-                              # Optional: Broadcast the log message to chat? 
-                              # The clients might just see it on refresh or we can broadcast it as a 'message' type separately.
-                              # For now, let's auto-broadcast it as a chat message too so it appears in feed instantly.
-                              log_session.refresh(log_msg)
-                              chat_log = {
-                                "type": "message",
-                                "id": log_msg.id,
-                                "sender_id": log_msg.sender_id,
-                                "sender_username": log_msg.sender_username,
-                                "receiver_id": log_msg.receiver_id,
-                                "content": log_msg.content,
-                                "msg_type": "call", # Custom field for frontend distinction
-                                "created_at": log_msg.created_at.isoformat()
-                              }
-                              await manager.broadcast(json.dumps(chat_log), receiver_id=receiver_id, sender_id=user_id)
-                              
-                      except Exception as e:
-                          print(f"Failed to log call start: {e}")
-
-                 elif msg_type == "hang-up":
-                      # Call Ended
-                      try:
-                          with Session(engine) as log_session:
-                              log_msg = Message(
-                                  sender_id=user_id,
-                                  sender_username=sender_username,
-                                  receiver_id=receiver_id,
-                                  content="Voice Call Ended",
-                                  type="call",
-                                  created_at=datetime.utcnow()
-                              )
-                              log_session.add(log_msg)
-                              log_session.commit()
-                              log_session.refresh(log_msg)
-                              chat_log = {
-                                "type": "message",
-                                "id": log_msg.id,
-                                "sender_id": log_msg.sender_id,
-                                "sender_username": log_msg.sender_username,
-                                "receiver_id": log_msg.receiver_id,
-                                "content": log_msg.content,
-                                "msg_type": "call",
-                                "created_at": log_msg.created_at.isoformat()
-                              }
-                              await manager.broadcast(json.dumps(chat_log), receiver_id=receiver_id, sender_id=user_id)
-                      except Exception as e:
-                          print(f"Failed to log call end: {e}")
-                 
-                 continue # Done handling signaling
-
-            # Chat Message
-            group_members = None
-            
-            with Session(engine) as session:
-                if group_id:
-                     # Get members
-                     members = session.exec(select(GroupMember).where(GroupMember.group_id == group_id)).all()
-                     group_members = [m.user_id for m in members]
-                
-                msg = Message(
-                    sender_id=user_id,
-                    sender_username=sender_username,
-                    receiver_id=receiver_id,
-                    group_id=group_id,
-                    content=content,
-                    type=message_data.get("msg_type", "text"), # Allow frontend to specify type if needed, default text
-                    created_at=datetime.utcnow()
-                )
-                session.add(msg)
-                session.commit()
-                session.refresh(msg)
-                
-                response = {
-                    "type": "message", # Explicit type
-                    "id": msg.id,
-                    "sender_id": msg.sender_id,
-                    "sender_username": msg.sender_username,
-                    "receiver_id": msg.receiver_id,
-                    "group_id": msg.group_id,
-                    "content": msg.content,
-                    "msg_type": msg.type,
-                    "created_at": msg.created_at.isoformat()
-                }
-                
-                await manager.broadcast(
-                    json.dumps(response), 
-                    receiver_id=receiver_id, 
-                    sender_id=user_id, 
-                    group_members=group_members
-                )
-
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, user_id)
-
+    # Hand over control to the Gateway's read loop
+    await gateway.handle_loop(ctx, process_message)
 
 
 @router.delete("/messages/{message_id}")
 async def delete_message(
     message_id: int, 
     mode: str = Query(..., regex="^(me|everyone)$"),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service)
 ):
-    message = session.get(Message, message_id)
-    if not message:
-        raise HTTPException(status_code=404, detail="Message not found")
-
+    result = service.delete_message(message_id, mode, current_user)
+    
     if mode == "everyone":
-        # UNSEND
-        if message.sender_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Can only unsend your own messages")
-        
-        message.is_unsent = True
-        message.content = "Message unsent" # Optional redundancy
-        session.add(message)
-        session.commit()
-        
-        # Broadcast Update via WS
-        await manager.broadcast(
-            json.dumps({
+        message = result["message"]
+        # Use ChatService -> Pipeline -> DeliveryService for broadcasting now
+        from app.deps import get_delivery_service
+        delivery = get_delivery_service()
+        await delivery.broadcast_event(
+            {
                 "type": "message_update",
                 "id": message.id,
                 "is_unsent": True,
                 "content": "Message unsent"
-            }),
-            receiver_id=message.receiver_id,
-            sender_id=message.sender_id,
-            # If group, fetch members? optimize later. For now, broadcast to relevant IDs if possible or just rely on client refresh
-            # Simpler: If global/group, broadcast broadly
+            },
+            recipient_ids=[message.receiver_id, message.sender_id] if message.receiver_id else []
         )
-        
-    elif mode == "me":
-        # DELETE FOR ME
-        current_deleted = (message.deleted_by_ids or "").split(",")
-        if str(current_user.id) not in current_deleted:
-             if message.deleted_by_ids:
-                 message.deleted_by_ids += f",{current_user.id}"
-             else:
-                 message.deleted_by_ids = str(current_user.id)
-             session.add(message)
-             session.commit()
-
     return {"status": "success"}
-
-
-class SendMessageRequest(BaseModel):
-    content: str
-    receiver_id: Optional[int] = None
-    group_id: Optional[int] = None
 
 @router.post("/send")
 async def send_message_http(
     req: SendMessageRequest,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service)
 ):
-    """
-    HTTP Fallback for sending messages (Serverless compatible)
-    """
-    try:
-        # 1. Moderation Check (Text Only for now via HTTP)
-        mod_result = moderate_text(req.content)
-        
-        # Log Moderation
-        # Use a new session for logging or commit properly
-        # We can use the same session if we commit. But if moderate logs are separate, we might want separate session.
-        # Original code used separate session. Let's keep it safe.
-        from app.db import engine
-        from sqlmodel import Session
-        try:
-             with Session(engine) as log_session:
-                from app import crud
-                crud.create_moderation_log(
-                    log_session,
-                    content_type="text",
-                    content_excerpt=req.content,
-                    is_flagged=mod_result.get("is_flagged"),
-                    details=str(mod_result),
-                    source=str(current_user.id),
-                    original_language=mod_result.get("original_language", "en")
-                )
-        except Exception as log_err:
-             print(f"Moderation logging failed: {log_err}")
-
-        if mod_result.get("is_flagged"):
-            reason = "Content Policy Violation"
-            if mod_result.get("flags"):
-                 reason = f"Blocked: {mod_result['flags'][0].get('label', 'Inappropriate Content')}"
-            raise HTTPException(status_code=400, detail=f"Message blocked: {reason}")
-
-        # 2. Save Message
-        from app.models import GroupMember, Message
-        msg = Message(
-            sender_id=current_user.id,
-            sender_username=current_user.username,
-            receiver_id=req.receiver_id,
-            group_id=req.group_id,
-            content=req.content,
-            created_at=datetime.utcnow()
-        )
-        session.add(msg)
-        session.commit()
-        session.refresh(msg)
-
-        # 3. Best-effort Realtime Notification
-        response_dict = {
-            "type": "message",
-            "id": msg.id,
-            "sender_id": msg.sender_id,
-            "sender_username": msg.sender_username,
-            "receiver_id": msg.receiver_id,
-            "group_id": msg.group_id,
-            "content": msg.content,
-            "created_at": msg.created_at.isoformat()
-        }
-
-        group_members = None
-        if req.group_id:
-             members = session.exec(select(GroupMember).where(GroupMember.group_id == req.group_id)).all()
-             group_members = [m.user_id for m in members]
-
-        await manager.broadcast(
-            json.dumps(response_dict),
-            receiver_id=req.receiver_id,
-            sender_id=msg.sender_id,
-            group_members=group_members
-        )
-        
-        return response_dict
-
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Error sending message: {e}")
-        # Rollback logic if needed, but session is passed in dep.
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
-
-class AssistRequest(BaseModel):
-    text: str
-
-@router.post("/assist")
-def ai_assist(request: AssistRequest):
-    """
-    AI Assistant endpoint to improve text.
-    """
-    improved = improve_text(request.text)
-    return {"improved_text": improved}
-
+    # This automatically runs through the Pipeline and dispatches via DeliveryService
+    response_dict = await service.send_message_http(req, current_user)
+    return response_dict

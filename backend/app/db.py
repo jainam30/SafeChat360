@@ -1,23 +1,9 @@
 from sqlmodel import SQLModel, create_engine, Session
-import os
+from app.core.config import settings
+from app.core.logger import logger
 
-from dotenv import load_dotenv
-
-load_dotenv()  # checking local .env, but NOT overriding system envs (crucial for Render)
-
-# DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
-# For Vercel/Render: Use /tmp for SQLite if no DATABASE_URL is set (prevents Read-Only error), 
-# OR prefer the actual environment variable.
-if os.environ.get("VERCEL") or os.environ.get("RENDER"):
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        print("CRITICAL WARNING: DATABASE_URL is missing in Production! Using ephemeral SQLite.", flush=True)
-        DATABASE_URL = "sqlite:////tmp/safechat.db"
-    else:
-        DATABASE_URL = url
-else:
-    DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./safechat.db")
-print(f"DEBUG: Configured DATABASE_URL={DATABASE_URL}", flush=True)
+DATABASE_URL = settings.DATABASE_URL
+logger.info(f"Configured DATABASE_URL for DB connection")
 
 # Fix for Supabase/Heroku using deprecated 'postgres://' scheme
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):

@@ -1,16 +1,16 @@
 import sys
-sys.stdout.reconfigure(line_buffering=True)
-print("--- BACKEND STARTING ---", flush=True)
+from app.core.logger import logger
+logger.info("--- BACKEND STARTING ---")
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, moderation, history, social, users, video, analytics, review, blocklist, chat, friends, groups, notifications
+from app.routes import auth, moderation, history, social, users, video, analytics, review, blocklist, chat, friends, groups, notifications, security, pki
 from app.db import engine
 from sqlmodel import SQLModel
 import app.models  # Register models
 import uvicorn
 import os
-from app.firebase_setup import init_firebase
+from app.utils.firebase import init_firebase
 
 # Initialize Firebase Admin
 # init_firebase() moved to lifespan
@@ -19,9 +19,9 @@ from app.firebase_setup import init_firebase
 async def lifespan(app: FastAPI):
     # Load the DB
     try:
-        print("Creating database tables...")
+        logger.info("Creating database tables...")
         SQLModel.metadata.create_all(engine)
-        print("Tables created.")
+        logger.info("Tables created.")
         
         # AUTO-MIGRATION: Fix missing 'type' column for existing production DB
         try:
@@ -29,20 +29,32 @@ async def lifespan(app: FastAPI):
             with engine.connect() as connection:
                 connection.execute(text("ALTER TABLE message ADD COLUMN type VARCHAR DEFAULT 'text'"))
                 connection.commit()
-            print("MIGRATION SUCCESS: Added 'type' column to message table.")
+            logger.info("MIGRATION SUCCESS: Added 'type' column to message table.")
         except Exception as e:
-            print(f"MIGRATION INFO: Column 'type' likely exists or other error. {e}")
+            logger.info(f"MIGRATION INFO: Column 'type' likely exists or other error. {e}")
         
         # Initialize Firebase
-        print("Initializing Firebase...")
+        logger.info("Initializing Firebase...")
         init_firebase()
-        print("Firebase initialized.")
+        logger.info("Firebase initialized.")
     except Exception as e:
-        print(f"Error creating database tables: {e}")
+        logger.error(f"Error creating database tables: {e}", exc_info=True)
         # Continue anyway so the app starts and can return JSON errors
     yield
 
+from app.core.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
+from app.core.exceptions import APIException, api_exception_handler, custom_exception_handler
+from app.core.config import settings
+
 app = FastAPI(title="SafeChat360 Backend", lifespan=lifespan)
+
+# Add custom exception handlers
+app.add_exception_handler(APIException, api_exception_handler)
+app.add_exception_handler(Exception, custom_exception_handler)
+
+# Add Middlewares
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Security: Rate Limiting
 from slowapi import _rate_limit_exceeded_handler
@@ -53,12 +65,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS setup
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://safe-chat360.vercel.app", # Explicitly allow Vercel frontend
-    "*" # For development, fine to allow all
-]
+origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -82,6 +89,8 @@ app.include_router(chat.router)
 app.include_router(friends.router)
 app.include_router(groups.router)
 app.include_router(notifications.router)
+app.include_router(security.router)
+app.include_router(pki.router)
 
 from app.routes import debug
 app.include_router(debug.router)
@@ -103,15 +112,27 @@ try:
         os.makedirs("uploads")
     app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 except Exception as e:
-    print(f"WARNING: Could not mount /uploads (Read-only filesystem?): {e}")
+    logger.warning(f"WARNING: Could not mount /uploads (Read-only filesystem?): {e}")
     # We might be on Vercel. We can try mounting /tmp or just skip serving static files
     # For now, we just don't crash.
 
+# Health Endpoints
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "SafeChat360 Backend"}
+
+@app.get("/ready")
+def readiness_check():
+    # In a real app, you might ping the DB here
+    return {"status": "ready"}
+
+@app.get("/live")
+def liveness_check():
+    return {"status": "alive"}
+
 @app.get("/")
 def read_root():
-    from app.db import engine
-    import os
-    db_url = os.environ.get("DATABASE_URL", "sqlite")
+    db_url = settings.DATABASE_URL
     db_type = "PostgreSQL" if "postgres" in db_url else "SQLite (Read-Only on Vercel)"
     
     return {
