@@ -1,4 +1,4 @@
-from typing import Dict, List, Callable, Awaitable
+from typing import Dict, List, Callable, Awaitable, Optional
 import asyncio
 import logging
 
