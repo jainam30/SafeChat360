@@ -24,7 +24,10 @@ class ChatService:
         self.delivery = delivery
 
     def get_users(self, current_user: User) -> list:
-        users = self.user_repo.session.exec(self.user_repo.session.query(User).where(User.id != current_user.id)).all()
+        from sqlmodel import select
+        users = self.user_repo.session.exec(
+            select(User).where(User.id != current_user.id)
+        ).all()
         return [{
             "id": u.id,
             "username": u.username,

@@ -30,7 +30,8 @@ class MessagePipeline:
         event_bus: EventBus,
         metrics: MetricsService,
         audit: AuditService,
-        notifier: NotificationEngine
+        notifier: NotificationEngine,
+        group_membership_checker=None
     ):
         self.msg_repo = msg_repo
         self.conv_service = conv_service
@@ -41,6 +42,9 @@ class MessagePipeline:
         self.metrics = metrics
         self.audit = audit
         self.notifier = notifier
+        # Optional hook: (group_id, user_id) -> bool. Injected by deps.py so the
+        # domain pipeline can enforce group membership without a DB dependency.
+        self.group_membership_checker = group_membership_checker
 
     async def process(self, msg: MessageEntity) -> MessageEntity:
         """
@@ -136,8 +140,15 @@ class MessagePipeline:
             raise APIException(status_code=400, detail="Message cannot be empty")
 
     def _verify_permissions(self, msg: MessageEntity):
-        # Placeholder for blocklists, privacy checks, group membership checks
-        pass
+        # Group membership check: senders must be members of the target group.
+        if msg.group_id and self.group_membership_checker is not None:
+            try:
+                if not self.group_membership_checker(msg.group_id, msg.sender_id):
+                    raise APIException(status_code=403, detail="You are not a member of this group")
+            except APIException:
+                raise
+            except Exception as e:
+                logger.warning(f"Group membership check failed for group {msg.group_id}: {e}")
 
     def _moderation_hook(self, msg: MessageEntity):
         if msg.type == "text" and msg.content:

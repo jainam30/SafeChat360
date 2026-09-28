@@ -1,37 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Users, UserPlus, Search, UserCheck, Clock, Check, X, MessageSquare, UserX } from 'lucide-react';
-import CyberSearchInput from '../components/UI/CyberSearchInput';
+import { Users, UserPlus, Search, UserCheck, Clock, Check, X, MessageSquare, Phone, Video, ShieldAlert, CircleSlash, Users as UsersIcon } from 'lucide-react';
 
-export default function Friends() {
+export default function Contacts() {
     const { token } = useAuth();
-    const [activeTab, setActiveTab] = useState('friends'); // friends, find, requests
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'all';
+
     const [friends, setFriends] = useState([]);
     const [requests, setRequests] = useState([]);
-    const [searchResults, setSearchResults] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (activeTab === 'friends') fetchFriends();
-        if (activeTab === 'requests') fetchRequests();
+        if (token) {
+            fetchFriends();
+            if (activeTab === 'requests') fetchRequests();
+            if (activeTab === 'groups') fetchGroups();
+        }
     }, [activeTab, token]);
+
+    const handleTabChange = (tab) => {
+        setSearchParams({ tab });
+    };
 
     const fetchFriends = async () => {
         setLoading(true);
         try {
-            const res = await fetch(getApiUrl('/api/friends/'), {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setFriends(Array.isArray(data) ? data : []);
-            }
+            const res = await fetch(getApiUrl('/api/friends/'), { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) setFriends((await res.json()) || []);
         } catch (e) {
             console.error(e);
-            setFriends([]);
         } finally {
             setLoading(false);
         }
@@ -40,270 +41,240 @@ export default function Friends() {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            const res = await fetch(getApiUrl('/api/friends/requests'), {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setRequests(Array.isArray(data) ? data : []);
-            }
+            const res = await fetch(getApiUrl('/api/friends/requests'), { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) setRequests((await res.json()) || []);
         } catch (e) {
             console.error(e);
-            setRequests([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const [hasSearched, setHasSearched] = useState(false);
-
-    const handleSearch = async (e) => {
-        if (e) e.preventDefault();
-        if (!searchQuery.trim()) return;
-
+    const fetchGroups = async () => {
         setLoading(true);
-        setHasSearched(true);
-        setSearchResults([]); // Clear previous results
-
         try {
-            const res = await fetch(getApiUrl(`/api/friends/search?q=${encodeURIComponent(searchQuery.trim())}`), {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setSearchResults(Array.isArray(data) ? data : []);
-            } else {
-                setSearchResults([]);
-                console.error("Search failed with status:", res.status);
-            }
-        } catch (e) {
-            console.error("Search error:", e);
-            setSearchResults([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const sendRequest = async (userId) => {
-        try {
-            const res = await fetch(getApiUrl(`/api/friends/request/${userId}`), {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                setSearchResults(prev => prev.map(u =>
-                    u.id === userId ? { ...u, friendship_status: 'outgoing_request' } : u
-                ));
-            }
+            const res = await fetch(getApiUrl('/api/groups/'), { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) setGroups((await res.json()) || []);
         } catch (e) {
             console.error(e);
+        } finally {
+            setLoading(false);
         }
     };
 
     const acceptRequest = async (friendshipId) => {
         try {
-            const res = await fetch(getApiUrl(`/api/friends/accept/${friendshipId}`), {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                fetchRequests();
-            }
-        } catch (e) {
-            console.error(e);
-        }
+            const res = await fetch(getApiUrl(`/api/friends/accept/${friendshipId}`), { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) fetchRequests();
+        } catch (e) { console.error(e); }
     };
 
-    return (
-        <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                    <Users className="text-cyber-primary" />
-                    Friends & Connections
-                </h1>
-                <p className="text-white">Find friends and manage your network.</p>
+    const renderEmptyState = (icon, title, message, actionLabel, actionLink) => (
+        <div className="flex flex-col items-center justify-center text-center py-16 bg-white border border-slate-200 border-dashed rounded-xl shadow-sm">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
+                {icon}
             </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
+            <p className="text-slate-500 max-w-sm mb-6">{message}</p>
+            {actionLabel && (
+                <Link to={actionLink} className="px-5 py-2.5 bg-cyber-primary text-white font-medium rounded-lg shadow-sm hover:bg-blue-600 transition-colors">
+                    {actionLabel}
+                </Link>
+            )}
+        </div>
+    );
 
-            {/* Tabs */}
-            <div className="flex gap-4 border-b border-cyber-border mb-8 overflow-x-auto pb-1">
-                <button
-                    onClick={() => setActiveTab('friends')}
-                    className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'friends' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-white hover:text-cyber-text'}`}
-                >
-                    My Friends
-                </button>
-                <button
-                    onClick={() => setActiveTab('find')}
-                    className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'find' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-white hover:text-cyber-text'}`}
-                >
-                    Find People
-                </button>
-                <div className="relative">
-                    <button
-                        onClick={() => setActiveTab('requests')}
-                        className={`pb-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'requests' ? 'text-cyber-primary border-b-2 border-cyber-primary' : 'text-white hover:text-cyber-text'}`}
-                    >
-                        Requests
-                    </button>
-                    {requests.length > 0 && (
-                        <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                    )}
+    return (
+        <div className="max-w-5xl mx-auto pb-12 px-4 md:px-0">
+            {/* Header */}
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
+                        <Users className="text-cyber-primary" />
+                        Contacts
+                    </h1>
+                    <p className="text-slate-500">Manage your connections and find people you know.</p>
+                </div>
+                <div className="flex gap-3">
+                    <Link to="/social?tab=explore" className="px-4 py-2 bg-white text-slate-700 border border-slate-200 font-medium rounded-lg hover:bg-slate-50 shadow-sm flex items-center gap-2">
+                        <Search size={18} /> Find People
+                    </Link>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="min-h-[400px]">
-                {loading && <div className="text-center text-cyber-muted py-8">Loading...</div>}
-
-                {/* MY FRIENDS TAB */}
-                {activeTab === 'friends' && !loading && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {friends.length === 0 ? (
-                            <div className="col-span-2 text-center py-10 text-cyber-muted">
-                                <UserPlus size={48} className="mx-auto mb-4 opacity-50" />
-                                <p>No friends yet. Go to "Find People" to connect!</p>
-                            </div>
-                        ) : (
-                            friends.map(friend => (
-                                <div key={friend.id} className="glass-card p-4 flex items-center gap-4">
-                                    <Link to={`/profile/${friend.id}`} className="flex items-center gap-4 flex-1 group">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-primary to-cyber-secondary p-[2px] shrink-0">
-                                            <div className="w-full h-full rounded-full bg-cyber-background border-2 border-transparent overflow-hidden flex items-center justify-center">
-                                                {friend.profile_photo ? (
-                                                    <img src={friend.profile_photo} alt={friend.username} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-cyber-primary/20 text-cyber-primary font-bold text-lg">
-                                                        {friend.username.charAt(0).toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h3 className="text-cyber-text font-bold group-hover:text-cyber-primary transition-colors">{friend.full_name || friend.username}</h3>
-                                            <p className="text-xs text-cyber-muted">@{friend.username}</p>
-                                        </div>
-                                    </Link>
-                                    <div className="ml-auto">
-                                        <Link to={`/chat`} className="p-2 hover:bg-white/10 rounded-full text-cyber-primary transition-colors block" title="Message">
-                                            <MessageSquare size={20} />
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))
-                        )}
+            {/* Tabs & Content Grid */}
+            <div className="flex flex-col lg:flex-row gap-8">
+                
+                {/* Left Sidebar Tabs */}
+                <div className="lg:w-64 shrink-0">
+                    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden sticky top-20">
+                        <nav className="p-2 space-y-1">
+                            {[
+                                { id: 'all', label: 'All Contacts', icon: <Users size={18} /> },
+                                { id: 'online', label: 'Online', icon: <span className="w-2.5 h-2.5 bg-green-500 rounded-full ml-1 mr-1"></span> },
+                                { id: 'groups', label: 'My Groups', icon: <UsersIcon size={18} /> },
+                                { id: 'followers', label: 'Followers', icon: <UserCheck size={18} /> },
+                                { id: 'following', label: 'Following', icon: <UserPlus size={18} /> },
+                                { id: 'requests', label: 'Requests', icon: <Clock size={18} /> },
+                                { id: 'blocked', label: 'Blocked', icon: <CircleSlash size={18} /> }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => handleTabChange(tab.id)}
+                                    className={`w-full text-left px-4 py-2.5 flex items-center gap-3 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-blue-50 text-cyber-primary' : 'text-slate-700 hover:bg-slate-100'}`}
+                                >
+                                    <span className={activeTab === tab.id ? 'text-cyber-primary' : 'text-slate-400'}>{tab.icon}</span>
+                                    {tab.label}
+                                    {tab.id === 'requests' && requests.length > 0 && (
+                                        <span className="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">{requests.length}</span>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
                     </div>
-                )}
+                </div>
 
-                {/* FIND PEOPLE TAB */}
-                {activeTab === 'find' && (
-                    <div>
-                        <div className="mb-8 flex justify-center">
-                            <CyberSearchInput
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onSubmit={handleSearch}
-                                onFilterClick={() => alert("Filter functionality coming soon!")}
-                                placeholder="Search by username or email..."
-                            />
-                        </div>
-
-                        {hasSearched && searchResults.length === 0 && !loading && (
-                            <div className="text-center py-10 text-cyber-muted glass-card border border-white/5">
-                                <Search size={48} className="mx-auto mb-4 opacity-30" />
-                                <p className="text-lg font-medium text-white mb-1">No users found</p>
-                                <p className="text-sm">Try searching for a different username or email.</p>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {searchResults.map(user => (
-                                <div key={user.id} className="glass-card p-4 flex items-center gap-4">
-                                    <Link to={`/profile/${user.id}`} className="flex-1 flex items-center gap-4 group">
-                                        <div className="w-12 h-12 rounded-full bg-white/10 p-[2px] shrink-0">
-                                            <div className="w-full h-full rounded-full bg-cyber-background overflow-hidden flex items-center justify-center">
-                                                {user.profile_photo ? (
-                                                    <img src={user.profile_photo} alt={user.username} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-white/5 text-cyber-text font-bold text-lg">
-                                                        {user.username.charAt(0).toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h3 className="text-cyber-text font-bold group-hover:text-cyber-primary transition-colors">{user.full_name || user.username}</h3>
-                                            <p className="text-xs text-cyber-muted">@{user.username}</p>
-                                        </div>
-                                    </Link>
-                                    <div>
-                                        {user.friendship_status === 'none' && (
-                                            <button
-                                                onClick={() => sendRequest(user.id)}
-                                                className="glass-button-primary text-xs py-1.5 flex items-center gap-1"
-                                            >
-                                                <UserPlus size={14} /> Add
-                                            </button>
-                                        )}
-                                        {user.friendship_status === 'outgoing_request' && (
-                                            <span className="text-xs text-cyber-muted flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/10">
-                                                <Clock size={14} /> Pending
-                                            </span>
-                                        )}
-                                        {user.friendship_status === 'incoming_request' && (
-                                            <span className="text-xs text-cyber-secondary flex items-center gap-1 bg-cyber-secondary/10 px-2 py-1 rounded border border-cyber-secondary/20">
-                                                <UserPlus size={14} /> Invited You
-                                            </span>
-                                        )}
-                                        {user.friendship_status === 'accepted' && (
-                                            <span className="text-xs text-cyber-primary flex items-center gap-1 bg-cyber-primary/10 px-2 py-1 rounded border border-cyber-primary/20">
-                                                <UserCheck size={14} /> Friend
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                {/* Main Content Area */}
+                <div className="flex-1 min-w-0">
+                    
+                    {loading && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
+                            {[1, 2, 3, 4].map(n => (
+                                <div key={n} className="h-24 bg-slate-100 rounded-xl"></div>
                             ))}
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* REQUESTS TAB */}
-                {activeTab === 'requests' && !loading && (
-                    <div className="space-y-4">
-                        {requests.length === 0 ? (
-                            <div className="text-center py-10 text-cyber-muted">
-                                <p>No pending friend requests.</p>
-                            </div>
-                        ) : (
-                            requests.map(req => (
-                                <div key={req.id} className="glass-card p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-cyber-secondary/10 text-cyber-secondary flex items-center justify-center font-bold text-lg border border-cyber-secondary/20">
-                                            {req.requester_name.charAt(0).toUpperCase()}
+                    {!loading && (
+                        <>
+                            {/* ALL CONTACTS */}
+                            {activeTab === 'all' && (
+                                <>
+                                    {friends.length === 0 ? renderEmptyState(<Users size={32} />, "You don't have any contacts yet.", "Connect with friends to start chatting.", "Find People", "/social?tab=explore") : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {friends.map(friend => (
+                                                <div key={friend.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                                    <Link to={`/profile/${friend.username}`} className="flex-shrink-0 relative">
+                                                        {friend.profile_photo ? (
+                                                            <img src={friend.profile_photo} alt={friend.username} className="w-12 h-12 rounded-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg">
+                                                                {friend.username.charAt(0).toUpperCase()}
+                                                            </div>
+                                                        )}
+                                                        {friend.is_online && (
+                                                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                                                        )}
+                                                    </Link>
+                                                    <div className="flex-1 min-w-0">
+                                                        <Link to={`/profile/${friend.username}`} className="block hover:underline">
+                                                            <h3 className="text-slate-900 font-bold truncate">{friend.full_name || friend.username}</h3>
+                                                            <p className="text-xs text-slate-500 truncate">@{friend.username}</p>
+                                                        </Link>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Link to={`/chats/${friend.id}`} className="p-2 text-slate-400 hover:text-cyber-primary hover:bg-blue-50 rounded-full transition-colors" title="Message">
+                                                            <MessageSquare size={18} />
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div>
-                                            <h3 className="text-cyber-text font-bold">{req.requester_name}</h3>
-                                            <p className="text-xs text-cyber-muted">wants to be your friend</p>
+                                    )}
+                                </>
+                            )}
+
+                            {/* ONLINE */}
+                            {activeTab === 'online' && (
+                                <>
+                                    {friends.filter(f => f.is_online).length === 0 ? renderEmptyState(<Users size={32} />, "No contacts online.", "Check back later to see who's available.", null, null) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {friends.filter(f => f.is_online).map(friend => (
+                                                <div key={friend.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                                    <div className="relative">
+                                                        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg">
+                                                            {friend.username.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-slate-900 font-bold truncate">{friend.full_name || friend.username}</h3>
+                                                        <p className="text-xs text-slate-500 truncate">@{friend.username}</p>
+                                                    </div>
+                                                    <Link to={`/chats/${friend.id}`} className="px-3 py-1.5 bg-blue-50 text-cyber-primary font-medium text-sm rounded-lg hover:bg-blue-100 transition-colors">
+                                                        Message
+                                                    </Link>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => acceptRequest(req.id)}
-                                            className="px-4 py-1.5 bg-cyber-primary text-cyber-background rounded-lg hover:bg-cyber-primary_hover transition-colors shadow-sm flex items-center gap-1 text-sm font-bold"
-                                        >
-                                            <Check size={16} /> Accept
-                                        </button>
-                                        <button
-                                            // Reject not implemented yet
-                                            className="px-2 py-1.5 bg-white/5 text-cyber-muted rounded-lg hover:bg-white/10 transition-colors border border-white/10"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
+                                    )}
+                                </>
+                            )}
+
+                            {/* GROUPS */}
+                            {activeTab === 'groups' && (
+                                <>
+                                    {groups.length === 0 ? renderEmptyState(<UsersIcon size={32} />, "You haven't joined any groups yet.", "Create or join a group to start collaborating.", "Create Group", "/chats") : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {groups.map(group => (
+                                                <div key={group.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                                    <div className="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg shrink-0">
+                                                        {group.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-slate-900 font-bold truncate">{group.name}</h3>
+                                                        <p className="text-xs text-slate-500 truncate">{group.members_count || 0} members</p>
+                                                    </div>
+                                                    <Link to={`/chats/group/${group.id}`} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                                        <MessageSquare size={18} />
+                                                    </Link>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* UNSUPPORTED TABS */}
+                            {(activeTab === 'followers' || activeTab === 'following' || activeTab === 'blocked') && (
+                                renderEmptyState(<ShieldAlert size={32} />, `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Not Available`, "This feature is either not supported by the current backend or you have no entries here.", null, null)
+                            )}
+
+                            {/* REQUESTS */}
+                            {activeTab === 'requests' && (
+                                <>
+                                    {requests.length === 0 ? renderEmptyState(<Check size={32} />, "You're all caught up.", "No pending contact requests at this time.", null, null) : (
+                                        <div className="space-y-4">
+                                            <h3 className="font-bold text-slate-900 mb-4">Incoming Requests ({requests.length})</h3>
+                                            {requests.map(req => (
+                                                <div key={req.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-lg border border-slate-200">
+                                                            {req.requester_name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-slate-900 font-bold">{req.requester_name}</h3>
+                                                            <p className="text-xs text-slate-500">wants to connect</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => acceptRequest(req.id)} className="px-4 py-2 bg-cyber-primary text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm text-sm font-bold">
+                                                            Accept
+                                                        </button>
+                                                        <button className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-bold">
+                                                            Decline
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

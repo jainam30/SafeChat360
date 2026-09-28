@@ -68,9 +68,15 @@ class Message(SQLModel, table=True):
     content: str
     type: str = Field(default="text") # text, image, video, call, system
     is_unsent: bool = False
-    is_unsent: bool = False
     deleted_by_ids: Optional[str] = None # Comma separated list of user_ids
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class MessageReadState(SQLModel, table=True):
+    """Tracks which messages each user has read, powering unread badges."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    message_id: int = Field(index=True)
+    read_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Group(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

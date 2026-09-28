@@ -1,31 +1,43 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, MessageSquare, Clock, Settings, Info, Users, AlertTriangle, UserPlus, Globe, Shield } from 'lucide-react'
+import { Home, MessageSquare, Clock, Settings, Info, Users, AlertTriangle, UserPlus, Globe, Shield, Image, Bell, Lock, HelpCircle } from 'lucide-react'
 import SidebarSwitch from './SidebarSwitch'
 import { useNotifications } from '../../context/NotificationContext';
-// Added utility to hide text on mobile if needed
+import { useAuth } from '../../context/AuthContext';
+
 const hideOnMobile = 'hidden md:inline';
 
-const items = [
-  { to: '/dashboard', label: 'Dashboard', icon: Home },
-  { to: '/chat', label: 'Global Chat', icon: MessageSquare },
-  { to: '/social', label: 'Social Feed', icon: Globe },
-  { to: '/friends', label: 'Friends', icon: UserPlus },
-  { to: '/moderation', label: 'Mod Tools', icon: Shield },
-  { to: '/history', label: 'History', icon: Clock },
-  { to: '/review', label: 'Review Queue', icon: AlertTriangle },
-  { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/about', label: 'About', icon: Info },
-]
+const getNavItems = (userRole) => {
+  const isMod = userRole === 'admin' || userRole === 'moderator';
+  
+  const baseItems = [
+    { to: '/dashboard', label: 'Dashboard', icon: Home },
+    { to: '/chats', label: 'Chats', icon: MessageSquare },
+    { to: '/social', label: 'Social Feed', icon: Globe },
+    { to: '/contacts', label: 'Contacts', icon: Users },
+    { to: '/media', label: 'Media', icon: Image },
+    { to: '/notifications', label: 'Notifications', icon: Bell },
+    { to: '/security', label: 'Security & Privacy', icon: Lock },
+    { to: '/settings', label: 'Settings', icon: Settings },
+    { to: '/help', label: 'Help & Support', icon: HelpCircle },
+  ];
 
+  if (isMod) {
+    baseItems.push(
+      { to: '/moderation', label: 'Mod Tools', icon: Shield },
+      { to: '/moderation/review', label: 'Review Queue', icon: AlertTriangle }
+    );
+  }
+
+  return baseItems;
+};
 
 export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { friendRequests } = useNotifications() || { friendRequests: 0 }; // Handle context missing if accessed outside provider (shouldn't happen)
+  const { friendRequests, notifications } = useNotifications() || { friendRequests: 0, notifications: [] };
+  const { user } = useAuth();
+  const items = getNavItems(user?.role);
 
-  // Mobile: if mobileOpen is true, we force show (translate-x-0). 
-  // Desktop: we obey isCollapsed.
-  // We use `md:` prefix to apply desktop styles separately.
   return (
     <aside className={`
         fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out border-r border-white/10
@@ -41,7 +53,9 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden">
         {items.map(it => {
           const Icon = it.icon
-          const badgeCount = (it.to === '/friends') ? friendRequests : 0;
+          let badgeCount = 0;
+          if (it.to === '/contacts') badgeCount = friendRequests;
+          if (it.to === '/notifications') badgeCount = notifications?.filter(n => !n.read)?.length || 0;
 
           return (
             <NavLink

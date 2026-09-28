@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
 from typing import List, Dict
-from app.deps import get_current_user, get_friend_service
+import json
+from app.deps import get_current_user, get_friend_service, get_delivery_service
 from app.models import User
 from app.services.friend import FriendService
+from app.services.messaging.delivery import DeliveryService
 
 router = APIRouter(prefix="/api/friends", tags=["friends"])
 
@@ -13,18 +15,17 @@ async def send_friend_request(
     service: FriendService = Depends(get_friend_service)
 ):
     result = await service.send_friend_request(friend_id, current_user)
-    
-    # Notify target
-    from app.routes.chat import manager
-    import json
-    await manager.broadcast(
-        json.dumps({
+
+    # Notify target over their realtime channel (if online)
+    delivery: DeliveryService = get_delivery_service()
+    await delivery.broadcast_event(
+        {
             "type": "notification",
             "event": "friend_request",
             "sender_username": current_user.username,
             "sender_id": current_user.id
-        }),
-        receiver_id=friend_id
+        },
+        recipient_ids=[friend_id]
     )
     return result
 
@@ -42,18 +43,17 @@ async def accept_request(
     service: FriendService = Depends(get_friend_service)
 ):
     result = service.accept_request(friendship_id, current_user)
-    
-    # Notify original requester
-    from app.routes.chat import manager
-    import json
-    await manager.broadcast(
-        json.dumps({
+
+    # Notify original requester over their realtime channel (if online)
+    delivery: DeliveryService = get_delivery_service()
+    await delivery.broadcast_event(
+        {
             "type": "notification",
             "event": "friend_accepted",
             "sender_username": current_user.username,
             "sender_id": current_user.id
-        }),
-        receiver_id=result["user_id"]
+        },
+        recipient_ids=[result["user_id"]]
     )
     return {"status": "success", "message": result["message"]}
 

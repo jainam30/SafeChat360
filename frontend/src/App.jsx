@@ -7,11 +7,8 @@ import VideoModeration from './pages/VideoModeration';
 import TextModeration from './pages/TextModeration';
 import ImageModeration from './pages/ImageModeration';
 import AudioModeration from './pages/AudioModeration';
-import History from './pages/History';
 import Settings from './pages/Settings';
-import About from './pages/About';
 import AuthPage from './pages/AuthPage';
-import Account from './pages/Account';
 import ForgotPassword from './pages/ForgotPassword';
 import ReviewQueue from './pages/ReviewQueue';
 import ModerationTools from './pages/ModerationTools';
@@ -19,6 +16,11 @@ import LandingPage from './pages/LandingPage';
 import UserProfile from './pages/UserProfile';
 import Chat from './pages/Chat';
 import Friends from './pages/Friends';
+import Media from './pages/Media';
+import Notifications from './pages/Notifications';
+import Security from './pages/Security';
+import Help from './pages/Help';
+import VerifyEmail from './pages/VerifyEmail';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { CallProvider, useCall } from './context/CallContext';
@@ -26,9 +28,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { Toaster, toast } from 'react-hot-toast';
 import AnimatedBackground from './components/AnimatedBackground';
 import PostView from './pages/PostView';
-
 import ErrorBoundary from './components/ErrorBoundary';
-
 import FloatingVideo from './components/FloatingVideo';
 import CallModal from './components/CallModal';
 
@@ -84,31 +84,42 @@ export default function App() {
                   },
                 }} />
                 <Routes>
+                  {/* Public / Auth Routes */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/register" element={<AuthPage />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/verify-email" element={<VerifyEmail />} />
 
+                  {/* Primary Navigation Routes */}
                   <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-                  <Route path="/chat" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
+                  <Route path="/chats" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
+                  <Route path="/chats/:conversationId" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
+                  <Route path="/chats/group/:groupId" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
                   <Route path="/social" element={<ProtectedRoute><Layout><SocialFeed /></Layout></ProtectedRoute>} />
-                  <Route path="/post/:postId" element={<Layout><PostView /></Layout>} /> {/* Publicly accessible wrapper, internal checks handle auth/privacy */}
+                  <Route path="/contacts" element={<ProtectedRoute><Layout><Friends /></Layout></ProtectedRoute>} />
+                  <Route path="/media" element={<ProtectedRoute><Layout><Media /></Layout></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
+                  <Route path="/security" element={<ProtectedRoute><Layout><Security /></Layout></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+                  <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
+
+                  {/* Profile & Content Routes */}
+                  <Route path="/profile" element={<ProtectedRoute><Layout><UserProfile /></Layout></ProtectedRoute>} />
+                  <Route path="/profile/:username" element={<ProtectedRoute><Layout><UserProfile /></Layout></ProtectedRoute>} />
+                  <Route path="/post/:postId" element={<Layout><PostView /></Layout>} />
+
+                  {/* Moderation / Admin Routes */}
+                  <Route path="/moderation" element={<ProtectedRoute><Layout><ModerationTools /></Layout></ProtectedRoute>} />
+                  <Route path="/moderation/review" element={<ProtectedRoute><Layout><ReviewQueue /></Layout></ProtectedRoute>} />
+                  
+                  {/* Legacy or Specific Moderation Routes (Can be refactored into Mod Tools later) */}
                   <Route path="/video" element={<ProtectedRoute><Layout><VideoModeration /></Layout></ProtectedRoute>} />
                   <Route path="/text" element={<ProtectedRoute><Layout><TextModeration /></Layout></ProtectedRoute>} />
                   <Route path="/image" element={<ProtectedRoute><Layout><ImageModeration /></Layout></ProtectedRoute>} />
                   <Route path="/audio" element={<ProtectedRoute><Layout><AudioModeration /></Layout></ProtectedRoute>} />
-                  <Route path="/history" element={<ProtectedRoute><Layout><History /></Layout></ProtectedRoute>} />
 
-                  {/* Profile Routes */}
-                  <Route path="/profile/:userId" element={<ProtectedRoute><Layout><UserProfile /></Layout></ProtectedRoute>} />
-                  <Route path="/account" element={<ProtectedRoute><Layout><Account /></Layout></ProtectedRoute>} />
-                  <Route path="/friends" element={<ProtectedRoute><Layout><Friends /></Layout></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-                  <Route path="/review" element={<ProtectedRoute><Layout><ReviewQueue /></Layout></ProtectedRoute>} />
-                  <Route path="/moderation" element={<ProtectedRoute><Layout><ModerationTools /></Layout></ProtectedRoute>} />
-                  <Route path="/about" element={<ProtectedRoute><Layout><About /></Layout></ProtectedRoute>} />
-
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<Layout><ErrorState type="404" /></Layout>} />
                 </Routes>
               </div>
             </div>

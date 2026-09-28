@@ -7,9 +7,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class FriendService:
-    def __init__(self, friend_repo: FriendshipRepository, user_repo: UserRepository):
+    def __init__(self, friend_repo: FriendshipRepository, user_repo: UserRepository, msg_repo=None):
         self.friend_repo = friend_repo
         self.user_repo = user_repo
+        self.msg_repo = msg_repo  # Optional: powers last_message/unread_count enrichment
 
     async def send_friend_request(self, friend_id: int, current_user: User) -> dict:
         if friend_id == current_user.id:
@@ -61,13 +62,20 @@ class FriendService:
         for fid in friend_ids:
             u = self.user_repo.get(fid)
             if u:
-                friends.append({
+                entry = {
                     "id": u.id,
                     "username": u.username,
                     "full_name": u.full_name,
                     "profile_photo": u.profile_photo,
-                    "trust_score": u.trust_score
-                })
+                    "trust_score": u.trust_score,
+                }
+                if self.msg_repo is not None:
+                    last = self.msg_repo.get_last_private_message(current_user.id, fid)
+                    if last is not None:
+                        entry["last_message"] = last.content
+                        entry["last_message_at"] = last.created_at.isoformat() if last.created_at else None
+                    entry["unread_count"] = self.msg_repo.count_unread_private(current_user.id, fid)
+                friends.append(entry)
         return friends
 
     def search_users(self, q: str, current_user: User) -> list:

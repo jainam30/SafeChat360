@@ -1,547 +1,344 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Heart, MessageCircle, Send, Bookmark, MoreHorizontal,
-  Smile, Image as ImageIcon, X, Globe, Users, Plus, Camera, Video, AlertTriangle, Share2, Shield, Check
+  MessageSquare, Users, Image as ImageIcon, Plus, 
+  Shield, Check, Search, Bell, Video, Smartphone, Key,
+  Lock, AlertTriangle, FileText, Globe
 } from 'lucide-react';
 import StoryViewer from '../components/StoryViewer';
-import StoryEditor from '../components/StoryEditor';
 
-const Dashboard = () => {
-  const { token, user } = useAuth();
+export default function Dashboard() {
+  const { user, token } = useAuth();
+  const navigate = useNavigate();
 
-  // Helper to resolve media URLs
-  const getMediaSrc = (url) => {
-    if (!url) return '';
-    if (url.startsWith('blob:') || url.startsWith('http')) return url;
-    return getApiUrl(url);
-  };
-
-  const [posts, setPosts] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [stories, setStories] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [recentMedia, setRecentMedia] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Post Creation State
-  const [newPostContent, setNewPostContent] = useState('');
-  const [mediaUrl, setMediaUrl] = useState('');
-  const [mediaType, setMediaType] = useState('text');
-  const [privacy, setPrivacy] = useState('public');
-  const [isPosting, setIsPosting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-
-  // Story State
-  const [showStoryModal, setShowStoryModal] = useState(false);
-  const [storyMedia, setStoryMedia] = useState('');
-  const [storyType, setStoryType] = useState('');
+  
   const [viewingStory, setViewingStory] = useState(null);
 
-  const fileInputRef = useRef(null);
-
   useEffect(() => {
-    fetchResults();
+    if (!token) return;
+    
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const [friendsRes, groupsRes, storiesRes, postsRes] = await Promise.allSettled([
+          fetch(getApiUrl('/api/friends/'), { headers }),
+          fetch(getApiUrl('/api/groups/'), { headers }),
+          fetch(getApiUrl('/api/social/stories'), { headers }),
+          fetch(getApiUrl('/api/social/posts'), { headers })
+        ]);
+
+        if (friendsRes.status === 'fulfilled' && friendsRes.value.ok) {
+          setFriends(await friendsRes.value.json());
+        }
+        if (groupsRes.status === 'fulfilled' && groupsRes.value.ok) {
+          setGroups(await groupsRes.value.json());
+        }
+        if (storiesRes.status === 'fulfilled' && storiesRes.value.ok) {
+          setStories(await storiesRes.value.json());
+        }
+        if (postsRes.status === 'fulfilled' && postsRes.value.ok) {
+          const posts = await postsRes.value.json();
+          // Filter out text-only posts for the Recent Media section
+          const mediaPosts = posts.filter(p => p.media_url).slice(0, 4);
+          setRecentMedia(mediaPosts);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, [token]);
 
-  /* Update fetch to be robust */
-  const fetchResults = async () => {
-    try {
-      setLoading(true);
-      const results = await Promise.allSettled([
-        fetch(getApiUrl('/api/social/posts'), { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(getApiUrl('/api/social/stories'), { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(getApiUrl('/api/friends/suggestions'), { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
+  // Combine friends and groups for recent conversations (stub logic for ordering)
+  const recentConversations = [
+    ...friends.map(f => ({ ...f, isGroup: false })), 
+    ...groups.map(g => ({ ...g, isGroup: true }))
+  ].slice(0, 5);
 
-      const [postsRes, storiesRes, usersRes] = results;
-
-      if (postsRes.status === 'fulfilled' && postsRes.value.ok) {
-        setPosts(await postsRes.value.json());
-      }
-      if (storiesRes.status === 'fulfilled' && storiesRes.value.ok) {
-        setStories(await storiesRes.value.json());
-      }
-      if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
-        setUsers(await usersRes.value.json());
-      }
-    } catch (e) {
-      console.error("Dashboard fetch error", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFileUpload = async (e, isStory = false) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Immediate local preview
-    const localUrl = URL.createObjectURL(file);
-
-    // Set preview state immediately so UI updates INSTANTLY
-    if (!isStory) {
-      setMediaUrl(localUrl);
-      setMediaType(file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'text');
-    } else {
-      setStoryMedia(localUrl);
-      setStoryType(file.type.startsWith('image/') ? 'image' : 'video');
-      setShowStoryModal(true);
-    }
-
-    if (file.size > 50 * 1024 * 1024) {
-      alert("File too large (Max 50MB)");
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      /* Import compressor dynamically ONLY when needed for upload */
-      const { compressImage } = await import('../utils/imageCompressor');
-
-      /* Compress Image if needed */
-      let finalFile = file;
-      if (file.type.startsWith('image/')) {
-        try {
-          const compressedDataUrl = await compressImage(file);
-          const res = await fetch(compressedDataUrl);
-          const blob = await res.blob();
-          finalFile = new File([blob], file.name, { type: 'image/jpeg' });
-        } catch (err) {
-          console.error("Compression failed, using original", err);
-        }
-      }
-
-      const formData = new FormData();
-      formData.append('file', finalFile);
-
-      const res = await fetch(getApiUrl('/api/upload'), {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (isStory) {
-          setStoryMedia(data.url);
-          setStoryType(data.type);
-          setShowStoryModal(true);
-        } else {
-          setMediaUrl(data.url);
-          setMediaType(data.type);
-        }
-      } else {
-        console.error("Upload server error");
-        // Don't alert here to avoid disturbing flow, just let local preview stay or handle error
-      }
-    } catch (error) {
-      console.error("Upload failed", error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const createPost = async () => {
-    if (!newPostContent.trim() && !mediaUrl) return;
-    if (isUploading) {
-      alert("Please wait for the upload to complete.");
-      return;
-    }
-    setIsPosting(true);
-    try {
-      const payload = {
-        content: newPostContent,
-        media_url: mediaUrl || null,
-        media_type: mediaUrl ? mediaType : null,
-        privacy: privacy
-      };
-
-      const res = await fetch(getApiUrl('/api/social/posts'), {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        const newPost = await res.json();
-        setPosts([newPost, ...posts]);
-        setNewPostContent('');
-        setMediaUrl('');
-        setMediaType('text');
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsPosting(false);
-    }
-  };
-
-  const createStory = async (extraData = {}) => {
-    if (!storyMedia) return;
-    try {
-      const payload = {
-        media_url: storyMedia,
-        media_type: storyType,
-        privacy: 'public',
-        ...extraData
-      };
-
-      const res = await fetch(getApiUrl('/api/social/stories'), {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        setShowStoryModal(false);
-        setStoryMedia('');
-        fetchResults(); // Refresh stories
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const onlineContacts = friends.filter(f => f.is_online || true).slice(0, 5); // Fallback to all if is_online undefined
 
   return (
-    <div className="flex justify-center min-h-full">
-      <div className="w-full max-w-[1000px] flex flex-col lg:flex-row gap-4 lg:gap-10 pt-0 lg:pt-8 pb-10 lg:pb-20 px-0 lg:px-4">
-
-        {/* LEFT/MAIN COLUMN */}
-        <div className="w-full lg:max-w-[630px] flex flex-col mx-auto lg:mx-0">
-
-          {/* STORIES TRAY */}
-          <div className="glass-panel border-none bg-black/20 rounded-xl p-4 mb-6 overflow-x-auto scrollbar-hide flex gap-4 shadow-sm">
-            {/* Add Story Button */}
-            <div className="flex flex-col items-center gap-1 min-w-[66px] cursor-pointer" onClick={() => document.getElementById('story-file').click()}>
-              <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-white/10 border border-white/20 relative group hover:border-cyber-primary transition-colors">
-                <div className="w-full h-full rounded-full overflow-hidden bg-black/40 flex items-center justify-center">
-                  <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Your profile" />
-                </div>
-                <div className="absolute bottom-0 right-0 bg-cyber-primary text-white rounded-full p-0.5 border-2 border-black">
-                  <Plus size={12} strokeWidth={3} />
-                </div>
-              </div>
-              <span className="text-xs text-cyber-muted truncate w-full text-center group-hover:text-white">Your Story</span>
-              <input id="story-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, true)} accept="image/*,video/*" />
-            </div>
-
-            {/* Story Items */}
-            {stories.map(story => (
-              <div key={story.id} className="flex flex-col items-center gap-1 min-w-[66px] cursor-pointer group" onClick={() => setViewingStory(story)}>
-                <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-gradient-to-tr from-cyber-primary to-cyber-secondary group-hover:scale-105 transition-transform">
-                  <div className="w-full h-full rounded-full border-2 border-black overflow-hidden bg-black/40">
-                    <img src={story.author_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${story.username}`} className="w-full h-full object-cover" alt={`${story.username}'s story`} />
-                  </div>
-                </div>
-                <span className="text-xs text-cyber-muted truncate w-16 text-center font-medium group-hover:text-white transition-colors">{story.username}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* CREATE POST */}
-          <div className="glass-card p-4 mb-6">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-black/20 border border-white/10">
-                <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full object-cover" alt="Your profile" />
-              </div>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Start a post..."
-                  className="w-full h-10 bg-black/5 rounded-full px-4 text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyber-primary/50 transition-all border border-gray-200"
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                />
-
-                {mediaUrl && (
-                  <div className="relative mt-3 rounded-lg overflow-hidden aspect-square w-full max-w-full md:max-w-[400px] bg-black/20 mx-auto border border-white/10 shadow-inner">
-                    <button
-                      onClick={() => {
-                        setMediaUrl('');
-                        setMediaType('text');
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full z-10 hover:bg-black/80 transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                    {mediaType === 'image' && <img src={getMediaSrc(mediaUrl)} className="w-full h-full object-cover" alt="Post media preview" />}
-                    {mediaType === 'video' && <video src={getMediaSrc(mediaUrl)} controls className="w-full h-full object-cover" />}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
-                  <div className="flex gap-2">
-                    <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-white/5 rounded-full text-cyber-muted hover:text-cyber-primary transition-colors tooltip" title="Add Photo/Video">
-                      <ImageIcon size={20} />
-                    </button>
-                    <button onClick={() => setShowStoryModal(true)} className="p-2 hover:bg-white/5 rounded-full text-cyber-muted hover:text-pink-500 transition-colors tooltip" title="Create Story">
-                      <ImageIcon size={20} className="rotate-90" /> {/* Placeholder for Video icon if missing */}
-                    </button>
-                    <button className="p-2 hover:bg-white/5 rounded-full text-cyber-muted hover:text-yellow-500 transition-colors tooltip" title="Feeling/Activity">
-                      <Smile size={20} />
-                    </button>
-                    <div className="h-8 w-px bg-white/10 mx-2"></div>
-                    <select
-                      value={privacy}
-                      onChange={(e) => setPrivacy(e.target.value)}
-                      className="bg-transparent text-sm font-medium text-cyber-muted focus:outline-none cursor-pointer hover:text-white [&>option]:text-black"
-                    >
-                      <option value="public">Public</option>
-                      <option value="friends">Friends</option>
-                      <option value="private">Only Me</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="hidden">
-                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*,audio/*" onChange={handleFileUpload} />
-                    </div>
-                    {(newPostContent || mediaUrl) && (
-                      <button onClick={createPost} disabled={isPosting || isUploading} className="text-sm font-bold text-cyber-primary hover:text-cyber-primary_hover disabled:opacity-50">
-                        {isPosting ? 'Posting...' : isUploading ? 'Uploading...' : 'Post'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* FEED STREAM */}
-          <div className="flex flex-col gap-4">
-            {posts.map(post => (
-              <article key={post.id} className="glass-card overflow-hidden">
-                {/* Post Header */}
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 cursor-pointer">
-                      <img src={post.author_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`} className="w-full h-full object-cover" alt={`${post.username}'s profile`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 leading-none cursor-pointer hover:underline">{post.username}</p>
-                      {post.location && <p className="text-xs text-slate-500 mt-1">{post.location}</p>}
-                    </div>
-                  </div>
-                  <button className="text-cyber-muted hover:text-white"><MoreHorizontal size={20} /></button>
-                </div>
-
-                {/* Media */}
-                {post.media_url && (
-                  <div className="w-full bg-black/40 aspect-square relative flex items-center justify-center overflow-hidden border-y border-white/5">
-                    {post.media_type === 'image' && <img src={getMediaSrc(post.media_url)} className="w-full h-full object-cover" loading="lazy" alt="Post content" />}
-                    {post.media_type === 'video' && <video src={getMediaSrc(post.media_url)} controls className="w-full h-full object-contain" />}
-                    {post.media_type === 'audio' && <div className="w-full p-10 flex justify-center"><audio src={getMediaSrc(post.media_url)} controls /></div>}
-                  </div>
-                )}
-
-                {/* Content If No Media */}
-                {!post.media_url && post.content && (
-                  <div className="p-6 bg-gradient-to-br from-cyber-primary/10 to-purple-500/10 min-h-[150px] flex items-center justify-center text-center border-y border-white/5">
-                    <p className="text-lg font-medium text-slate-800">{post.content}</p>
-                  </div>
-                )}
-
-                {/* Action Bar */}
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-5">
-                      <button
-                        onClick={async () => {
-                          try {
-                            await fetch(getApiUrl(`/api/social/posts/${post.id}/like`), { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-                            // Optimistic update
-                            setPosts(posts.map(p => p.id === post.id ? { ...p, likes_count: (p.likes_count || 0) + (p.has_liked ? -1 : 1), has_liked: !p.has_liked } : p));
-                          } catch (e) { console.error(e); }
-                        }}
-                        className={`${post.has_liked ? 'text-cyber-accent' : 'text-cyber-muted hover:text-cyber-accent'} transition-colors`}
-                      >
-                        <Heart size={24} fill={post.has_liked ? "currentColor" : "none"} />
-                      </button>
-                      <button className="text-cyber-muted hover:text-white transition-colors"><MessageCircle size={24} /></button>
-                      <button className="text-cyber-muted hover:text-white transition-colors"><Send size={24} /></button>
-                    </div>
-                    <button className="text-cyber-muted hover:text-white"><Bookmark size={24} /></button>
-                  </div>
-
-                  {/* Likes Count */}
-                  <div className="text-sm font-semibold text-slate-800 mb-2">
-                    {post.likes_count || 0} likes
-                  </div>
-
-                  {/* Caption */}
-                  {post.content && post.media_url && (
-                    <div className="text-sm text-slate-800 mb-2">
-                      <span className="font-semibold mr-2">{post.username}</span>
-                      <span className="text-slate-600">{post.content}</span>
-                    </div>
-                  )}
-
-                  {/* Time */}
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wide">
-                    {new Date(post.created_at).toDateString()}
-                  </div>
-                </div>
-
-                {/* Add Comment */}
-                <div className="border-t border-white/10 p-3 flex items-center gap-3">
-                  <button className="text-cyber-muted hover:text-white"><Smile size={24} /></button>
-                  <input type="text" placeholder="Add a comment..." className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-slate-400 text-slate-800" />
-                  <button className="text-cyber-primary font-semibold text-sm opacity-50 hover:opacity-100">Post</button>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          {posts.length === 0 && !loading && (
-            <div className="text-center py-10 text-cyber-muted glass-card">No posts yet. Be the first!</div>
-          )}
+    <div className="flex flex-col h-full bg-slate-50/50 p-4 lg:p-8 overflow-y-auto">
+      
+      {/* HEADER */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Good afternoon, {user?.username || 'User'}</h1>
+          <p className="text-slate-500 mt-1">Here's what's happening across your SafeChat360 account.</p>
         </div>
-
-        {/* RIGHT COLUMN (DESKTOP) */}
-        <div className="hidden lg:block w-[320px] space-y-6 h-fit sticky top-8">
-          {/* Profile Card */}
-          <div className="glass-card p-6 text-center">
-            <div className="relative inline-block">
-              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-cyber-primary to-cyber-secondary mx-auto">
-                <div className="w-full h-full rounded-full border-4 border-black/20 overflow-hidden bg-black/50">
-                  <img
-                    src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-              {/* Trust Badge */}
-              <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-md ${(user?.trust_score || 100) >= 90 ? 'bg-cyber-primary text-white' :
-                (user?.trust_score || 100) >= 70 ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
-                }`} title="Trust Score">
-                <Shield size={16} fill="currentColor" />
-              </div>
-            </div>
-
-            <h2 className="mt-4 text-xl font-bold text-slate-800 tracking-tight flex items-center justify-center gap-2">
-              {user?.username}
-              {(user?.trust_score || 100) >= 90 && <Check size={16} className="text-cyber-primary" strokeWidth={4} />}
-            </h2>
-            <p className="text-sm text-slate-500">{user?.email}</p>
-
-            {/* Gamified Trust Bar */}
-            <div className="mt-4 px-4">
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-500">Reputation</span>
-                <span className={`${(user?.trust_score || 100) >= 90 ? 'text-cyber-primary' : 'text-slate-700'
-                  }`}>{user?.trust_score || 100}%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-1000 ${(user?.trust_score || 100) >= 90 ? 'bg-gradient-to-r from-cyber-primary to-blue-500' :
-                    (user?.trust_score || 100) >= 70 ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}
-                  style={{ width: `${user?.trust_score || 100}%` }}
-                ></div>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                {(user?.trust_score || 100) >= 90 ? "✨ Elite SafeChatter Status" : "Keep verified interactions high to boost score."}
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-6 mt-6 border-t border-gray-200 pt-4">
-              <div className="text-center">
-                <div className="text-lg font-bold text-slate-800">24</div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider">Posts</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-slate-800">1.2k</div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider">Followers</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-slate-800">85</div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider">Following</div>
-              </div>
-            </div>
+        
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              className="w-full pl-10 pr-4 py-2 rounded-full border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-cyber-primary/50 text-sm"
+            />
           </div>
+          <button className="p-2 relative bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => navigate('/notifications')}>
+            <Bell size={20} />
+            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+          </button>
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-slate-200 cursor-pointer" onClick={() => navigate('/profile')}>
+            <img 
+              src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} 
+              alt="Profile" 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+        </div>
+      </header>
 
-          {/* Suggested Friends */}
-          {/* Suggested Friends */}
-          <div className="glass-card p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="text-sm font-bold text-slate-800">Suggested for you</div>
-              <button className="text-xs font-bold text-cyber-primary hover:text-cyber-primary_hover">See All</button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* LEFT/MAIN COLUMN (Takes up 2 cols) */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* QUICK ACTIONS */}
+          <section>
+            <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-3">Quick Actions</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Link to="/chats" className="flex flex-col items-center justify-center gap-2 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-cyber-primary/30 transition-all text-cyber-primary">
+                <MessageSquare size={24} />
+                <span className="text-sm font-medium text-slate-700">Start Chat</span>
+              </Link>
+              <Link to="/chats" className="flex flex-col items-center justify-center gap-2 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-cyber-primary/30 transition-all text-cyber-primary">
+                <Users size={24} />
+                <span className="text-sm font-medium text-slate-700">Group</span>
+              </Link>
+              <Link to="/social" className="flex flex-col items-center justify-center gap-2 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-cyber-primary/30 transition-all text-cyber-primary">
+                <Globe size={24} />
+                <span className="text-sm font-medium text-slate-700">Post</span>
+              </Link>
+              <Link to="/media" className="flex flex-col items-center justify-center gap-2 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-cyber-primary/30 transition-all text-cyber-primary">
+                <ImageIcon size={24} />
+                <span className="text-sm font-medium text-slate-700">Upload</span>
+              </Link>
             </div>
+          </section>
 
-            <div className="space-y-3">
-              {users.length > 0 ? (
-                users.slice(0, 5).map(u => (
-                  <div key={u.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
-                        <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" alt={u.username} />
+          {/* RECENT CONVERSATIONS */}
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-900">Recent Conversations</h2>
+              <Link to="/chats" className="text-sm font-medium text-cyber-primary hover:underline">View all chats</Link>
+            </div>
+            
+            {loading ? (
+              <div className="p-5 text-center text-slate-500">Loading...</div>
+            ) : recentConversations.length > 0 ? (
+              <div className="divide-y divide-slate-50">
+                {recentConversations.map((chat, idx) => (
+                  <Link 
+                    key={idx} 
+                    to={chat.isGroup ? `/chats/group/${chat.id}` : `/chats/${chat.id}`}
+                    className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100">
+                        <img 
+                          src={chat.profile_photo || chat.group_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.username || chat.name}`} 
+                          alt="Avatar" 
+                          className="w-full h-full object-cover" 
+                        />
                       </div>
-                      <div>
-                        <div className="font-bold text-sm text-slate-800 hover:underline cursor-pointer">{u.username}</div>
-                        <div className="text-xs text-slate-500 truncate w-32">
-                          {u.mutual_count ? 'Mutual Friend' : 'Suggested for you'}
-                        </div>
+                      {!chat.isGroup && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-slate-900 truncate">{chat.username || chat.name}</h3>
+                      <p className="text-sm text-slate-500 truncate">{chat.last_message || 'No messages yet'}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs text-slate-400">2h ago</span>
+                      {chat.unread_count > 0 && (
+                        <span className="bg-cyber-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          {chat.unread_count}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-500">
+                <p>No recent conversations.</p>
+                <Link to="/contacts" className="text-cyber-primary font-medium mt-2 inline-block">Find people to chat with</Link>
+              </div>
+            )}
+          </section>
+
+          {/* STORIES */}
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Stories</h2>
+              <Link to="/social" className="text-sm font-medium text-cyber-primary hover:underline">View all stories</Link>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {/* Add Story */}
+              <Link to="/social" className="flex flex-col items-center gap-2 min-w-[72px]">
+                <div className="w-16 h-16 rounded-full border border-slate-200 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-cyber-primary transition-colors cursor-pointer relative">
+                  <img src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} className="w-full h-full rounded-full object-cover opacity-50" />
+                  <Plus className="absolute z-10" />
+                </div>
+                <span className="text-xs font-medium text-slate-600">Add Story</span>
+              </Link>
+              
+              {/* Friends Stories */}
+              {loading ? (
+                <div className="text-sm text-slate-400 flex items-center">Loading...</div>
+              ) : stories.length > 0 ? (
+                stories.map(story => (
+                  <div key={story.id} className="flex flex-col items-center gap-2 min-w-[72px] cursor-pointer group" onClick={() => setViewingStory(story)}>
+                    <div className="w-16 h-16 rounded-full p-[3px] bg-gradient-to-tr from-cyber-primary to-blue-400 group-hover:scale-105 transition-transform">
+                      <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-100">
+                        <img src={story.author_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${story.username}`} className="w-full h-full object-cover" alt="story" />
                       </div>
                     </div>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const res = await fetch(getApiUrl(`/api/friends/request/${u.id}`), {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          if (res.ok || res.status === 400) { // 400 usually means already sent
-                            // Remove from list or show "Sent"
-                            setUsers(users.map(user => user.id === u.id ? { ...user, is_sent: true } : user));
-                          }
-                        } catch (e) { console.error(e); }
-                      }}
-                      disabled={u.is_sent}
-                      className="text-xs font-bold text-cyber-primary hover:text-cyber-primary_hover disabled:text-gray-500 disabled:cursor-default"
-                    >
-                      {u.is_sent ? 'Sent' : 'Add Friend'}
-                    </button>
+                    <span className="text-xs font-medium text-slate-700 truncate w-16 text-center">{story.username}</span>
                   </div>
                 ))
               ) : (
-                <div className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
-                  No suggestions found within your network.
-                </div>
+                <div className="text-sm text-slate-400 flex items-center px-4">No recent stories</div>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Footer */}
-          <div className="glass-card p-4 text-xs text-cyber-muted text-center">
-            © 2025 SafeChat360
-          </div>
         </div>
 
+        {/* RIGHT COLUMN (Takes up 1 col) */}
+        <div className="space-y-6">
+          
+          {/* SECURITY STATUS */}
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-0 opacity-50"></div>
+            
+            <div className="flex justify-between items-center mb-4 relative z-10">
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Shield className="text-green-500" size={20} />
+                Security Status
+              </h2>
+              <Link to="/security" className="text-sm font-medium text-cyber-primary hover:underline">Review</Link>
+            </div>
+            
+            <div className="space-y-3 relative z-10">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 bg-green-100 p-1 rounded-full text-green-600"><Check size={12} strokeWidth={3} /></div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">End-to-End Encryption</p>
+                  <p className="text-xs text-slate-500">Active for all private chats</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 bg-green-100 p-1 rounded-full text-green-600"><Check size={12} strokeWidth={3} /></div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Account Verified</p>
+                  <p className="text-xs text-slate-500">{user?.email}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 bg-yellow-100 p-1 rounded-full text-yellow-600"><AlertTriangle size={12} strokeWidth={3} /></div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Two-Factor Auth</p>
+                  <p className="text-xs text-slate-500">Not enabled. Recommended.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* RECENT MEDIA */}
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Recent Media</h2>
+              <Link to="/media" className="text-sm font-medium text-cyber-primary hover:underline">View all</Link>
+            </div>
+            
+            {loading ? (
+              <div className="text-sm text-slate-500">Loading...</div>
+            ) : recentMedia.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {recentMedia.map((post, idx) => (
+                  <div key={idx} className="aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                    {post.media_type === 'image' ? (
+                      <img src={post.media_url.startsWith('http') ? post.media_url : getApiUrl(post.media_url)} className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer" alt="media" />
+                    ) : post.media_type === 'video' ? (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-800 relative cursor-pointer group">
+                        <Video className="text-white z-10" />
+                        <video src={post.media_url.startsWith('http') ? post.media_url : getApiUrl(post.media_url)} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                        <FileText />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500 text-center py-4">No recent media.</div>
+            )}
+          </section>
+
+          {/* ONLINE CONTACTS */}
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Online Contacts</h2>
+              <Link to="/contacts" className="text-sm font-medium text-cyber-primary hover:underline">All contacts</Link>
+            </div>
+            
+            {loading ? (
+              <div className="text-sm text-slate-500">Loading...</div>
+            ) : onlineContacts.length > 0 ? (
+              <div className="space-y-4">
+                {onlineContacts.map(contact => (
+                  <div key={contact.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100">
+                          <img src={contact.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.username}`} className="w-full h-full object-cover" alt="Avatar" />
+                        </div>
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-800">{contact.username}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link to={`/chats/${contact.id}`} className="p-2 text-slate-400 hover:text-cyber-primary hover:bg-slate-50 rounded-full transition-colors">
+                        <MessageSquare size={16} />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500 text-center py-4">No contacts online right now.</div>
+            )}
+          </section>
+
+        </div>
       </div>
-
-      {/* Story Modals */}
-      {showStoryModal && storyMedia && (
-        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center">
-          {/* Simple wrapper for now, assuming StoryEditor handles its own closing UI */}
-          <StoryEditor
-            mediaFile={storyMedia}
-            mediaType={storyType}
-            onClose={() => { setStoryMedia(''); setStoryType(''); setShowStoryModal(false); }}
-            onPost={async (data) => { await createStory(data); }}
-          />
-        </div>
-      )}
-
+      
+      {/* Story Viewer Modal */}
       {viewingStory && (
         <StoryViewer
           story={viewingStory}
           onClose={() => setViewingStory(null)}
         />
       )}
-
+      
     </div>
   );
-};
-
-export default Dashboard;
+}

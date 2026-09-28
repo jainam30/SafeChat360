@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Awaitable, Any
+from typing import Callable, Awaitable, Any, Optional
 
 class PubSubProvider(ABC):
     """
@@ -18,6 +18,6 @@ class PubSubProvider(ABC):
         pass
 
     @abstractmethod
-    async def unsubscribe(self, channel: str) -> None:
-        """Removes the subscription for a specific channel."""
+    async def unsubscribe(self, channel: str, handler: Optional[Callable[[str], Awaitable[None]]] = None) -> None:
+        """Removes a specific handler, or the entire channel when handler is None."""
         pass

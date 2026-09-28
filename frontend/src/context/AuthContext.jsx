@@ -4,14 +4,19 @@ import { getApiUrl } from "../config";
 
 const AuthContext = createContext();
 
-// Helper to decode JWT safely
+// Helper to decode JWT safely (handles base64url charset: '-' and '_')
 const decodeToken = (token) => {
-  // ... existing decodeToken code ...
   try {
     const parts = token.split(".");
     if (parts.length === 3) {
-      const payload = JSON.parse(atob(parts[1]));
-      return { id: parseInt(payload.sub), email: payload.email, role: payload.role, username: payload.sub };
+      // JWT segments are base64url-encoded; convert to standard base64 for atob()
+      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      // Pad to a multiple of 4 characters
+      while (base64.length % 4 !== 0) base64 += '=';
+      const payload = JSON.parse(decodeURIComponent(
+        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      ));
+      return { id: parseInt(payload.sub), email: payload.email, role: payload.role, username: payload.username ?? payload.sub };
     }
   } catch (e) {
     console.warn("Token decode failed", e);

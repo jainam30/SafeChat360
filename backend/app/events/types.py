@@ -29,6 +29,11 @@ class GroupCreatedEvent(BaseEvent):
 class MessageSentEvent(BaseEvent):
     event_type: str = "MessageSent"
 
+# Alias: the message pipeline publishes MessageCreatedEvent when a message is persisted.
+# Kept as a distinct class so handlers can subscribe to either name.
+class MessageCreatedEvent(MessageSentEvent):
+    event_type: str = "MessageCreated"
+
 class StoryCreatedEvent(BaseEvent):
     event_type: str = "StoryCreated"
 

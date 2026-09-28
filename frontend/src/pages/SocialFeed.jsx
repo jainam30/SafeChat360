@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { formatTimeForUser, formatDateForUser } from '../utils/dateFormatter';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile, Bookmark } from 'lucide-react';
 import ChatBotCard from '../components/UI/ChatBotCard';
+import StoryViewer from '../components/StoryViewer';
 
 const SocialFeed = () => {
     const [posts, setPosts] = useState([]);
@@ -27,6 +28,29 @@ const SocialFeed = () => {
     const [activeMenuPostId, setActiveMenuPostId] = useState(null); // Which post has menu open
 
     const [loading, setLoading] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'feed';
+
+    const handleTabChange = (tab) => {
+        setSearchParams({ tab });
+    };
+
+    const filteredPosts = React.useMemo(() => {
+        if (!posts) return [];
+        switch (activeTab) {
+            case 'explore':
+                return posts.filter(p => p.privacy === 'public');
+            case 'friends':
+            case 'following':
+                return posts.filter(p => friends.some(f => f.id === p.sender_id) || p.sender_id === user?.id);
+            case 'trending':
+                return [...posts].filter(p => p.privacy === 'public').sort((a, b) => ((b.likes_count || 0) + (b.comments_count || 0)) - ((a.likes_count || 0) + (a.comments_count || 0)));
+            case 'feed':
+            default:
+                return posts;
+        }
+    }, [posts, activeTab, friends, user]);
+
     const [submitting, setSubmitting] = useState(false);
     const { token, user } = useAuth();
     const fileInputRef = React.useRef(null);
@@ -352,13 +376,36 @@ const SocialFeed = () => {
     };
 
     return (
-        <div className="max-w-3xl mx-auto pb-10 relative">
+        <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto pb-10 px-4 md:px-0">
+            {/* LEFT NAV */}
+            <div className="hidden lg:block w-64 shrink-0">
+                <div className="sticky top-20 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 border-b border-slate-200">
+                        <h2 className="font-bold text-lg text-slate-900">Social</h2>
+                    </div>
+                    <nav className="p-2 space-y-1">
+                        {['feed', 'explore', 'following', 'friends', 'trending'].map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => handleTabChange(tab)}
+                                className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors capitalize ${activeTab === tab ? 'bg-blue-50 text-cyber-primary' : 'text-slate-600 hover:bg-slate-100'}`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+            </div>
+
+            {/* MAIN CONTENT */}
+            <div className="flex-1 min-w-0 max-w-2xl">
+
             {/* Edit Modal */}
             {editingPost && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in-up">
                         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-slate-50">
-                            <h3 className="font-bold text-lg text-cyber-text">Edit Post</h3>
+                            <h3 className="font-bold text-lg text-slate-800">Edit Post</h3>
                             <button onClick={() => setEditingPost(null)} className="text-gray-400 hover:text-gray-600">✕</button>
                         </div>
                         <div className="p-6 space-y-4">
@@ -370,7 +417,7 @@ const SocialFeed = () => {
                             )}
 
                             <textarea
-                                className="w-full bg-slate-50 border border-cyber-border rounded-xl p-4 focus:outline-none focus:border-cyber-primary resize-none"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 focus:outline-none focus:border-cyber-primary resize-none"
                                 rows={4}
                                 value={editContent}
                                 onChange={(e) => setEditContent(e.target.value)}
@@ -380,7 +427,7 @@ const SocialFeed = () => {
                             {(editMediaPreview || isFullEdit) && (
                                 <div className="relative">
                                     {editMediaPreview && (
-                                        <div className="relative rounded-lg overflow-hidden border border-cyber-border bg-black/5">
+                                        <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-black/5">
                                             {editMediaType === 'video' ?
                                                 <video src={editMediaPreview} className="w-full h-48 object-contain" controls /> :
                                                 <img src={editMediaPreview} className="w-full h-48 object-contain" alt="preview" />
@@ -388,7 +435,7 @@ const SocialFeed = () => {
                                             {isFullEdit && (
                                                 <button
                                                     onClick={() => { setEditMediaPreview(''); setEditMediaFile(null); }}
-                                                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow hover:bg-red-600"
+                                                    className="absolute top-2 right-2 bg-red-500 text-slate-900 p-1 rounded-full shadow hover:bg-red-600"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -399,7 +446,7 @@ const SocialFeed = () => {
                                     {isFullEdit && !editMediaPreview && (
                                         <div
                                             onClick={() => editFileInputRef.current.click()}
-                                            className="border-2 border-dashed border-cyber-border rounded-lg p-8 flex flex-col items-center justify-center text-cyber-muted hover:bg-slate-50 cursor-pointer transition-colors"
+                                            className="border-2 border-dashed border-slate-200 rounded-lg p-8 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 cursor-pointer transition-colors"
                                         >
                                             <Camera size={24} className="mb-2" />
                                             <span className="text-sm">Add Photo or Video</span>
@@ -414,7 +461,7 @@ const SocialFeed = () => {
                             <button
                                 onClick={saveEdit}
                                 disabled={submitting}
-                                className="px-4 py-2 bg-cyber-primary text-white font-medium rounded-lg hover:bg-cyber-primary_hover transition-colors shadow-lg shadow-indigo-200"
+                                className="px-4 py-2 bg-cyber-primary text-slate-900 font-medium rounded-lg hover:bg-cyber-primary_hover transition-colors shadow-lg shadow-indigo-200"
                             >
                                 {submitting ? "Saving..." : "Save Changes"}
                             </button>
@@ -423,16 +470,24 @@ const SocialFeed = () => {
                 </div>
             )}
 
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                    <User className="text-cyber-primary" />
-                    Social Feed
-                </h1>
-                <p className="text-white">Post updates, photos, and videos.</p>
-            </div>
+            <div className="mb-6 lg:hidden flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                    {['feed', 'explore', 'following', 'friends', 'trending'].map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => handleTabChange(tab)}
+                            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors capitalize border ${activeTab === tab ? 'bg-cyber-primary text-white border-cyber-primary shadow-sm' : 'bg-white text-slate-600 border-slate-200'}`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
 
             {/* Share Box / Chat Bot Interface */}
-            <div className="w-full mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            
+            <div className="mb-6">
+                <StoryViewer token={token} user={user} friends={friends} />
+            </div>
+\n                <div className="w-full mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <ChatBotCard
                     content={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
@@ -453,7 +508,7 @@ const SocialFeed = () => {
 
             {/* Feed */}
             <div className="space-y-6">
-                {posts.map(post => (
+                {filteredPosts.map(post => (
                     <div key={post.id} className={`glass-card p-4 md:p-6 relative group bg-white/70 hover:bg-white transition-colors shadow-sm hover:shadow-md ${post.is_flagged ? 'border-red-500/30 bg-red-50/50' : ''}`}>
                         {/* ... Flags ... */}
                         {post.is_flagged && (
@@ -465,18 +520,18 @@ const SocialFeed = () => {
 
                         <div className="flex items-center gap-3 mb-4 relative">
                             <Link to={`/profile/${post.user_id}`} className="flex items-center gap-3 group/author min-w-0 flex-1">
-                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text overflow-hidden group-hover/author:scale-105 transition-transform shadow-sm border border-cyber-border shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-800 overflow-hidden group-hover/author:scale-105 transition-transform shadow-sm border border-slate-200 shrink-0">
                                     {post.author_photo ? (
                                         <img src={post.author_photo} alt={post.username} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                                        <div className="w-full h-full bg-gradient-to-br from-cyber-primary to-purple-500 flex items-center justify-center text-slate-900 font-bold text-sm">
                                             {(post.username || "U").charAt(0).toUpperCase()}
                                         </div>
                                     )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-cyber-text font-bold group-hover/author:text-cyber-primary transition-colors truncate">{post.username || "Unknown"}</div>
-                                    <div className="text-cyber-muted text-xs flex items-center gap-1 flex-wrap">
+                                    <div className="text-slate-800 font-bold group-hover/author:text-cyber-primary transition-colors truncate">{post.username || "Unknown"}</div>
+                                    <div className="text-slate-500 text-xs flex items-center gap-1 flex-wrap">
                                         <Clock size={12} />
                                         {formatDate(post.created_at)}
                                         <span className="mx-1">•</span>
@@ -491,21 +546,21 @@ const SocialFeed = () => {
                             <div className="ml-auto relative shrink-0">
                                 <button
                                     onClick={() => setActiveMenuPostId(activeMenuPostId === post.id ? null : post.id)}
-                                    className="text-cyber-muted hover:text-cyber-text p-2 rounded-full hover:bg-slate-100 transition-colors"
+                                    className="text-slate-500 hover:text-slate-800 p-2 rounded-full hover:bg-slate-100 transition-colors"
                                 >
                                     <MoreHorizontal size={18} />
                                 </button>
                                 {/* ... Menu ... */}
                                 {activeMenuPostId === post.id && (
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-cyber-border rounded-xl shadow-xl z-10 py-1 overflow-hidden animate-fade-in-up">
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-10 py-1 overflow-hidden animate-fade-in-up">
                                         {/* ... */}
                                         {(post.user_id === user?.id || user?.role === 'admin') && (
                                             <>
-                                                <button onClick={() => initiateEdit(post)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-cyber-text group/item"><Edit2 size={16} className="text-cyber-muted group-hover/item:text-cyber-primary" /> Edit Post</button>
+                                                <button onClick={() => initiateEdit(post)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-800 group/item"><Edit2 size={16} className="text-slate-500 group-hover/item:text-cyber-primary" /> Edit Post</button>
                                                 <button onClick={() => deletePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600 group/item"><Trash2 size={16} /> Delete</button>
                                             </>
                                         )}
-                                        <button onClick={() => sharePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-cyber-text group/item border-t border-gray-100"><LinkIcon size={16} className="text-cyber-muted group-hover/item:text-blue-500" /> Share Link</button>
+                                        <button onClick={() => sharePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-800 group/item border-t border-gray-100"><LinkIcon size={16} className="text-slate-500 group-hover/item:text-blue-500" /> Share Link</button>
                                     </div>
                                 )}
                             </div>
@@ -515,11 +570,11 @@ const SocialFeed = () => {
                         <div className={`space-y-4 ${post.is_flagged ? 'blur-[2px] opacity-50 hover:blur-none hover:opacity-100 transition-all cursor-pointer' : ''}`}>
 
                             {post.content && (
-                                <div className="text-cyber-text whitespace-pre-wrap leading-relaxed break-words">{post.content}</div>
+                                <div className="text-slate-800 whitespace-pre-wrap leading-relaxed break-words">{post.content}</div>
                             )}
 
                             {post.media_url && (
-                                <div className="rounded-xl overflow-hidden border border-cyber-border bg-black/5 shadow-inner">
+                                <div className="rounded-xl overflow-hidden border border-slate-200 bg-black/5 shadow-inner">
                                     {post.media_type === 'video' ? (
                                         <video src={post.media_url} controls className="w-full max-h-[500px] object-contain" />
                                     ) : (
@@ -533,10 +588,10 @@ const SocialFeed = () => {
                             <p className="text-xs text-red-500 mt-2 italic font-medium">*Content hidden due to community guidelines. Hover to view.*</p>
                         )}
 
-                        <div className="mt-4 pt-4 border-t border-cyber-border flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+                        <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
                             <button
                                 onClick={() => handleLike(post)}
-                                className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn shrink-0 ${post.has_liked ? 'text-red-500' : 'text-cyber-muted hover:text-red-500'}`}
+                                className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn shrink-0 ${post.has_liked ? 'text-red-500' : 'text-slate-500 hover:text-red-500'}`}
                             >
                                 <Heart size={18} className={`group-hover/btn:scale-110 transition-transform ${post.has_liked ? 'fill-current' : ''}`} />
                                 {post.likes_count > 0 ? post.likes_count : 'Like'}
@@ -544,19 +599,19 @@ const SocialFeed = () => {
                             <div className="flex gap-4 shrink-0">
                                 <button
                                     onClick={() => handleSave(post)}
-                                    className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn ${post.is_saved ? 'text-cyber-primary' : 'text-cyber-muted hover:text-cyber-primary'}`}
+                                    className={`flex items-center gap-2 transition-colors text-sm font-medium group/btn ${post.is_saved ? 'text-cyber-primary' : 'text-slate-500 hover:text-cyber-primary'}`}
                                 >
                                     <Bookmark size={18} className={`group-hover/btn:scale-110 transition-transform ${post.is_saved ? 'fill-current' : ''}`} />
                                     <span className="hidden xs:inline">{post.is_saved ? 'Saved' : 'Save'}</span>
                                 </button>
                                 <button
                                     onClick={() => toggleComments(post.id)}
-                                    className="flex items-center gap-2 text-cyber-muted hover:text-blue-500 transition-colors text-sm font-medium group/btn"
+                                    className="flex items-center gap-2 text-slate-500 hover:text-blue-500 transition-colors text-sm font-medium group/btn"
                                 >
                                     <MessageCircle size={18} className="group-hover/btn:scale-110 transition-transform" />
                                     {post.comments_count > 0 ? post.comments_count : ''} <span className="hidden xs:inline">Comment</span>
                                 </button>
-                                <button className="flex items-center gap-2 text-cyber-muted hover:text-green-500 transition-colors text-sm font-medium group/btn">
+                                <button className="flex items-center gap-2 text-slate-500 hover:text-green-500 transition-colors text-sm font-medium group/btn">
                                     <Share2 size={18} className="group-hover/btn:scale-110 transition-transform" /> <span className="hidden xs:inline">Share</span>
                                 </button>
                             </div>
@@ -568,31 +623,31 @@ const SocialFeed = () => {
                                 <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
                                     {(comments[post.id] || []).map(comment => (
                                         <div key={comment.id} className="flex gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-cyber-text shrink-0">
+                                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-800 shrink-0">
                                                 {comment.username.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="bg-slate-50 rounded-2xl rounded-tl-none p-3 text-sm flex-1 break-words min-w-0">
-                                                <div className="font-bold text-xs text-cyber-text mb-1">{comment.username}</div>
+                                                <div className="font-bold text-xs text-slate-800 mb-1">{comment.username}</div>
                                                 <div className="text-gray-700">{comment.content}</div>
                                             </div>
                                         </div>
                                     ))}
                                     {(!comments[post.id] || comments[post.id].length === 0) && (
-                                        <p className="text-center text-xs text-cyber-muted italic">No comments yet.</p>
+                                        <p className="text-center text-xs text-slate-500 italic">No comments yet.</p>
                                     )}
                                 </div>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
                                         placeholder="Write a comment..."
-                                        className="flex-1 bg-slate-50 border border-cyber-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-cyber-primary min-w-0"
+                                        className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-cyber-primary min-w-0"
                                         value={newComment}
                                         onChange={(e) => setNewComment(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && submitComment(post.id)}
                                     />
                                     <button
                                         onClick={() => submitComment(post.id)}
-                                        className="bg-cyber-primary text-white p-2 rounded-full hover:bg-cyber-primary_hover transition-colors shadow-sm shrink-0"
+                                        className="bg-cyber-primary text-slate-900 p-2 rounded-full hover:bg-cyber-primary_hover transition-colors shadow-sm shrink-0"
                                     >
                                         <Send size={16} />
                                     </button>
@@ -602,14 +657,26 @@ const SocialFeed = () => {
                     </div>
                 ))}
 
-                {posts.length === 0 && !loading && (
-                    <div className="text-center text-cyber-muted py-10 bg-white/50 rounded-2xl border border-dashed border-cyber-border">
+                {filteredPosts.length === 0 && !loading && (
+                    <div className="text-center text-slate-500 py-10 bg-white/50 rounded-2xl border border-dashed border-slate-200">
                         {privacy === 'public' ? "No public posts yet." : "No posts found."} Be the first to share something!
                     </div>
                 )}
+            </div>
+            </div>
+
+            {/* RIGHT SIDEBAR */}
+            <div className="hidden xl:block w-80 shrink-0">
+                <div className="sticky top-20 space-y-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                        <h3 className="font-bold text-slate-900 mb-4">Suggested People</h3>
+                        <div className="text-sm text-slate-500 text-center py-4">Discover people to follow on the Explore tab.</div>
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
 
 export default SocialFeed;
+
