@@ -1,11 +1,6 @@
 import os, tempfile, base64
 from typing import Dict
 
-try:
-    import whisper
-except Exception:
-    whisper = None
-
 from app.services.text_moderator import moderate_text
 
 _whisper = None
@@ -13,9 +8,12 @@ _whisper = None
 def _load_whisper(name="base"):
     global _whisper
     if _whisper is None:
-        if whisper is None:
-            raise RuntimeError("whisper not installed")
-        _whisper = whisper.load_model(name)
+        try:
+            import whisper
+            _whisper = whisper.load_model(name)
+        except Exception as e:
+            print(f"Failed to load whisper: {e}")
+            raise RuntimeError(f"whisper not installed or failed: {e}")
     return _whisper
 
 def moderate_audio_base64(b64_str: str, model_name="base") -> Dict:

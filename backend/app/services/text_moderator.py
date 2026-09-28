@@ -1,11 +1,6 @@
 from typing import Dict
 import re
 
-try:
-    from transformers import pipeline
-except Exception:
-    pipeline = None
-
 _model = None
 
 try:
@@ -69,14 +64,11 @@ def _translate_to_english(text: str) -> dict:
 def _load_model(model_name="unitary/toxic-bert"):
     global _model
     if _model is None:
-        if pipeline is None:
-            # Fallback: Just return False (failed to load) so we rely on keywords only
-            # raise RuntimeError("transformers not installed") 
-            _model = False
-            return _model
         try:
+            from transformers import pipeline
             _model = pipeline("text-classification", model=model_name, return_all_scores=True)
-        except:
+        except Exception as e:
+            print(f"Failed to load transformers: {e}")
             _model = False  # Mark as failed so we don't retry
     return _model
 

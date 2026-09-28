@@ -3,22 +3,17 @@ import io
 from PIL import Image
 from typing import Dict
 
-try:
-    from transformers import pipeline
-except Exception:
-    pipeline = None
-
 _nsfw_model = None
 
 def _load_nsfw_model():
     """Load NSFW detection model from HuggingFace"""
     global _nsfw_model
     if _nsfw_model is None:
-        if pipeline is None:
-            return None
         try:
+            from transformers import pipeline
             _nsfw_model = pipeline("image-classification", model="Falconsai/nsfw_image_detection")
-        except:
+        except Exception as e:
+            print(f"Failed to load image transformers: {e}")
             _nsfw_model = False  # Mark as failed
     return _nsfw_model
 
