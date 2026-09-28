@@ -29,6 +29,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import AnimatedBackground from './components/AnimatedBackground';
 import PostView from './pages/PostView';
 import ErrorBoundary from './components/ErrorBoundary';
+import ErrorState from './components/ErrorState';
 import FloatingVideo from './components/FloatingVideo';
 import CallModal from './components/CallModal';
 
