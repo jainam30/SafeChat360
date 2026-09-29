@@ -1,337 +1,159 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
-import toast from 'react-hot-toast';
 import { 
-    Settings as SettingsIcon, SlidersHorizontal, User, ShieldCheck, 
-    Palette, Bell, HardDrive, ShieldAlert, Trash2, Plus, AlertCircle, ChevronRight, MessageSquare
+    User, Shield, Lock, Bell, Palette, HelpCircle, 
+    Camera, Mail, Phone, AlertTriangle, Trash2
 } from 'lucide-react';
 
 export default function Settings() {
-    const { user, token, logout } = useAuth();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const activeSection = searchParams.get('section') || 'general';
+    const { user, logout } = useAuth();
+    const [activeTab, setActiveTab] = useState('account');
 
-    const handleSectionChange = (section) => {
-        setSearchParams({ section });
-    };
-
-    // --- BLOCKLIST STATE (Moderation) ---
-    const [terms, setTerms] = useState([]);
-    const [newTerm, setNewTerm] = useState('');
-    const [loadingTerms, setLoadingTerms] = useState(false);
-
-    useEffect(() => {
-        if (token && activeSection === 'moderation') {
-            fetchTerms();
-        }
-    }, [token, activeSection]);
-
-    const fetchTerms = async () => {
-        setLoadingTerms(true);
-        try {
-            const res = await fetch(getApiUrl('/api/blocklist/'), {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setTerms(data);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoadingTerms(false);
-        }
-    };
-
-    const addTerm = async (e) => {
-        e.preventDefault();
-        if (!newTerm.trim()) return;
-        try {
-            const res = await fetch(getApiUrl('/api/blocklist/'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ term: newTerm })
-            });
-            if (res.ok) {
-                setNewTerm('');
-                fetchTerms();
-                toast.success('Term added to blocklist');
-            } else {
-                toast.error('Failed to add term');
-            }
-        } catch (err) {
-            toast.error('Error adding term');
-        }
-    };
-
-    const removeTerm = async (id) => {
-        if (!confirm('Remove this term?')) return;
-        try {
-            const res = await fetch(getApiUrl(`/api/blocklist/${id}`), {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                setTerms(terms.filter(t => t.id !== id));
-                toast.success('Term removed');
-            } else {
-                toast.error('Failed to remove term');
-            }
-        } catch (err) {
-            toast.error('Error removing term');
-        }
-    };
-
-    const handleClearLocalData = () => {
-        if (confirm("This will clear your local application cache and sign you out. Continue?")) {
-            localStorage.clear();
-            sessionStorage.clear();
-            logout();
-        }
-    };
-
-    const navItems = [
-        { id: 'general', label: 'General', icon: <SlidersHorizontal size={18} /> },
-        { id: 'appearance', label: 'Appearance', icon: <Palette size={18} /> },
-        { id: 'chat', label: 'Chat & Media', icon: <MessageSquare size={18} /> },
-        { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
-        { id: 'moderation', label: 'Moderation', icon: <ShieldAlert size={18} /> },
-        { id: 'data', label: 'Data & Storage', icon: <HardDrive size={18} /> }
+    const menuItems = [
+        { id: 'account', label: 'Account', icon: <User size={18}/> },
+        { id: 'privacy', label: 'Privacy', icon: <Shield size={18}/> },
+        { id: 'security', label: 'Security', icon: <Lock size={18}/> },
+        { id: 'notifications', label: 'Notifications', icon: <Bell size={18}/> },
+        { id: 'appearance', label: 'Appearance', icon: <Palette size={18}/> },
+        { id: 'help', label: 'Help & Support', icon: <HelpCircle size={18}/> },
     ];
 
-    return (
-        <div className="max-w-6xl mx-auto pb-12 px-4 md:px-0">
-            {/* HEADER */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
-                    <SettingsIcon className="text-cyber-primary" size={32} />
-                    Settings
-                </h1>
-                <p className="text-slate-500 text-lg">Manage your SafeChat360 preferences and application experience.</p>
+    const renderAccountSettings = () => (
+        <div className="max-w-3xl">
+            <h2 className="text-xl font-bold text-slate-900 mb-6">Account Settings</h2>
+            
+            {/* Profile Information */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div className="p-4 border-b border-slate-100">
+                    <h3 className="font-bold text-slate-900">Profile Information</h3>
+                    <p className="text-xs text-slate-500">Update your photo and personal details.</p>
+                </div>
+                <div className="p-6">
+                    <div className="flex items-center gap-6 mb-8">
+                        <div className="relative">
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'user'}`} className="w-20 h-20 rounded-full object-cover border border-slate-200" alt="avatar"/>
+                            <button className="absolute bottom-0 right-0 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600 shadow-sm">
+                                <Camera size={12}/>
+                            </button>
+                        </div>
+                        <div className="flex gap-3">
+                            <button className="px-4 py-2 bg-blue-50 text-blue-600 font-bold text-sm rounded-lg hover:bg-blue-100 transition-colors">Change Photo</button>
+                            <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-50 transition-colors">Remove</button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
+                            <input type="text" defaultValue={user?.full_name || 'Jainam Jain'} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Username</label>
+                            <input type="text" defaultValue={user?.username || 'jainamjain'} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Bio</label>
+                        <textarea rows="3" defaultValue="Software Developer | Tech Enthusiast | Explorer 🚀" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none resize-none"></textarea>
+                    </div>
+                </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* LEFT NAVIGATION */}
-                <div className="lg:w-64 shrink-0">
-                    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden sticky top-20">
-                        <nav className="p-2 space-y-1">
-                            {navItems.map(item => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => handleSectionChange(item.id)}
-                                    className={`w-full text-left px-4 py-2.5 flex items-center gap-3 rounded-lg text-sm font-medium transition-colors ${activeSection === item.id ? 'bg-blue-50 text-cyber-primary' : 'text-slate-700 hover:bg-slate-100'}`}
-                                >
-                                    <span className={activeSection === item.id ? 'text-cyber-primary' : 'text-slate-400'}>{item.icon}</span>
-                                    {item.label}
-                                </button>
-                            ))}
-                        </nav>
-                        <div className="p-2 border-t border-slate-100 mt-2 space-y-1">
-                            <Link to="/profile" className="w-full text-left px-4 py-2.5 flex items-center gap-3 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
-                                <User size={18} className="text-slate-400" /> Profile & Account
-                            </Link>
-                            <Link to="/security" className="w-full text-left px-4 py-2.5 flex items-center gap-3 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
-                                <ShieldCheck size={18} className="text-slate-400" /> Security & Privacy
-                            </Link>
+            {/* Contact Information */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div className="p-4 border-b border-slate-100">
+                    <h3 className="font-bold text-slate-900">Contact Information</h3>
+                    <p className="text-xs text-slate-500">Manage your email and phone number.</p>
+                </div>
+                <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input type="email" defaultValue={user?.email || 'jainamjainrj03@gmail.com'} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Phone Number</label>
+                            <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input type="tel" defaultValue="+91 9876543210" className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* MAIN CONTENT AREA */}
-                <div className="flex-1 min-w-0">
-                    
-                    {/* SECTION: GENERAL */}
-                    {activeSection === 'general' && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">General</h2>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-4">Account Information</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
-                                        <input type="email" value={user?.email || ''} disabled className="w-full max-w-md px-4 py-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-1">Role</label>
-                                        <div className="inline-flex px-3 py-1 bg-blue-50 text-blue-700 text-sm font-bold rounded-full uppercase tracking-wide border border-blue-100">
-                                            {user?.role || 'User'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2">Language & Region</h3>
-                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-start gap-3">
-                                    <AlertCircle className="text-slate-400 shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-700">Language configuration not currently available</p>
-                                        <p className="text-xs text-slate-500 mt-1">SafeChat360 currently defaults to English (US). Granular locale settings are pending backend support.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SECTION: APPEARANCE */}
-                    {activeSection === 'appearance' && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">Appearance</h2>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2">Theme</h3>
-                                <p className="text-sm text-slate-500 mb-4">Customize the look and feel of your SafeChat360 interface.</p>
-                                
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
-                                    <div className="border-2 border-cyber-primary bg-slate-50 p-4 rounded-xl cursor-pointer">
-                                        <div className="w-full h-24 bg-white border border-slate-200 rounded-md shadow-sm mb-3"></div>
-                                        <p className="text-sm font-bold text-slate-900 text-center">Light Mode</p>
-                                    </div>
-                                    <div className="border-2 border-slate-100 bg-slate-100 p-4 rounded-xl opacity-50 cursor-not-allowed" title="Dark mode is not currently available">
-                                        <div className="w-full h-24 bg-slate-800 border border-slate-700 rounded-md shadow-sm mb-3"></div>
-                                        <p className="text-sm font-bold text-slate-500 text-center">Dark Mode</p>
-                                    </div>
-                                    <div className="border-2 border-slate-100 bg-slate-100 p-4 rounded-xl opacity-50 cursor-not-allowed" title="System sync is not currently available">
-                                        <div className="w-full h-24 bg-gradient-to-r from-white to-slate-800 border border-slate-300 rounded-md shadow-sm mb-3"></div>
-                                        <p className="text-sm font-bold text-slate-500 text-center">System</p>
-                                    </div>
-                                </div>
-                                <p className="text-xs text-slate-400 mt-4 italic">Note: Dark mode implementation is not yet supported globally across all components.</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SECTION: CHAT & MEDIA */}
-                    {activeSection === 'chat' && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">Chat & Media</h2>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2">Chat Preferences</h3>
-                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-start gap-3">
-                                    <AlertCircle className="text-slate-400 shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-700">Client preferences are not yet persistent</p>
-                                        <p className="text-xs text-slate-500 mt-1">Features like "Enter to send" and "Read receipts toggles" are currently managed dynamically by the application.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2 flex justify-between items-center">
-                                    Media Management
-                                    <Link to="/media" className="text-sm text-cyber-primary font-semibold hover:underline flex items-center">Open Library <ChevronRight size={16} /></Link>
-                                </h3>
-                                <p className="text-sm text-slate-500 mb-4">View and manage media shared across your network.</p>
-                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-start gap-3">
-                                    <AlertCircle className="text-slate-400 shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-700">Storage quotas unavailable</p>
-                                        <p className="text-xs text-slate-500 mt-1">The server currently provides unmetered cloud storage. Per-user quota limits are not implemented.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SECTION: MODERATION */}
-                    {activeSection === 'moderation' && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">Moderation & Safety</h2>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2">Custom Blocked Words</h3>
-                                <p className="text-sm text-slate-500 mb-4">Add specific words or phrases to automatically flag across the network.</p>
-
-                                <form onSubmit={addTerm} className="flex gap-2 mb-6 max-w-md">
-                                    <input
-                                        type="text"
-                                        value={newTerm}
-                                        onChange={e => setNewTerm(e.target.value)}
-                                        placeholder="Enter word to block..."
-                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-cyber-primary"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!newTerm.trim()}
-                                        className="px-4 py-2 bg-cyber-primary text-white font-medium rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        <Plus size={18} /> Add
-                                    </button>
-                                </form>
-
-                                <div>
-                                    {loadingTerms ? (
-                                        <p className="text-sm text-slate-400">Loading terms...</p>
-                                    ) : terms.length === 0 ? (
-                                        <p className="text-sm text-slate-400 italic">No custom rules added.</p>
-                                    ) : (
-                                        <div className="flex flex-wrap gap-2">
-                                            {terms.map(term => (
-                                                <span key={term.id} className="px-3 py-1.5 bg-slate-100 rounded-lg text-sm text-slate-700 flex items-center gap-2 border border-slate-200">
-                                                    {term.term}
-                                                    <button onClick={() => removeTerm(term.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Remove term">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SECTION: NOTIFICATIONS */}
-                    {activeSection === 'notifications' && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">Notifications</h2>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2 flex justify-between items-center">
-                                    Notification Preferences
-                                    <Link to="/notifications" className="text-sm text-cyber-primary font-semibold hover:underline flex items-center">View Notifications <ChevronRight size={16} /></Link>
-                                </h3>
-                                <p className="text-sm text-slate-500 mb-4">Manage how SafeChat360 alerts you to new activity.</p>
-                                
-                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-start gap-3">
-                                    <AlertCircle className="text-slate-400 shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-700">Fine-grained notification controls are not currently available.</p>
-                                        <p className="text-xs text-slate-500 mt-1">The server dynamically handles WebSockets and push payloads. Mute toggles are pending.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SECTION: DATA & STORAGE */}
-                    {activeSection === 'data' && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">Data & Storage</h2>
-                            
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                                <h3 className="font-bold text-slate-900 mb-2">Local Application Cache</h3>
-                                <p className="text-sm text-slate-500 mb-4 max-w-2xl">
-                                    Clearing local data will remove cached UI states, temporary files, and active session tokens from your browser. You will be signed out immediately.
-                                </p>
-                                <button 
-                                    onClick={handleClearLocalData}
-                                    className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                                >
-                                    Clear local data
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
+            {/* Account Management */}
+            <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden mb-6">
+                <div className="p-4 border-b border-red-100 bg-red-50/50">
+                    <h3 className="font-bold text-red-600 flex items-center gap-2"><AlertTriangle size={16}/> Danger Zone</h3>
+                    <p className="text-xs text-red-500/80">Irreversible account actions.</p>
                 </div>
+                <div className="p-6 space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h4 className="font-bold text-slate-900 text-sm">Deactivate Account</h4>
+                            <p className="text-xs text-slate-500">Temporarily disable your account and hide your profile.</p>
+                        </div>
+                        <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-50 transition-colors shrink-0">Deactivate</button>
+                    </div>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                        <div>
+                            <h4 className="font-bold text-slate-900 text-sm">Delete Account</h4>
+                            <p className="text-xs text-slate-500">Permanently delete your account and all your data.</p>
+                        </div>
+                        <button className="px-4 py-2 bg-red-50 text-red-600 font-bold text-sm rounded-lg hover:bg-red-100 transition-colors shrink-0 flex items-center gap-2"><Trash2 size={16}/> Delete Account</button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end">
+                <button className="px-6 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Save Changes</button>
+            </div>
+        </div>
+    );
+
+    const renderMockContent = (title) => (
+        <div className="max-w-3xl flex flex-col items-center justify-center text-slate-500 py-20">
+            <Settings size={48} className="text-slate-200 mb-4"/>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">{title} Settings</h2>
+            <p className="text-sm font-medium">This section is currently under construction in the mock.</p>
+        </div>
+    );
+
+    return (
+        <div className="flex h-full w-full bg-slate-50 overflow-hidden text-slate-900">
+            
+            {/* LEFT SIDEBAR (Settings Menu) */}
+            <div className="hidden md:flex w-[260px] flex-col border-r border-slate-200 bg-white shrink-0 p-4">
+                <div className="mb-6 px-2">
+                    <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+                    <p className="text-xs font-medium text-slate-500 mt-1">Manage your account, privacy, and preferences</p>
+                </div>
+
+                <div className="space-y-1">
+                    {menuItems.map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id)}
+                            className={`flex items-center gap-3 w-full p-3 rounded-xl font-bold text-sm transition-colors ${
+                                activeTab === item.id 
+                                ? 'bg-blue-50 text-blue-600' 
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                        >
+                            <span className={activeTab === item.id ? 'text-blue-600' : 'text-slate-400'}>{item.icon}</span>
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* MAIN PANE */}
+            <div className="flex-1 overflow-y-auto min-w-0 p-6 md:p-8 bg-slate-50">
+                {activeTab === 'account' ? renderAccountSettings() : renderMockContent(menuItems.find(i => i.id === activeTab)?.label)}
             </div>
         </div>
     );
