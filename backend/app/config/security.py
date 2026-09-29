@@ -16,7 +16,7 @@ class SecuritySettings(BaseSettings):
     # that combination, and it is unsafe anyway. List real origins explicitly.
     ALLOWED_ORIGINS: str = os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173",
+        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://safe-chat360.vercel.app",
     )
 
     def __init__(self, **kwargs):
