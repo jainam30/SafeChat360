@@ -73,7 +73,7 @@ export default function VerifyEmail() {
         navigate('/login');
       } else {
         const data = await response.json();
-        toast.error(data.detail || 'Verification failed');
+        toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Verification failed');
       }
     } catch (err) {
       toast.error('Network error. Please try again.');

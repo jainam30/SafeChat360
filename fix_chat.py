@@ -1,373 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { formatTimeForUser } from '../utils/dateFormatter';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
-import toast from 'react-hot-toast';
-import {
-    Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video,
-    Sparkles, Trash2, Undo2, MoreHorizontal, ArrowLeft, Image as ImageIcon,
-    Smile, Heart, Info
-} from 'lucide-react';
-import CreateGroupModal from '../components/CreateGroupModal';
-import CosmicInput from '../components/UI/CosmicInput';
+import os
 
-import { useCall } from '../context/CallContext';
-
-export default function Chat() {
-    const { user, token } = useAuth();
-    const { socket, isConnected, startCall: startCallContext } = useCall();
-
-    // State
-    const { conversationId, groupId } = useParams();
-    const navigate = useNavigate();
-    const [activeChat, setActiveChat] = useState({ type: null, id: null, data: null });
-
-    useEffect(() => {
-        if (conversationId) {
-            const id = parseInt(conversationId);
-            const u = friends.find(f => f.id === id) || users.find(u => u.id === id);
-            setActiveChat({ type: 'private', id, data: u || { username: '...', id } });
-            setMobileView('chat');
-        } else if (groupId) {
-            const id = parseInt(groupId);
-            const g = groups.find(g => g.id === id);
-            setActiveChat({ type: 'group', id, data: g || { name: '...', id } });
-            setMobileView('chat');
-        } else {
-            setActiveChat({ type: null, id: null, data: null });
-            setMobileView('list');
-        }
-    }, [conversationId, groupId, friends, users, groups]);
-    const [users, setUsers] = useState([]);
-    const [friends, setFriends] = useState([]);
-    const [groups, setGroups] = useState([]);
-    const [messages, setMessages] = useState([]);
-    const [inputValue, setInputValue] = useState('');
-    const [showGroupModal, setShowGroupModal] = useState(false);
-
-    const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
-
-    const [vibe, setVibe] = useState({ score: 100, status: 'safe', loading: false });
-    const [isAiLoading, setIsAiLoading] = useState(false);
-
-    const messagesEndRef = useRef(null);
-    const activeChatRef = useRef(activeChat);
-
-    const [activeMessageMenu, setActiveMessageMenu] = useState(null);
-
-    // Keep ref in sync
-    useEffect(() => {
-        activeChatRef.current = activeChat;
-    }, [activeChat]);
-
-    // Fetch Initial Data
-    useEffect(() => {
-        if (!token) return;
-
-        const fetchData = async () => {
-            try {
-                const headers = { 'Authorization': `Bearer ${token}` };
-                const [uRes, fRes, gRes] = await Promise.all([
-                    fetch(getApiUrl('/api/chat/users'), { headers }),
-                    fetch(getApiUrl('/api/friends/'), { headers }),
-                    fetch(getApiUrl('/api/groups/'), { headers })
-                ]);
-
-                if (uRes.ok) setUsers(await uRes.json());
-                if (fRes.ok) setFriends(await fRes.json());
-                if (gRes.ok) setGroups(await gRes.json());
-
-            } catch (err) {
-                console.error("Failed to fetch chat data", err);
-            }
-        };
-        fetchData();
-    }, [token]);
-
-    // Fetch History
-    useEffect(() => {
-        const fetchHistory = async () => {
-            if (!token) return;
-            setMessages([]);
-
-            try {
-                let url = '/api/chat/history';
-                if (activeChat.type === 'private') {
-                    url += `?other_user_id=${activeChat.id}`;
-                } else if (activeChat.type === 'group') {
-                    url += `?group_id=${activeChat.id}`;
-                }
-
-                const res = await fetch(getApiUrl(url), {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    const history = await res.json();
-                    setMessages(history);
-                    // Mark fetched messages as read (powers unread badges server-side)
-                    const unreadIds = history
-                        .filter(m => m && m.id && m.sender_id !== user?.id && !m.is_unsent)
-                        .map(m => m.id);
-                    if (unreadIds.length) {
-                        fetch(getApiUrl('/api/chat/read'), {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({ message_ids: unreadIds })
-                        }).catch(() => { });
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to fetch history", err);
-            }
-        };
-        fetchHistory();
-    }, [activeChat, token]);
-
-    // WebSocket Listeners (using global socket)
-    useEffect(() => {
-        if (!socket) return;
-
-        const handleMessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-
-                // Ignore call signaling (handled by context)
-                if (['call-request', 'call-response', 'offer', 'answer', 'ice-candidate'].includes(data.type)) return;
-
-                if (data.type === 'message' || !data.type) {
-                    const currentActive = activeChatRef.current;
-                    const isRelevant =
-                        (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
-                        (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
-                        (currentActive.type === 'group' && data.group_id === currentActive.id);
-
-                    if (isRelevant) {
-                        setMessages(prev => {
-                            if (prev.find(m => m.id === data.id)) return prev;
-                            return [...prev, data];
-                        });
-                    } else {
-                        // Background Notification Logic
-                        if (data.sender_id && !data.group_id) {
-                            setFriends(prev => prev.map(f => {
-                                if (f.id === data.sender_id) {
-                                    return { ...f, unread_count: (f.unread_count || 0) + 1, last_message: data.content };
-                                }
-                                return f;
-                            }));
-                        }
-                    }
-                } else if (data.type === 'message_update') {
-                    setMessages(prev => prev.map(msg =>
-                        msg.id === data.id
-                            ? { ...msg, ...data, content: "Message unsent" }
-                            : msg
-                    ));
-                }
-            } catch (e) {
-                console.error("WS Parse error", e);
-            }
-        };
-
-        socket.addEventListener('message', handleMessage);
-
-        return () => {
-            socket.removeEventListener('message', handleMessage);
-        };
-    }, [socket, activeChat, token]);
-
-    // Auto-scroll
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    // Real Vibe Check: analyze the active conversation (debounced on new messages)
-    useEffect(() => {
-        if (!token) return;
-        const t = setTimeout(async () => {
-            setVibe(v => ({ ...v, loading: true }));
-            try {
-                let url = '/api/chat/vibe';
-                if (activeChat.type === 'private') url += `?other_user_id=${activeChat.id}`;
-                else if (activeChat.type === 'group') url += `?group_id=${activeChat.id}`;
-                const res = await fetch(getApiUrl(url), { headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) {
-                    const data = await res.json();
-                    setVibe({ score: data.score, status: data.status, loading: false });
-                } else {
-                    setVibe(v => ({ ...v, loading: false }));
-                }
-            } catch {
-                setVibe(v => ({ ...v, loading: false }));
-            }
-        }, 800);
-        return () => clearTimeout(t);
-    }, [activeChat, messages.length, token]);
-
-
-    // Polling (Fallback when WS is disconnected)
-    useEffect(() => {
-        if (!token || isConnected) return;
-
-        const pollMessages = async () => {
-            if (!activeChat.id && activeChat.type !== 'global') return;
-
-            try {
-                let url = '/api/chat/history';
-                if (activeChat.type === 'private') {
-                    url += `?other_user_id=${activeChat.id}`;
-                } else if (activeChat.type === 'group') {
-                    url += `?group_id=${activeChat.id}`;
-                }
-
-                const res = await fetch(getApiUrl(url), {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const freshMsgs = await res.json();
-                    if (Array.isArray(freshMsgs)) {
-                        setMessages(prev => {
-                            const lastPrev = prev[prev.length - 1];
-                            const lastNew = freshMsgs[freshMsgs.length - 1];
-                            if (!lastPrev || !lastNew || lastPrev.id !== lastNew.id || prev.length !== freshMsgs.length) {
-                                return freshMsgs;
-                            }
-                            return prev;
-                        });
-                    }
-                }
-            } catch (e) { console.error("Poll err", e); }
-        };
-
-        const intervalId = setInterval(pollMessages, 5000);
-        return () => clearInterval(intervalId);
-    }, [activeChat, token, isConnected]);
-
-    const startCall = (isVideo) => {
-        if (!isConnected) {
-            alert("Chat service disconnected. Please wait for reconnection.");
-            return;
-        }
-        if (activeChat.type !== 'private') return;
-        startCallContext(activeChat.data, isVideo);
-    };
-
-    const sendMessage = async () => {
-        if (!inputValue.trim()) return;
-
-        try {
-            const body = {
-                content: inputValue,
-                receiver_id: activeChat.type === 'private' ? activeChat.id : null,
-                group_id: activeChat.type === 'group' ? activeChat.id : null
-            };
-
-            const res = await fetch(getApiUrl('/api/chat/send'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(body)
-            });
-
-            if (!res.ok) {
-                if (res.status === 401) {
-                    alert("Session expired. Please log in again.");
-                    // Force logout or redirect
-                    // Since we have logout from useAuth(), let's use it? 
-                    // But logout() is not destructured in the first line of Chat component yet.
-                    // Let's reload to be safe and force auth check
-                    window.location.href = '/login';
-                    return;
-                }
-
-                let errorMsg = "Failed to send message";
-                try {
-                    const err = await res.json();
-                    errorMsg = (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail)) || errorMsg;
-                } catch (jsonErr) {
-                    const text = await res.text();
-                    console.error("Non-JSON error response:", text);
-                    errorMsg = `Server Error: ${res.status}`;
-                }
-                alert(errorMsg);
-                return;
-            }
-
-            const sentMsg = await res.json();
-            setMessages(prev => {
-                if (prev.find(m => m.id === sentMsg.id)) return prev;
-                return [...prev, sentMsg];
-            });
-            setInputValue('');
-
-        } catch (err) {
-            console.error("HTTP Send failed", err);
-            alert("Connection error: " + err.message);
-        }
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') sendMessage();
-    };
-
-    const handleAiAssist = async () => {
-        if (!inputValue.trim()) return;
-        setIsAiLoading(true);
-        try {
-            const res = await fetch(getApiUrl('/api/chat/assist'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ text: inputValue })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.improved_text) {
-                    setInputValue(data.improved_text);
-                }
-            } else {
-                toast.error('AI assist unavailable right now');
-            }
-        } catch (err) {
-            console.error("AI Assist failed", err);
-            toast.error('AI assist unavailable right now');
-        } finally {
-            setIsAiLoading(false);
-        }
-    };
-
-    const handleGroupCreated = (newGroup) => {
-        setGroups(prev => [...prev, newGroup]);
-        setActiveChat({ type: 'group', id: newGroup.id, data: newGroup });
-    };
-
-    const handleDeleteMessage = async (msgId, mode) => {
-        try {
-            await fetch(getApiUrl(`/api/chat/messages/${msgId}?mode=${mode}`), {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (mode === 'me') {
-                setMessages(prev => prev.filter(m => m.id !== msgId));
-            }
-        } catch (err) {
-            console.error("Delete failed", err);
-        }
-    };
-
-    if (!user) return <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>;
-
-    return (
+jsx_code = r'''    return (
         <div className="flex h-full w-full bg-white overflow-hidden text-slate-900 font-sans">
             
             {/* MIDDLE PANE (Chat List) */}
-            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[320px] lg:w-[340px] flex-col border-r border-slate-200 bg-slate-50 shrink-0`}>
+            <div className={\ w-full md:w-[320px] lg:w-[340px] flex-col border-r border-slate-200 bg-slate-50 shrink-0}>
                 <div className="p-4 bg-white border-b border-slate-200">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold text-slate-900">Chats</h2>
@@ -393,8 +30,8 @@ export default function Chat() {
                     {groups.map(g => {
                         const isActive = activeChat.type === 'group' && activeChat.id === g.id;
                         return (
-                            <Link key={`g-${g.id}`} to={`/chats/group/${g.id}`}
-                                className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive ? 'bg-blue-50 border-l-[3px] border-blue-600' : 'hover:bg-slate-100 border-l-[3px] border-transparent'}`}
+                            <Link key={g-\} to={/chats/group/\}
+                                className={lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \}
                             >
                                 <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0 text-lg">
                                     <Users size={20} />
@@ -414,11 +51,11 @@ export default function Chat() {
                     {friends.map(f => {
                         const isActive = activeChat.type === 'private' && activeChat.id === f.id;
                         return (
-                            <Link key={`f-${f.id}`} to={`/chats/${f.id}`}
-                                className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive ? 'bg-blue-50 border-l-[3px] border-blue-600' : 'hover:bg-slate-100 border-l-[3px] border-transparent'}`}
+                            <Link key={-\} to={/chats/\}
+                                className={lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \}
                             >
                                 <div className="relative flex-shrink-0">
-                                    <img src={f.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.username}`} className="w-12 h-12 rounded-full object-cover border border-slate-200" />
+                                    <img src={f.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\} className="w-12 h-12 rounded-full object-cover border border-slate-200" />
                                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -436,7 +73,7 @@ export default function Chat() {
             </div>
 
             {/* MAIN PANE */}
-            <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col relative bg-white border-r border-slate-200 min-w-0`}>
+            <div className={\ flex-1 flex-col relative bg-white border-r border-slate-200 min-w-0}>
                 
                 {activeChat.type ? (
                     <>
@@ -450,7 +87,7 @@ export default function Chat() {
                                 {activeChat.type === 'private' ? (
                                     <>
                                         <div className="relative hidden sm:block">
-                                            <img src={activeChat.data?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data?.username}`} className="w-10 h-10 rounded-full object-cover" />
+                                            <img src={activeChat.data?.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\} className="w-10 h-10 rounded-full object-cover" />
                                             <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                                         </div>
                                         <div>
@@ -488,7 +125,7 @@ export default function Chat() {
                             {activeChat.type === 'group' && (
                                 <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-md p-3 rounded-xl border border-blue-100 mb-6 flex items-start justify-between shadow-sm">
                                     <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 text-blue-600">📌</div>
+                                        <div className="mt-0.5 text-blue-600">??</div>
                                         <div>
                                             <p className="text-xs font-bold text-slate-900">Pinned Message</p>
                                             <p className="text-xs text-slate-600 font-medium">Project deadline: 30th June 2026 | Please update your tasks by EOD.</p>
@@ -537,11 +174,11 @@ export default function Chat() {
                                     type="text"
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder={`Type a message to ${activeChat.data?.username || activeChat.data?.name || '...'}`}
+                                    placeholder={Type a message to \}
                                     className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm text-slate-800 placeholder-slate-400"
                                 />
 
-                                <button type="button" onClick={handleAiAssist} disabled={isAiLoading || !inputValue.trim()} className={`text-slate-400 hover:text-blue-600 transition-colors p-1 ${isAiLoading ? 'animate-pulse text-blue-400' : ''}`} title="AI Polish">
+                                <button type="button" onClick={handleAiAssist} disabled={isAiLoading || !inputValue.trim()} className={	ext-slate-400 hover:text-blue-600 transition-colors p-1 \} title="AI Polish">
                                     <Sparkles size={18} />
                                 </button>
                                 <button type="button" className="text-slate-400 hover:text-blue-600 transition-colors p-1 hidden sm:block"><Smile size={20} /></button>
@@ -575,7 +212,7 @@ export default function Chat() {
                             <button className="text-slate-400 hover:text-slate-900"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
                         </div>
                         <div className="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-2 border-white shadow-sm relative">
-                            <img src={activeChat.data?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data?.username}`} className="w-full h-full object-cover" />
+                            <img src={activeChat.data?.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\} className="w-full h-full object-cover" />
                         </div>
                         <h2 className="text-xl font-bold text-slate-900 leading-tight">{activeChat.data?.username}</h2>
                         <p className="text-xs font-bold text-green-600 flex items-center justify-center gap-1 mt-1 mb-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</p>
@@ -675,24 +312,24 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
     const showAvatar = !isOwn && (index === messages.length - 1 || messages[index + 1]?.sender_id !== message.sender_id);
 
     return (
-        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group mb-2 relative`}>
+        <div className={lex \ group mb-2 relative}>
             {!isOwn && (
                 <div className="w-8 h-8 flex-shrink-0 mr-3 flex items-end">
                     {showAvatar ? (
                         <img
-                            src={senderUser?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.sender_username}`}
+                            src={senderUser?.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\}
                             className="w-8 h-8 rounded-full object-cover border border-slate-200"
                             alt="avatar"
                         />
                     ) : <div className="w-8" />}
                 </div>
             )}
-            <div className={`max-w-[70%] relative flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+            <div className={max-w-[70%] relative flex flex-col \}>
                 {!isOwn && activeChatType !== 'private' && showAvatar && (
                     <span className="text-[11px] font-bold text-slate-500 mb-1 ml-1">{message.sender_username}</span>
                 )}
                 
-                <div className={`px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm ${isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 border border-slate-200/60 rounded-bl-sm whitespace-pre-wrap'}`}>
+                <div className={px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm \}>
                     {message.is_unsent ? (
                         <span className="italic opacity-60 text-sm flex items-center gap-1">Message unsent</span>
                     ) : (
@@ -700,7 +337,7 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
                     )}
                 </div>
                 
-                <div className={`text-[10px] mt-1 font-bold ${isOwn ? 'mr-1 text-blue-500 flex items-center gap-1' : 'ml-1 text-slate-400'}`}>
+                <div className={	ext-[10px] mt-1 font-bold \}>
                     {formatTime(message.created_at)} 
                     {isOwn && <CheckCircle2 size={10} className="text-blue-500" strokeWidth={3}/>}
                 </div>
@@ -708,3 +345,6 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
         </div>
     );
 }
+'''
+with open('frontend/src/pages/Chat_new.jsx', 'a', encoding='utf-8') as f:
+    f.write(jsx_code)

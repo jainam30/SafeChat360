@@ -53,7 +53,7 @@ const Login = () => {
         login(verifyData.access_token);
         navigate('/dashboard');
       } else {
-        throw new Error(verifyData.detail || "Login failed on server.");
+        throw new Error((typeof verifyData.detail === 'string' ? verifyData.detail : JSON.stringify(verifyData.detail)) || "Login failed on server.");
       }
     } catch (err) {
       console.error("Login Error:", err);
@@ -90,7 +90,7 @@ const Login = () => {
         // Create account if not exists or handle error
         // For now, we'll assume the backend handles it or we'd need a register endpoint. 
         // But let's stick to the current flow.
-        throw new Error(verifyData.detail || "Google Login failed.");
+        throw new Error((typeof verifyData.detail === 'string' ? verifyData.detail : JSON.stringify(verifyData.detail)) || "Google Login failed.");
       }
     } catch (error) {
       console.error(error);

@@ -124,7 +124,7 @@ const Register = () => {
           setTimeout(() => navigate('/login'), 1500);
         }
       } else {
-        toast.error(data.detail || 'Registration failed');
+        toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Registration failed');
       }
     } catch (err) {
       console.error("Registration Error:", err);
@@ -155,7 +155,7 @@ const Register = () => {
         login(verifyData.access_token);
         navigate('/dashboard');
       } else {
-        throw new Error(verifyData.detail || "Google Login failed.");
+        throw new Error((typeof verifyData.detail === 'string' ? verifyData.detail : JSON.stringify(verifyData.detail)) || "Google Login failed.");
       }
     } catch (error) {
       console.error(error);

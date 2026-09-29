@@ -191,7 +191,7 @@ const SocialFeed = () => {
                 fetchPosts();
             } else {
                 const data = await res.json();
-                alert(data.detail || "Failed to create post");
+                alert((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || "Failed to create post");
             }
         } catch (err) {
             console.error(err);
@@ -258,7 +258,7 @@ const SocialFeed = () => {
                 fetchPosts();
             } else {
                 const err = await res.json();
-                alert(err.detail || "Failed to update post");
+                alert((typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail)) || "Failed to update post");
             }
         } catch (err) {
             console.error(err);

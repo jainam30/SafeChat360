@@ -75,7 +75,7 @@ export default function AuthPage() {
           toast.success('Successfully logged in!');
           navigate('/dashboard');
         } else {
-          toast.error(data.detail || 'Login failed. Check credentials.');
+          toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Login failed. Check credentials.');
         }
       } else {
         const response = await fetch(getApiUrl('/api/auth/register'), {
@@ -95,7 +95,7 @@ export default function AuthPage() {
           toast.success('Account created! Please verify your email.');
           navigate('/verify-email', { state: { email: formData.email } });
         } else {
-          toast.error(data.detail || 'Registration failed');
+          toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Registration failed');
         }
       }
     } catch (err) {
