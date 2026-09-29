@@ -12,6 +12,7 @@ class APIException(Exception):
 
 async def custom_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled Exception: {str(exc)}", exc_info=True)
+    headers = {"Access-Control-Allow-Origin": request.headers.get("origin") or "*", "Access-Control-Allow-Credentials": "true"}
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -20,10 +21,12 @@ async def custom_exception_handler(request: Request, exc: Exception):
             "data": {},
             "meta": {},
             "errors": []
-        }
+        },
+        headers=headers
     )
 
 async def api_exception_handler(request: Request, exc: APIException):
+    headers = {"Access-Control-Allow-Origin": request.headers.get("origin") or "*", "Access-Control-Allow-Credentials": "true"}
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -32,5 +35,6 @@ async def api_exception_handler(request: Request, exc: APIException):
             "data": {},
             "meta": {},
             "errors": exc.errors
-        }
+        },
+        headers=headers
     )

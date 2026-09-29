@@ -23,14 +23,14 @@ def verify_password(plain_password: str, hashed_password: str) -> tuple[bool, bo
     
     is_valid = False
     
-    if pwd_context.verify(sha256_password, hashed_password):
-        is_valid = True
-    else:
-        try:
+    try:
+        if pwd_context.verify(sha256_password, hashed_password):
+            is_valid = True
+        else:
             if pwd_context.verify(plain_password, hashed_password):
                 is_valid = True
-        except Exception:
-            is_valid = False
+    except Exception:
+        is_valid = False
 
     needs_upgrade = False
     if is_valid and pwd_context.needs_update(hashed_password):

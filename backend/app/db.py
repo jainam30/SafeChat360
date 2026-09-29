@@ -12,6 +12,19 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 engine_args = {}
 if DATABASE_URL.startswith("sqlite"):
     engine_args["connect_args"] = {"check_same_thread": False}
+else:
+    # Production PostgreSQL pooling settings
+    engine_args["pool_pre_ping"] = True
+    engine_args["pool_size"] = 10
+    engine_args["max_overflow"] = 20
+    engine_args["pool_recycle"] = 300 # Recycle connections every 5 mins
+    # connect_args for postgres
+    engine_args["connect_args"] = {
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5
+    }
 
 engine = create_engine(
     DATABASE_URL,
