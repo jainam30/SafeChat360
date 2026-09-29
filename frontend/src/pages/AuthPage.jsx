@@ -1,534 +1,356 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import styled, { keyframes } from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { getApiUrl } from '../config';
-import { auth } from '../firebase';
-import {
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    GoogleAuthProvider,
-    signInWithPopup
-} from 'firebase/auth';
-import { parsePhoneNumber } from 'libphonenumber-js';
-import { User, Phone, Globe } from 'lucide-react';
-import logoImg from '../assets/safechat_logo.png';
 
-const rotate = keyframes`
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-`;
+export default function AuthPage() {
+  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-const AuthPage = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { login } = useAuth();
+  // Form State
+  const [formData, setFormData] = useState({
+    fullName: '',
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeTerms: false
+  });
 
-    // Determine mode based on URL
-    const isLogin = location.pathname === '/login';
-
-    // State
-    const [loading, setLoading] = useState(false);
-
-    // Login States
-    const [loginEmail, setLoginEmail] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
-    const [showLoginPassword, setShowLoginPassword] = useState(false);
-
-    // Register States
-    const [regEmail, setRegEmail] = useState('');
-    const [regPassword, setRegPassword] = useState('');
-    const [regConfirmPassword, setRegConfirmPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [countryCode, setCountryCode] = useState('+91');
-
-    const borderColor = isLogin ? '#2d79f3' : '#9d00ff';
-
-    const COUNTRY_CODES = [
-        { code: '+91', country: 'India' },
-        { code: '+1', country: 'USA/Canada' },
-        { code: '+44', country: 'UK' },
-        { code: '+61', country: 'Australia' },
-        { code: '+81', country: 'Japan' },
-        { code: '+49', country: 'Germany' },
-        { code: '+33', country: 'France' },
-        { code: '+86', country: 'China' },
-        { code: '+7', country: 'Russia' },
-        { code: '+971', country: 'UAE' },
-        { code: '+65', country: 'Singapore' },
-    ];
-
-    const handleLoginSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        if (!loginEmail) {
-            toast.error('Please enter a valid email');
-            setLoading(false); return;
-        }
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
-            const token = await userCredential.user.getIdToken();
-            const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
-            });
-            const verifyData = await verifyRes.json();
-            if (verifyRes.ok && verifyData.access_token) {
-                toast.success("Login successful!");
-                login(verifyData.access_token);
-                navigate('/dashboard');
-            } else {
-                throw new Error(verifyData.detail || "Login failed on server.");
-            }
-        } catch (err) {
-            console.error(err);
-            let msg = err.message;
-            if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') msg = "Invalid email or password.";
-            toast.error(msg);
-        } finally { setLoading(false); }
-    };
-
-    const handleRegisterSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        const fullPhoneNumber = countryCode + phoneNumber.trim();
-        if (!phoneNumber.trim()) { toast.error('Please enter mobile number.'); setLoading(false); return; }
-
-        try {
-            // Phone Validation
-            try {
-                const parsedNumber = parsePhoneNumber(fullPhoneNumber);
-                if (!parsedNumber || !parsedNumber.isValid()) throw new Error('Invalid Phone');
-            } catch (e) { toast.error('Invalid Phone Number'); setLoading(false); return; }
-
-            if (regPassword.length < 6) { toast.error('Password min 6 chars.'); setLoading(false); return; }
-            if (regPassword !== regConfirmPassword) { toast.error('Passwords do not match.'); setLoading(false); return; }
-
-            // Firebase Create
-            let userCredential;
-            try {
-                userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPassword);
-            } catch (firebaseErr) {
-                if (firebaseErr.code === 'auth/email-already-in-use') {
-                    toast.success("Account exists! Redirecting...");
-                    setTimeout(() => navigate('/login'), 2000);
-                    return;
-                }
-                throw firebaseErr;
-            }
-
-            // Backend Register
-            const token = await userCredential.user.getIdToken();
-            const res = await fetch(getApiUrl('/api/auth/register'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: regEmail,
-                    username,
-                    phone_number: fullPhoneNumber,
-                    password: regPassword,
-                    full_name: fullName,
-                    firebase_token: token
-                }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-                toast.success('Registration successful! Login you in...');
-                if (data.data?.access_token) {
-                    login(data.data.access_token);
-                    navigate('/dashboard');
-                } else { navigate('/login'); }
-            } else { toast.error(data.detail || 'Registration failed'); }
-
-        } catch (err) {
-            console.error(err);
-            toast.error(err.message);
-        } finally { setLoading(false); }
-    };
-
-    const handleGoogleLogin = async () => {
-        try {
-            const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
-            const token = await result.user.getIdToken();
-            const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
-            });
-            const verifyData = await verifyRes.json();
-            if (verifyRes.ok && verifyData.access_token) {
-                toast.success("Google Login successful!");
-                login(verifyData.access_token);
-                navigate('/dashboard');
-            } else { throw new Error(verifyData.detail || "Google Login failed."); }
-        } catch (e) { console.error(e); toast.error("Google sign in failed"); }
-    };
-
-    // Animation Variants
-    const variants = {
-        enter: (direction) => ({
-            x: direction > 0 ? 300 : -300,
-            opacity: 0
-        }),
-        center: {
-            zIndex: 1,
-            x: 0,
-            opacity: 1
-        },
-        exit: (direction) => ({
-            zIndex: 0,
-            x: direction < 0 ? 300 : -300,
-            opacity: 0
-        })
-    };
-
-    // 1 for Login -> Register (Right to Left), -1 for Register -> Login
-    const direction = isLogin ? -1 : 1;
-
-    return (
-        <PageContainer>
-            <div style={{ width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 'auto' }}>
-                <div className={`logo-container`} style={{ marginBottom: '30px', zIndex: 2, display: 'flex', justifyContent: 'center', width: '100%' }}>
-                    <Link to="/" style={{ display: 'flex' }}>
-                        <motion.img
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            src={logoImg}
-                            alt="SafeChat360"
-                            style={{ height: '100px', width: '100px', borderRadius: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}
-                        />
-                    </Link>
-                </div>
-
-                <StyledWrapper $borderColor={borderColor}>
-                    <div className="card-wrapper">
-                        <motion.div
-                            className="form-container"
-                            layout // Smooth size transitions
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            style={{ width: '100%', maxWidth: '450px', backgroundColor: '#fff', borderRadius: '20px', overflow: 'hidden' }}
-                        >
-                            <AnimatePresence initial={false} mode='wait' custom={direction}>
-                                {isLogin ? (
-                                    <motion.form
-                                        key="login"
-                                        custom={direction}
-                                        variants={variants}
-                                        initial="enter"
-                                        animate="center"
-                                        exit="exit"
-                                        transition={{
-                                            x: { type: "spring", stiffness: 300, damping: 30 },
-                                            opacity: { duration: 0.2 }
-                                        }}
-                                        className="form-content"
-                                        onSubmit={handleLoginSubmit}
-                                    >
-                                        {/* LOGIN FORM CONTENT */}
-                                        <h2 className="text-center font-bold text-xl mb-4 text-black">Welcome Back</h2>
-
-                                        <div className="flex-column"><label>Email</label></div>
-                                        <div className="inputForm">
-                                            <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg"><g id="Layer_3"><path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" /></g></svg>
-                                            <input type="text" className="input" placeholder="Enter your Email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
-                                        </div>
-
-                                        <div className="flex-column"><label>Password</label></div>
-                                        <div className="inputForm">
-                                            <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
-                                            <input type={showLoginPassword ? "text" : "password"} className="input" placeholder="Enter your Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
-                                            <svg viewBox="0 0 576 512" height="1em" onClick={() => setShowLoginPassword(!showLoginPassword)} style={{ cursor: 'pointer', fill: showLoginPassword ? '#2d79f3' : 'black' }}><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM144 256a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm144-64c0 35.3-28.7 64-64 64c-7.1 0-13.9-1.2-20.3-3.3c-5.5-1.8-11.9 1.6-11.7 7.4c.3 6.9 1.3 13.8 3.2 20.7c13.7 51.2 66.4 81.6 117.6 67.9s81.6-66.4 67.9-117.6c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.2 6.1-7.4 11.7c2.1 6.4 3.3 13.2 3.3 20.3z" /></svg>
-                                        </div>
-
-                                        <div className="flex-row">
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                <input type="checkbox" id="remember" />
-                                                <label htmlFor="remember">Remember me</label>
-                                            </div>
-                                            <span className="span" onClick={() => navigate('/forgot-password')}>Forgot password?</span>
-                                        </div>
-
-                                        <button className="button-submit" type="submit" disabled={loading}>{loading ? 'Signing In...' : 'Sign In'}</button>
-
-                                        <div className="flex-row" style={{ justifyContent: 'center', marginTop: '10px' }}>
-                                            <p className="p">Don't have an account?</p>
-                                            {/* Use replace to keep history clean or push to animate */}
-                                            <span className="span" onClick={() => navigate('/register')}>Sign Up</span>
-                                        </div>
-                                        <p className="p line">Or With</p>
-                                        {googleAndAppleButtons(handleGoogleLogin)}
-                                    </motion.form>
-                                ) : (
-                                    <motion.form
-                                        key="register"
-                                        custom={direction}
-                                        variants={variants}
-                                        initial="enter"
-                                        animate="center"
-                                        exit="exit"
-                                        transition={{
-                                            x: { type: "spring", stiffness: 300, damping: 30 },
-                                            opacity: { duration: 0.2 }
-                                        }}
-                                        className="form-content"
-                                        onSubmit={handleRegisterSubmit}
-                                    >
-                                        {/* REGISTER FORM CONTENT */}
-                                        <h2 className="text-center font-bold text-xl mb-4 text-black">Create Account</h2>
-
-                                        <div className="flex-column"><label>Full Name</label></div>
-                                        <div className="inputForm">
-                                            <User size={20} color="black" />
-                                            <input type="text" className="input" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                                        </div>
-
-                                        <div className="flex-column"><label>Username</label></div>
-                                        <div className="inputForm">
-                                            <User size={20} color="black" />
-                                            <input type="text" className="input" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-                                        </div>
-
-                                        <div className="flex-column"><label>Email</label></div>
-                                        <div className="inputForm">
-                                            <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg"><g id="Layer_3"><path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" /></g></svg>
-                                            <input type="email" className="input" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
-                                        </div>
-
-                                        <div className="flex-column"><label>Phone Number</label></div>
-                                        <div className="inputForm">
-                                            <div style={{ display: 'flex', alignItems: 'center', borderRight: '1px solid #ddd', paddingRight: '5px', marginRight: '5px' }}>
-                                                <Globe size={16} color="black" style={{ marginRight: '5px' }} />
-                                                <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '14px', outline: 'none', width: '60px' }}>
-                                                    {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                                                </select>
-                                            </div>
-                                            <Phone size={18} color="black" />
-                                            <input type="tel" className="input" placeholder="9876543210" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} style={{ width: '60%' }} required />
-                                        </div>
-
-                                        <div className="flex-column"><label>Password</label></div>
-                                        <div className="inputForm">
-                                            <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
-                                            <input type="password" className="input" placeholder="Create Password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
-                                        </div>
-
-                                        <div className="flex-column"><label>Confirm</label></div>
-                                        <div className="inputForm">
-                                            <svg height={20} viewBox="-64 0 512 512" width={20} xmlns="http://www.w3.org/2000/svg"><path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0" /><path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0" /></svg>
-                                            <input type="password" className="input" placeholder="Confirm" value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} required />
-                                        </div>
-
-                                        <button className="button-submit" type="submit" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>
-
-                                        <div className="flex-row" style={{ justifyContent: 'center', marginTop: '10px' }}>
-                                            <p className="p">Already have an account?</p>
-                                            <span className="span" onClick={() => navigate('/login')}>Sign In</span>
-                                        </div>
-                                        <p className="p line">Or With</p>
-                                        {googleAndAppleButtons(handleGoogleLogin)}
-                                    </motion.form>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    </div>
-                </StyledWrapper>
-            </div>
-        </PageContainer>
-    );
-};
-
-const googleAndAppleButtons = (googleHandler) => (
-    <div className="flex-row">
-        <button type="button" className="btn google" onClick={googleHandler}>
-            <svg version="1.1" width={20} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path style={{ fill: '#FBBB00' }} d="M113.47,309.408L95.648,375.94l-65.139,1.378C11.042,341.211,0,299.9,0,256c0-42.451,10.324-82.483,28.624-117.732h0.014l57.992,10.632l25.404,57.644c-5.317,15.501-8.215,32.141-8.215,49.456C103.821,274.792,107.225,292.797,113.47,309.408z" /><path style={{ fill: '#518EF8' }} d="M507.527,208.176C510.467,223.662,512,239.655,512,256c0,18.328-1.927,36.206-5.598,53.451c-12.462,58.683-45.025,109.925-90.134,146.187l-0.014-0.014l-73.044-3.727l-10.338-64.535c29.932-17.554,53.324-45.025,65.646-77.911h-136.89V208.176h138.887L507.527,208.176L507.527,208.176z" /><path style={{ fill: '#28B446' }} d="M416.253,455.624l0.014,0.014C372.396,490.901,316.666,512,256,512c-97.491,0-182.252-54.491-225.491-134.681l82.961-67.91c21.619,57.698,77.278,98.771,142.53,98.771c28.047,0,54.323-7.582,76.87-20.818L416.253,455.624z" /><path style={{ fill: '#F14336' }} d="M419.404,58.936l-82.933,67.896c-23.335-14.586-50.919-23.012-80.471-23.012c-66.729,0-123.429,42.957-143.965,102.724l-83.397-68.276h-0.014C71.23,56.123,157.06,0,256,0C318.115,0,375.068,22.126,419.404,58.936z" /></svg>
-            Google
-        </button>
-        <button type="button" className="btn apple" onClick={() => toast('Apple Login coming soon')}>
-            <svg version="1.1" height={20} width={20} viewBox="0 0 22.773 22.773"><g><g><path d="M15.769,0c0.053,0,0.106,0,0.162,0c0.13,1.606-0.483,2.806-1.228,3.675c-0.731,0.863-1.732,1.7-3.351,1.573c-0.108-1.583,0.506-2.694,1.25-3.561C13.292,0.879,14.557,0.16,15.769,0z" /><path d="M20.67,16.716c0,0.016,0,0.03,0,0.045c-0.455,1.378-1.104,2.559-1.896,3.655c-0.723,0.995-1.609,2.334-3.191,2.334c-1.367,0-2.275-0.879-3.676-0.903c-1.482-0.024-2.297,0.735-3.652,0.926c-0.155,0-0.31,0-0.462,0c-0.995-0.144-1.798-0.932-2.383-1.642c-1.725-2.098-3.058-4.808-3.306-8.276c0-0.34,0-0.679,0-1.019c0.105-2.482,1.311-4.5,2.914-5.478c0.846-0.52,2.009-0.963,3.304-0.765c0.555,0.086,1.122,0.276,1.619,0.464c0.471,0.181,1.06,0.502,1.618,0.485c0.378-0.011,0.754-0.208,1.135-0.347c1.116-0.403,2.21-0.865,3.652-0.648c1.733,0.262,2.963,1.032,3.723,2.22c-1.466,0.933-2.625,2.339-2.427,4.74C17.818,14.688,19.086,15.964,20.67,16.716z" /></g></g></svg>
-            Apple
-        </button>
-    </div>
-);
-
-const PageContainer = styled.div`
-  height: 100dvh; /* Fixed height to match viewport */
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  /* margin: auto on key child centers it */
-  background-color: #1a1a2e;
-  overflow-y: auto; /* Allow internal scrolling if needed */
-  overflow-x: hidden;
-  padding: 20px; /* Minimal padding to prevent edge touches */
-`;
-
-const StyledWrapper = styled.div`
-  .card-wrapper {
-    position: relative;
-    border-radius: 24px;
-    padding: 3px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 20px;
-    /* Removed overflow: hidden from here to prevent clipping spring animations if needed, 
-       but keeping it might be cleaner for border. The motion.div inside handles overflow. */
-  }
-
-  .card-wrapper::before {
-    content: '';
-    position: absolute;
-    width: 250%; 
-    height: 250%;
-    left: -75%;
-    top: -75%;
-    background: conic-gradient(
-      transparent 0deg, 
-      transparent 320deg, 
-      ${props => props.$borderColor} 330deg, 
-      ${props => props.$borderColor} 360deg
-    );
-    animation: ${rotate} 4s linear infinite;
-    z-index: 0;
-  }
-
-  .card-wrapper::after {
-    content: '';
-    position: absolute;
-    inset: 3px;
-    background: #ffffff;
-    border-radius: 20px;
-    z-index: 0;
-  }
-
-  /* The motion.div acts as the form container */
-  .form-content {
-    position: relative;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 30px;
-    background-color: #fff;
-    width: 100%;
-    /* No fixed width here, parent sets mix/max */
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  }
-
-  @media (max-width: 480px) {
-    .form-content {
-      padding: 20px;
+  // Switch between login and register based on pathname
+  React.useEffect(() => {
+    if (location.pathname === '/register') {
+      setIsLogin(false);
+    } else {
+      setIsLogin(true);
     }
-  }
+  }, [location.pathname]);
 
-  .flex-column > label {
-    color: #151717;
-    font-weight: 600;
-  }
+  const toggleAuthMode = () => {
+    navigate(isLogin ? '/register' : '/login');
+  };
 
-  .inputForm {
-    border: 1.5px solid #ecedec;
-    border-radius: 10px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    padding-left: 10px;
-    transition: 0.2s ease-in-out;
-  }
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
 
-  .input {
-    margin-left: 10px;
-    border-radius: 10px;
-    border: none;
-    width: 85%;
-    height: 100%;
-    outline: none;
-    background-color: transparent;
-    color: #151717;
-    font-size: 15px;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (!isLogin && !formData.agreeTerms) {
+      toast.error('You must agree to the Terms of Service');
+      return;
+    }
 
-  .inputForm:focus-within {
-    border: 1.5px solid ${props => props.$borderColor};
-  }
+    setLoading(true);
+    try {
+      if (isLogin) {
+        await login(formData.email, formData.password);
+        toast.success('Successfully logged in!');
+        navigate('/dashboard');
+      } else {
+        const response = await fetch(getApiUrl('/api/auth/register'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            username: formData.username,
+            full_name: formData.fullName
+          })
+        });
 
-  .button-submit {
-    margin: 15px 0 10px 0;
-    background-color: #151717;
-    border: none;
-    color: white;
-    font-size: 15px;
-    font-weight: 500;
-    border-radius: 10px;
-    height: 50px;
-    width: 100%;
-    cursor: pointer;
-    transition: 0.2s ease-in-out;
-  }
+        const data = await response.json();
+        
+        if (response.ok) {
+          toast.success('Account created! Please verify your email.');
+          navigate('/verify-email', { state: { email: formData.email } });
+        } else {
+          toast.error(data.detail || 'Registration failed');
+        }
+      }
+    } catch (err) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  .button-submit:hover {
-    background-color: #252727;
-  }
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Header */}
+      <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold text-slate-900 tracking-tight">SafeChat<span className="text-blue-600">360</span></span>
+        </div>
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <a href="/" className="hover:text-blue-600">Home</a>
+          <a href="#" className="hover:text-blue-600">Features</a>
+          <a href="#" className="hover:text-blue-600">Security</a>
+          <a href="#" className="hover:text-blue-600">Pricing</a>
+          <a href="/help" className="hover:text-blue-600">Help</a>
+        </nav>
+        <div className="flex items-center gap-4">
+          {!isLogin && <button onClick={() => navigate('/login')} className="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-lg bg-white shadow-sm">Log in</button>}
+          {isLogin && <button onClick={() => navigate('/register')} className="text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-lg">Create account</button>}
+        </div>
+      </header>
 
-  .button-submit:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
+      {/* Main Layout */}
+      <div className="flex-1 flex w-full max-w-7xl mx-auto pt-24 px-6 gap-12 lg:gap-24">
+        
+        {/* Left Side: Marketing Copy */}
+        <div className="hidden lg:flex flex-col justify-center w-1/2 relative pb-12">
+          <div className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-4 flex gap-3">
+            <span>Secure</span> • <span>Private</span> • <span>Always Yours</span>
+          </div>
+          
+          <h1 className="text-5xl font-extrabold text-slate-900 leading-tight mb-6">
+            {isLogin ? (
+              <>Conversations <br />that stay <span className="text-blue-600">yours.</span></>
+            ) : (
+              <>Join SafeChat<span className="text-blue-600">360</span></>
+            )}
+          </h1>
+          
+          <p className="text-lg text-slate-600 mb-10 max-w-md">
+            {isLogin ? 
+              "SafeChat360 gives you a secure and private space to chat, share and collaborate — with end-to-end encryption and complete control over your data." : 
+              "Create your account and start secure conversations with your friends, family or team. Your privacy comes first."
+            }
+          </p>
 
-  .flex-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    justify-content: space-between;
-  }
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">End-to-end encrypted</h3>
+                <p className="text-sm text-slate-500">Only you and the people you chat with can read your messages.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">Private group chats</h3>
+                <p className="text-sm text-slate-500">Connect and collaborate securely.</p>
+              </div>
+            </div>
+            {!isLogin && (
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">No unwanted tracking</h3>
+                  <p className="text-sm text-slate-500">No ads, no third-party access.</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Faded Laptop Illustration Placeholder */}
+          <div className="absolute -bottom-10 -right-20 w-[120%] opacity-20 pointer-events-none -z-10 bg-gradient-to-tr from-blue-100 to-transparent h-64 rounded-full blur-3xl"></div>
+        </div>
 
-  .flex-row > div > label {
-      font-size: 14px;
-      color: black;
-      font-weight: 400;
-  }
+        {/* Right Side: Auth Card */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center lg:justify-end py-12 z-10">
+          <div className="bg-white w-full max-w-md p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+            
+            <div className="flex justify-center mb-6">
+               <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                   <MessageCircle className="w-5 h-5 text-white" />
+                 </div>
+                 <span className="text-xl font-bold text-slate-900 tracking-tight">SafeChat<span className="text-blue-600">360</span></span>
+               </div>
+            </div>
 
-  .span {
-    font-size: 14px;
-    margin-left: 5px;
-    color: ${props => props.$borderColor};
-    font-weight: 500;
-    cursor: pointer;
-  }
+            <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">
+              {isLogin ? 'Welcome back' : 'Create your account'}
+            </h2>
+            <p className="text-sm text-slate-500 text-center mb-8">
+              {isLogin ? 'Sign in to continue to your secure space.' : 'Join a safer and more private chat experience.'}
+            </p>
 
-  .p {
-    text-align: center;
-    color: black;
-    font-size: 14px;
-    margin: 5px 0;
-  }
+            <form onSubmit={handleSubmit} className="space-y-5">
+              
+              {!isLogin && (
+                <div className="flex gap-4">
+                  <div className="w-1/2 space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700">Full name</label>
+                    <div className="relative">
+                      <input 
+                        type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} required
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                        placeholder="Enter your full name"
+                      />
+                      <Users className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                  <div className="w-1/2 space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700">Username</label>
+                    <div className="relative">
+                      <input 
+                        type="text" name="username" value={formData.username} onChange={handleInputChange} required
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                        placeholder="Choose a username"
+                      />
+                      <span className="text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium">@</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-   .btn {
-    margin-top: 10px;
-    width: 100%;
-    height: 50px;
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: 500;
-    gap: 10px;
-    border: 1px solid #ededef;
-    background-color: white;
-    cursor: pointer;
-    transition: 0.2s ease-in-out;
-  }
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">Email address</label>
+                <div className="relative">
+                  <input 
+                    type="email" name="email" value={formData.email} onChange={handleInputChange} required
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                    placeholder="you@example.com"
+                  />
+                  <svg className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 4 10 8 10-8"/></svg>
+                </div>
+              </div>
 
-  .btn:hover {
-    border: 1px solid ${props => props.$borderColor};
-  }
-`;
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">Password</label>
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleInputChange} required
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                    placeholder={isLogin ? "Enter your password" : "Create a strong password"}
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
-export default AuthPage;
+              {!isLogin && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700">Confirm password</label>
+                  <div className="relative">
+                    <input 
+                      type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} required
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                      placeholder="Confirm your password"
+                    />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isLogin ? (
+                <div className="flex items-center justify-between mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <div className="relative flex items-center justify-center">
+                      <input type="checkbox" className="peer sr-only" />
+                      <div className="w-4 h-4 border-2 border-slate-300 rounded bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
+                      <Check className="w-3 h-3 text-white absolute opacity-0 peer-checked:opacity-100 pointer-events-none" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 select-none">Remember me</span>
+                  </label>
+                  <button type="button" onClick={() => navigate('/forgot-password')} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                    Forgot password?
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3 mt-2">
+                  <label className="flex items-start gap-2 cursor-pointer group">
+                    <div className="relative flex items-center justify-center mt-0.5">
+                      <input type="checkbox" name="agreeTerms" checked={formData.agreeTerms} onChange={handleInputChange} className="peer sr-only" />
+                      <div className="w-4 h-4 border-2 border-slate-300 rounded bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
+                      <Check className="w-3 h-3 text-white absolute opacity-0 peer-checked:opacity-100 pointer-events-none" />
+                    </div>
+                    <span className="text-sm text-slate-600 leading-tight">
+                      I agree to the <a href="#" className="text-blue-600 font-medium hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 font-medium hover:underline">Privacy Policy</a>
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              <button 
+                type="submit" disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-[0_4px_14px_0_rgb(37,99,235,0.39)] transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-6"
+              >
+                {isLogin ? 'Sign in' : 'Create account'} 
+                {!loading && <span className="text-lg leading-none">→</span>}
+                {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+              </button>
+              
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-medium uppercase tracking-wider">OR</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              <button type="button" className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-3">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+              </button>
+
+              <div className="text-center mt-6">
+                <span className="text-sm text-slate-500">
+                  {isLogin ? "Don't have an account? " : "Already have an account? "}
+                </span>
+                <button type="button" onClick={toggleAuthMode} className="text-sm font-bold text-blue-600 hover:text-blue-700">
+                  {isLogin ? 'Create account' : 'Sign in'}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom Security Badge */}
+      <div className="absolute bottom-6 right-6 lg:right-24 hidden md:flex items-center gap-3 bg-green-50 px-4 py-3 rounded-xl border border-green-100">
+        <ShieldCheck className="w-6 h-6 text-green-600" />
+        <div>
+          <p className="text-sm font-bold text-green-800">Your data is protected with end-to-end encryption.</p>
+          <p className="text-xs text-green-600">We never read your messages.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Quick MessageCircle mock to avoid extra lucide-react imports if it's missing in some versions
+function MessageCircle(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+    </svg>
+  );
+}

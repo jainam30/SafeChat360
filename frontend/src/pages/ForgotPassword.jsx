@@ -1,232 +1,191 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import styled, { keyframes } from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { Lock, Mail, ShieldCheck, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { auth } from '../firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import logoImg from '../assets/safechat_logo.png';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { getApiUrl } from '../config';
 
-const rotate = keyframes`
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-`;
+export default function ForgotPassword() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-const ForgotPassword = () => {
-    const [email, setEmail] = useState('');
-    const [submitted, setSubmitted] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-
-    // Custom color for Forgot Password (Orange)
-    const borderColor = '#ffa500';
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-
-        try {
-            await sendPasswordResetEmail(auth, email);
-            setSubmitted(true);
-            toast.success('Password reset email sent!');
-        } catch (error) {
-            console.error("Reset Password Error:", error);
-            toast.error(error.message || 'Failed to send reset email');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <PageContainer>
-            <div className="flex-column" style={{ alignItems: 'center', marginBottom: '30px', zIndex: 2 }}>
-                <Link to="/">
-                    <img src={logoImg} alt="SafeChat360" style={{ height: '100px', width: '100px', borderRadius: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }} />
-                </Link>
-            </div>
-            <StyledWrapper $borderColor={borderColor}>
-                <div className="card-wrapper">
-                    <div className="form"> {/* Usage of logic inside the same styled container */}
-
-                        {!submitted ? (
-                            <>
-                                <h2 style={{ textAlign: 'center', color: '#151717', fontWeight: '700', marginBottom: '20px' }}>Reset Password</h2>
-
-                                <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <div className="flex-column">
-                                        <label>Email Address</label>
-                                    </div>
-                                    <div className="inputForm">
-                                        <svg height={20} viewBox="0 0 32 32" width={20} xmlns="http://www.w3.org/2000/svg">
-                                            <g id="Layer_3" data-name="Layer 3">
-                                                <path d="m30.853 13.87a15 15 0 0 0 -29.729 4.082 15.1 15.1 0 0 0 12.876 12.918 15.6 15.6 0 0 0 2.016.13 14.85 14.85 0 0 0 7.715-2.145 1 1 0 1 0 -1.031-1.711 13.007 13.007 0 1 1 5.458-6.529 2.149 2.149 0 0 1 -4.158-.759v-10.856a1 1 0 0 0 -2 0v1.726a8 8 0 1 0 .2 10.325 4.135 4.135 0 0 0 7.83.274 15.2 15.2 0 0 0 .823-7.455zm-14.853 8.13a6 6 0 1 1 6-6 6.006 6.006 0 0 1 -6 6z" />
-                                            </g>
-                                        </svg>
-                                        <input
-                                            type="email"
-                                            className="input"
-                                            placeholder="Enter your Email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-
-                                    <button className="button-submit" type="submit" disabled={loading}>
-                                        {loading ? 'Sending...' : 'Send Reset Link'}
-                                    </button>
-                                </form>
-                            </>
-                        ) : (
-                            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-                                <div style={{ color: '#28a745' }}>
-                                    <CheckCircle size={50} />
-                                </div>
-                                <h3 style={{ color: '#151717', fontSize: '20px', fontWeight: '600' }}>Check your email</h3>
-                                <p style={{ color: '#666', fontSize: '14px' }}>
-                                    We've sent password reset instructions to <br /><strong>{email}</strong>
-                                </p>
-                                <button className="button-submit" onClick={() => setSubmitted(false)} style={{ backgroundColor: 'transparent', border: '1.5px solid #ecedec', color: '#151717' }}>
-                                    Resend Email
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="flex-row" style={{ justifyContent: 'center', marginTop: '20px' }}>
-                            <span className="span" onClick={() => navigate('/login')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <ArrowLeft size={14} /> Back to Login
-                            </span>
-                        </div>
-
-                    </div>
-                </div>
-            </StyledWrapper>
-        </PageContainer>
-    );
-}
-
-const PageContainer = styled.div`
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #1a1a2e;
-`;
-
-const StyledWrapper = styled.div`
-  .card-wrapper {
-    position: relative;
-    border-radius: 24px;
-    padding: 3px;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 20px;
-  }
-
-  .card-wrapper::before {
-    content: '';
-    position: absolute;
-    width: 250%; 
-    height: 250%;
-    left: -75%;
-    top: -75%;
-    background: conic-gradient(
-      transparent 0deg, 
-      transparent 320deg, 
-      ${props => props.$borderColor} 330deg, 
-      ${props => props.$borderColor} 360deg
-    );
-    animation: ${rotate} 4s linear infinite;
-    z-index: 0;
-  }
-
-  .card-wrapper::after {
-    content: '';
-    position: absolute;
-    inset: 3px;
-    background: #ffffff;
-    border-radius: 20px;
-    z-index: 0;
-  }
-
-  .form {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background-color: #ffffff;
-    padding: 30px;
-    width: 100%;
-    max-width: 450px;
-    border-radius: 20px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  }
-  
-  @media (max-width: 480px) {
-    .form {
-      padding: 20px;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const response = await fetch(getApiUrl('/api/auth/forgot-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      // Always show success to prevent email enumeration, but backend decides if real
+      setSubmitted(true);
+      toast.success('Reset link sent if the email exists.');
+    } catch (err) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  .flex-column > label {
-    color: #151717;
-    font-weight: 600;
-  }
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Header */}
+      <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+          </div>
+          <span className="text-xl font-bold text-slate-900 tracking-tight">SafeChat<span className="text-blue-600">360</span></span>
+        </div>
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <a href="/" className="hover:text-blue-600">Home</a>
+          <a href="#" className="hover:text-blue-600">Features</a>
+          <a href="#" className="hover:text-blue-600">Security</a>
+          <a href="#" className="hover:text-blue-600">Pricing</a>
+          <a href="/help" className="hover:text-blue-600">About</a>
+        </nav>
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/login')} className="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-lg bg-white shadow-sm">Log in</button>
+          <button onClick={() => navigate('/register')} className="text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-lg">Create account</button>
+        </div>
+      </header>
 
-  .inputForm {
-    border: 1.5px solid #ecedec;
-    border-radius: 10px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    padding-left: 10px;
-    transition: 0.2s ease-in-out;
-  }
+      {/* Main Layout */}
+      <div className="flex-1 flex w-full max-w-7xl mx-auto pt-24 px-6 gap-12 lg:gap-24">
+        
+        {/* Left Side: Marketing Copy */}
+        <div className="hidden lg:flex flex-col justify-center w-1/2 relative pb-12">
+          <div className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-4 flex gap-3">
+            <span>Secure</span> • <span>Private</span> • <span>Always Yours</span>
+          </div>
+          
+          <h1 className="text-5xl font-extrabold text-slate-900 leading-[1.1] mb-6">
+            Reset your password, <br />stay <span className="text-blue-600">in control.</span>
+          </h1>
+          
+          <p className="text-lg text-slate-600 mb-10 max-w-md">
+            Forgot your password? No worries. We'll help you get back to your SafeChat360 account securely and quickly.
+          </p>
 
-  .input {
-    margin-left: 10px;
-    border-radius: 10px;
-    border: none;
-    width: 85%;
-    height: 100%;
-    outline: none;
-    background-color: transparent;
-    color: #151717;
-    font-size: 15px;
-  }
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">Secure reset process</h3>
+                <p className="text-sm text-slate-500">Your information is always protected.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">Quick and easy</h3>
+                <p className="text-sm text-slate-500">Receive a secure link on your email.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">Same level of security</h3>
+                <p className="text-sm text-slate-500">End-to-end encrypted, always.</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Faded Laptop Illustration Placeholder */}
+          <div className="absolute -bottom-10 -right-20 w-[120%] opacity-20 pointer-events-none -z-10 bg-gradient-to-tr from-blue-100 to-transparent h-64 rounded-full blur-3xl"></div>
+        </div>
 
-  .inputForm:focus-within {
-    border: 1.5px solid ${props => props.$borderColor};
-  }
+        {/* Right Side: Auth Card */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center lg:justify-end py-12 z-10">
+          <div className="bg-white w-full max-w-md p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+            
+            <div className="flex justify-center mb-6">
+               <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                   <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                 </div>
+                 <span className="text-xl font-bold text-slate-900 tracking-tight">SafeChat<span className="text-blue-600">360</span></span>
+               </div>
+            </div>
 
-  .button-submit {
-    margin: 10px 0;
-    background-color: #151717;
-    border: none;
-    color: white;
-    font-size: 15px;
-    font-weight: 500;
-    border-radius: 10px;
-    height: 50px;
-    width: 100%;
-    cursor: pointer;
-    transition: 0.2s ease-in-out;
-  }
+            <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Forgot your password?</h2>
+            <p className="text-sm text-slate-500 text-center mb-8 px-4">
+              {submitted 
+                ? "If an account exists, a reset link has been sent to your email." 
+                : "No worries! Enter your email address and we'll send you a secure link to reset your password."}
+            </p>
 
-  .button-submit:hover {
-    background-color: #252727;
-  }
+            {!submitted ? (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700">Email address</label>
+                  <div className="relative">
+                    <input 
+                      type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                      placeholder="you@example.com"
+                    />
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
 
-  .span {
-    font-size: 14px;
-    color: ${props => props.$borderColor};
-    font-weight: 500;
-    cursor: pointer;
-  }
-`;
+                <button 
+                  type="submit" disabled={loading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-[0_4px_14px_0_rgb(37,99,235,0.39)] transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-6"
+                >
+                  Send reset link {!loading && <span className="text-lg leading-none">→</span>}
+                  {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                </button>
+                
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-medium uppercase tracking-wider">OR</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
 
-export default ForgotPassword;
+                <button type="button" className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-3">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  Continue with Google
+                </button>
+
+                <div className="text-center mt-6">
+                  <button type="button" onClick={() => navigate('/login')} className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1.5 mx-auto">
+                    <ArrowLeft className="w-4 h-4" /> Back to login
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="text-center mt-2">
+                <button type="button" onClick={() => navigate('/login')} className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1.5 mx-auto px-6 py-2.5 bg-blue-50 rounded-xl">
+                  <ArrowLeft className="w-4 h-4" /> Return to Login
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom Security Badge */}
+      <div className="absolute bottom-6 right-6 lg:right-24 hidden md:flex items-center gap-3 bg-green-50 px-4 py-3 rounded-xl border border-green-100">
+        <ShieldCheck className="w-6 h-6 text-green-600" />
+        <div>
+          <p className="text-sm font-bold text-green-800">Your security matters.</p>
+          <p className="text-xs text-green-600">We'll never share your email with anyone.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
