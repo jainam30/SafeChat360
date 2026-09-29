@@ -4,10 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck, Check } from 'lucide-react';
 import { getApiUrl } from '../config';
-import { Phone } from 'lucide-react';
-import { auth } from '../firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { parsePhoneNumber } from 'libphonenumber-js';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,12 +15,10 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form State
-    const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     fullName: '',
     username: '',
     email: '',
-    phoneNumber: '',
-    countryCode: '+91',
     password: '',
     confirmPassword: '',
     agreeTerms: false
@@ -51,36 +45,6 @@ export default function AuthPage() {
     }));
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      setLoading(true);
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const token = await result.user.getIdToken();
-
-      const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
-      });
-
-      const verifyData = await verifyRes.json();
-
-      if (verifyRes.ok && verifyData.access_token) {
-        toast.success("Google Login successful!");
-        login(verifyData.access_token);
-        navigate('/dashboard');
-      } else {
-        throw new Error((typeof verifyData.detail === 'string' ? verifyData.detail : JSON.stringify(verifyData.detail)) || "Google Login failed.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Google sign in failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isLogin && formData.password !== formData.confirmPassword) {
@@ -89,11 +53,6 @@ export default function AuthPage() {
     }
     if (!isLogin && !formData.agreeTerms) {
       toast.error('You must agree to the Terms of Service');
-      return;
-    }
-    
-    if (!isLogin && formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long.');
       return;
     }
 
@@ -118,40 +77,6 @@ export default function AuthPage() {
           toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Login failed. Check credentials.');
         }
       } else {
-        const fullPhoneNumber = formData.countryCode + formData.phoneNumber.trim();
-        if (!formData.phoneNumber.trim()) {
-          toast.error('Please enter your mobile number.');
-          setLoading(false);
-          return;
-        }
-        try {
-          const parsedNumber = parsePhoneNumber(fullPhoneNumber);
-          if (!parsedNumber || !parsedNumber.isValid()) {
-            toast.error('Invalid Phone Number format.');
-            setLoading(false);
-            return;
-          }
-        } catch (parseError) {
-          toast.error('Invalid Phone Number format.');
-          setLoading(false);
-          return;
-        }
-
-        let firebaseUser;
-        let token;
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-          firebaseUser = userCredential.user;
-          token = await firebaseUser.getIdToken();
-        } catch (firebaseErr) {
-          if (firebaseErr.code === 'auth/email-already-in-use') {
-            toast.success("Account already exists! Redirecting to Login...");
-            setTimeout(() => navigate('/login'), 2000);
-            return;
-          }
-          throw new Error(firebaseErr.message);
-        }
-
         const response = await fetch(getApiUrl('/api/auth/register'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -159,22 +84,15 @@ export default function AuthPage() {
             email: formData.email,
             password: formData.password,
             username: formData.username,
-            full_name: formData.fullName,
-            phone_number: fullPhoneNumber,
-            firebase_token: token
+            full_name: formData.fullName
           })
         });
 
         const data = await response.json();
         
         if (response.ok) {
-          toast.success('Account created successfully!');
-          if (data.access_token) {
-            login(data.access_token);
-            navigate('/dashboard');
-          } else {
-            navigate('/login');
-          }
+          toast.success('Account created! Please verify your email.');
+          navigate('/verify-email', { state: { email: formData.email } });
         } else {
           toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Registration failed');
         }
@@ -406,7 +324,7 @@ export default function AuthPage() {
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              <button type="button" onClick={handleGoogleLogin} disabled={loading} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70">
+              <button type="button" className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-3">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
