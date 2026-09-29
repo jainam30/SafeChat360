@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Image, Bookmark, MessageSquare, Users, User, Clock, Image as ImageIcon, Bookmark, Search, Bell, Settings, Shield, HelpCircle, Cloud, AlertTriangle } from 'lucide-react';
+import { Home, MessageSquare, Users, User, Clock, Image as ImageIcon, Bookmark, Search, Bell, Settings, Shield, HelpCircle, Cloud, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 

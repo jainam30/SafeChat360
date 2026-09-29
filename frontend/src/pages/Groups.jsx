@@ -6,7 +6,7 @@ import {
     Users, Plus, Phone, Video, Search, MoreHorizontal, 
     Paperclip, Smile, Mic, Send, Lock, ArrowLeft,
     CheckCircle2, Edit2, FileText, Link as LinkIcon, 
-    Image as ImageIcon, Star, Settings, LogOut, ChartBar,
+    Image as ImageIcon, Star, Settings, LogOut, BarChart2,
     Pin
 } from 'lucide-react';
 import { formatTimeForUser } from '../utils/dateFormatter';
@@ -184,7 +184,7 @@ export default function Groups() {
                                 {msg.type === 'poll' && (
                                     <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm min-w-[300px]">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <ChartBar className="text-blue-600 w-5 h-5"/>
+                                            <BarChart2 className="text-blue-600 w-5 h-5"/>
                                             <h4 className="font-bold text-slate-900 text-sm">{msg.question}</h4>
                                         </div>
                                         <div className="space-y-2 mb-4">
@@ -235,7 +235,7 @@ export default function Groups() {
 
                         <button className="text-slate-400 hover:text-slate-600 transition-colors p-1 hidden sm:block"><Smile size={20} /></button>
                         <button className="text-slate-400 hover:text-slate-600 transition-colors px-1 font-bold text-xs hidden sm:block border border-slate-300 rounded mx-1">GIF</button>
-                        <button className="text-slate-400 hover:text-slate-600 transition-colors p-1 hidden sm:block"><ChartBar size={18} /></button>
+                        <button className="text-slate-400 hover:text-slate-600 transition-colors p-1 hidden sm:block"><BarChart2 size={18} /></button>
                         <button className="text-slate-400 hover:text-slate-600 transition-colors p-1 hidden sm:block"><Mic size={20} /></button>
                         
                         <button className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shadow-sm ml-1">
