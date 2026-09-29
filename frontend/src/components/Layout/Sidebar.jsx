@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, MessageSquare, Users, User, Clock, Image as ImageIcon, Bookmark, Search, Bell, Settings, Shield, HelpCircle, Cloud, AlertTriangle } from 'lucide-react';
+import { Home, Image, Bookmark, MessageSquare, Users, User, Clock, Image as ImageIcon, Bookmark, Search, Bell, Settings, Shield, HelpCircle, Cloud, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,6 +12,8 @@ const getNavItems = (userRole) => {
     { to: '/chats', label: 'Chats', icon: MessageSquare, id: 'chats' },
     { to: '/groups', label: 'Groups', icon: Users, id: 'groups' },
     { to: '/contacts', label: 'Contacts', icon: User, id: 'contacts' }, // Using contacts for both Friends/Contacts
+    { to: '/media', label: 'Media', icon: Image, id: 'media' },
+    { to: '/saved', label: 'Saved Items', icon: Bookmark, id: 'saved' },
     { to: '/social', label: 'Stories', icon: Clock },
     { to: '/media', label: 'Media', icon: ImageIcon },
     { to: '/saved', label: 'Saved', icon: Bookmark },
