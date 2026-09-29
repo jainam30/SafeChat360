@@ -59,9 +59,24 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (isLogin) {
-        await login(formData.email, formData.password);
-        toast.success('Successfully logged in!');
-        navigate('/dashboard');
+        const params = new URLSearchParams();
+        params.append('username', formData.email);
+        params.append('password', formData.password);
+
+        const response = await fetch(getApiUrl('/api/auth/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          login(data.access_token);
+          toast.success('Successfully logged in!');
+          navigate('/dashboard');
+        } else {
+          toast.error(data.detail || 'Login failed. Check credentials.');
+        }
       } else {
         const response = await fetch(getApiUrl('/api/auth/register'), {
           method: 'POST',
