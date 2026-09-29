@@ -16,6 +16,7 @@ import LandingPage from './pages/LandingPage';
 import UserProfile from './pages/UserProfile';
 import Chat from './pages/Chat';
 import Friends from './pages/Friends';
+import Groups from './pages/Groups';
 import Media from './pages/Media';
 import Notifications from './pages/Notifications';
 import Security from './pages/Security';
@@ -98,6 +99,8 @@ export default function App() {
                   <Route path="/chats/:conversationId" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
                   <Route path="/chats/group/:groupId" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
                   <Route path="/social" element={<ProtectedRoute><Layout><SocialFeed /></Layout></ProtectedRoute>} />
+                                    <Route path="/groups" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
+                  <Route path="/groups/:groupId" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
                   <Route path="/contacts" element={<ProtectedRoute><Layout><Friends /></Layout></ProtectedRoute>} />
                   <Route path="/media" element={<ProtectedRoute><Layout><Media /></Layout></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />

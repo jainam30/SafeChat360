@@ -10,6 +10,7 @@ const getNavItems = (userRole) => {
   const baseItems = [
     { to: '/dashboard', label: 'Home', icon: Home },
     { to: '/chats', label: 'Chats', icon: MessageSquare, id: 'chats' },
+    { to: '/groups', label: 'Groups', icon: Users, id: 'groups' },
     { to: '/contacts', label: 'Contacts', icon: User, id: 'contacts' }, // Using contacts for both Friends/Contacts
     { to: '/social', label: 'Stories', icon: Clock },
     { to: '/media', label: 'Media', icon: ImageIcon },
