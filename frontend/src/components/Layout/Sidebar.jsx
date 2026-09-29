@@ -12,11 +12,11 @@ const getNavItems = (userRole) => {
     { to: '/chats', label: 'Chats', icon: MessageSquare, id: 'chats' },
     { to: '/groups', label: 'Groups', icon: Users, id: 'groups' },
     { to: '/contacts', label: 'Contacts', icon: User, id: 'contacts' }, // Using contacts for both Friends/Contacts
-    { to: '/media', label: 'Media', icon: Image, id: 'media' },
+    { to: '/media', label: 'Media', icon: ImageIcon, id: 'media' },
     { to: '/saved', label: 'Saved Items', icon: Bookmark, id: 'saved' },
     { to: '/social', label: 'Stories', icon: Clock },
-    { to: '/media', label: 'Media', icon: ImageIcon },
-    { to: '/saved', label: 'Saved', icon: Bookmark },
+    
+    
     { to: '/explore', label: 'Explore', icon: Search },
     { to: '/notifications', label: 'Notifications', icon: Bell, id: 'notifications' },
     { to: '/settings', label: 'Settings', icon: Settings },
