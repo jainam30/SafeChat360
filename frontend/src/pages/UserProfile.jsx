@@ -5,7 +5,7 @@ import { getApiUrl } from '../config';
 import { 
     Camera, MapPin, GraduationCap, Calendar, Edit3, MoreHorizontal,
     Image as ImageIcon, Video, Bookmark, Tag, Heart, MessageSquare, 
-    Share2, User, Shield, Link as LinkIcon, Mail, Github, Linkedin, Plus
+    Share2, User, Shield, Link as LinkIcon, Mail, Github, Linkedin, Plus, Check
 } from 'lucide-react';
 
 export default function UserProfile() {

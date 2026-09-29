@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck, Check } from 'lucide-react';
 import { getApiUrl } from '../config';
 
 export default function AuthPage() {
