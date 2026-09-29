@@ -364,7 +364,7 @@ export default function Chat() {
         <div className="flex h-full w-full bg-white overflow-hidden text-slate-900 font-sans">
             
             {/* MIDDLE PANE (Chat List) */}
-            <div className={\${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}\ w-full md:w-[320px] lg:w-[340px] flex-col border-r border-slate-200 bg-slate-50 shrink-0}>
+            <div className={\ w-full md:w-[320px] lg:w-[340px] flex-col border-r border-slate-200 bg-slate-50 shrink-0}>
                 <div className="p-4 bg-white border-b border-slate-200">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold text-slate-900">Chats</h2>
@@ -390,8 +390,8 @@ export default function Chat() {
                     {groups.map(g => {
                         const isActive = activeChat.type === 'group' && activeChat.id === g.id;
                         return (
-                            <Link key={\g-\\} to={\/chats/group/\\}
-                                className={\lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \\}
+                            <Link key={g-\} to={/chats/group/\}
+                                className={lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \}
                             >
                                 <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0 text-lg">
                                     <Users size={20} />
@@ -411,11 +411,11 @@ export default function Chat() {
                     {friends.map(f => {
                         const isActive = activeChat.type === 'private' && activeChat.id === f.id;
                         return (
-                            <Link key={\-\\} to={\/chats/\\}
-                                className={\lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \\}
+                            <Link key={-\} to={/chats/\}
+                                className={lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \}
                             >
                                 <div className="relative flex-shrink-0">
-                                    <img src={f.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\} className="w-12 h-12 rounded-full object-cover border border-slate-200" />
+                                    <img src={f.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\} className="w-12 h-12 rounded-full object-cover border border-slate-200" />
                                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -433,7 +433,7 @@ export default function Chat() {
             </div>
 
             {/* MAIN PANE */}
-            <div className={\\ flex-1 flex-col relative bg-white border-r border-slate-200 min-w-0\}>
+            <div className={\ flex-1 flex-col relative bg-white border-r border-slate-200 min-w-0}>
                 
                 {activeChat.type ? (
                     <>
@@ -447,7 +447,7 @@ export default function Chat() {
                                 {activeChat.type === 'private' ? (
                                     <>
                                         <div className="relative hidden sm:block">
-                                            <img src={activeChat.data?.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\} className="w-10 h-10 rounded-full object-cover" />
+                                            <img src={activeChat.data?.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\} className="w-10 h-10 rounded-full object-cover" />
                                             <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                                         </div>
                                         <div>
@@ -534,11 +534,11 @@ export default function Chat() {
                                     type="text"
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder={\Type a message to \\}
+                                    placeholder={Type a message to \}
                                     className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm text-slate-800 placeholder-slate-400"
                                 />
 
-                                <button type="button" onClick={handleAiAssist} disabled={isAiLoading || !inputValue.trim()} className={\	ext-slate-400 hover:text-blue-600 transition-colors p-1 \\} title="AI Polish">
+                                <button type="button" onClick={handleAiAssist} disabled={isAiLoading || !inputValue.trim()} className={	ext-slate-400 hover:text-blue-600 transition-colors p-1 \} title="AI Polish">
                                     <Sparkles size={18} />
                                 </button>
                                 <button type="button" className="text-slate-400 hover:text-blue-600 transition-colors p-1 hidden sm:block"><Smile size={20} /></button>
@@ -572,7 +572,7 @@ export default function Chat() {
                             <button className="text-slate-400 hover:text-slate-900"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
                         </div>
                         <div className="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-2 border-white shadow-sm relative">
-                            <img src={activeChat.data?.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\} className="w-full h-full object-cover" />
+                            <img src={activeChat.data?.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\} className="w-full h-full object-cover" />
                         </div>
                         <h2 className="text-xl font-bold text-slate-900 leading-tight">{activeChat.data?.username}</h2>
                         <p className="text-xs font-bold text-green-600 flex items-center justify-center gap-1 mt-1 mb-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</p>
@@ -672,24 +672,24 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
     const showAvatar = !isOwn && (index === messages.length - 1 || messages[index + 1]?.sender_id !== message.sender_id);
 
     return (
-        <div className={\lex \ group mb-2 relative\}>
+        <div className={lex \ group mb-2 relative}>
             {!isOwn && (
                 <div className="w-8 h-8 flex-shrink-0 mr-3 flex items-end">
                     {showAvatar ? (
                         <img
-                            src={senderUser?.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\}
+                            src={senderUser?.profile_photo || https://api.dicebear.com/7.x/avataaars/svg?seed=\}
                             className="w-8 h-8 rounded-full object-cover border border-slate-200"
                             alt="avatar"
                         />
                     ) : <div className="w-8" />}
                 </div>
             )}
-            <div className={\max-w-[70%] relative flex flex-col \\}>
+            <div className={max-w-[70%] relative flex flex-col \}>
                 {!isOwn && activeChatType !== 'private' && showAvatar && (
                     <span className="text-[11px] font-bold text-slate-500 mb-1 ml-1">{message.sender_username}</span>
                 )}
                 
-                <div className={\px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm \\}>
+                <div className={px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm \}>
                     {message.is_unsent ? (
                         <span className="italic opacity-60 text-sm flex items-center gap-1">Message unsent</span>
                     ) : (
@@ -697,7 +697,7 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
                     )}
                 </div>
                 
-                <div className={\	ext-[10px] mt-1 font-bold \\}>
+                <div className={	ext-[10px] mt-1 font-bold \}>
                     {formatTime(message.created_at)} 
                     {isOwn && <CheckCircle2 size={10} className="text-blue-500" strokeWidth={3}/>}
                 </div>
