@@ -361,242 +361,288 @@ export default function Chat() {
     if (!user) return <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>;
 
     return (
-        <div className="flex h-full w-full mx-auto bg-white rounded-none md:rounded-xl overflow-hidden shadow-sm border border-slate-200">
-            {/* LEFT SIDEBAR (Chat List) */}
-            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[320px] lg:w-[360px] flex-col border-r border-slate-200 bg-slate-50 md:rounded-l-xl`}>
-
-                {/* Header */}
-                <div className="h-16 border-b border-slate-200 flex items-center justify-between px-5 bg-white">
-                    <div className="font-bold text-xl flex items-center gap-2 text-slate-900">
-                        {user.username} <span className="text-xs text-slate-500 font-normal">▼</span>
+        <div className="flex h-full w-full bg-white overflow-hidden text-slate-900 font-sans">
+            
+            {/* MIDDLE PANE (Chat List) */}
+            <div className={\${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}\ w-full md:w-[320px] lg:w-[340px] flex-col border-r border-slate-200 bg-slate-50 shrink-0}>
+                <div className="p-4 bg-white border-b border-slate-200">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-slate-900">Chats</h2>
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowGroupModal(true)} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors">
+                                <Plus size={18} />
+                            </button>
+                            <button className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                            </button>
+                        </div>
                     </div>
-                    <button onClick={() => setShowGroupModal(true)} className="text-slate-500 hover:text-cyber-primary transition-colors">
-                        <Plus size={24} strokeWidth={1.5} />
-                    </button>
+                    <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+                        <button className="px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100">All</button>
+                        <button className="px-4 py-1.5 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-100">Unread</button>
+                        <button className="px-4 py-1.5 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-100">Groups</button>
+                        <button className="px-4 py-1.5 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-100">Favorites</button>
+                    </div>
                 </div>
 
-                {/* Chat List Scrollable */}
-                <div className="flex-1 overflow-y-auto">
-                    <div className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Messages</div>
-
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-1">
                     {/* Groups */}
-                    {groups.map(g => (
-                        <div
-                            key={g.id}
-                            onClick={() => { navigate(`/chats/group/${g.id}`); }}
-                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-slate-100 transition-colors ${activeChat.type === 'group' && activeChat.id === g.id ? 'bg-blue-50/50 border-l-2 border-cyber-primary' : ''}`}
-                        >
-                            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                <Users size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <div className="text-sm font-medium text-slate-900">{g.name}</div>
-                                <div className="text-xs text-slate-500 truncate">{g.member_count} members</div>
-                            </div>
-                        </div>
-                    ))}
-
-                    {friends.map(u => (
-                        <div
-                            key={u.id}
-                            onClick={() => {
-                                setActiveChat({ type: 'private', id: u.id, data: u });
-                                setMobileView('chat');
-                                setFriends(prev => prev.map(f => f.id === u.id ? { ...f, unread_count: 0 } : f));
-                            }}
-                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-slate-100 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-blue-50/50 border-l-2 border-cyber-primary' : ''}`}
-                        >
-                            <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 relative">
-                                <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center mb-0.5">
-                                    <div className="text-sm font-medium text-slate-900 truncate">{u.username}</div>
-                                    <span className="text-[10px] text-slate-500 opacity-60">
-                                        {/* Timestamp could go here if available */}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <div className={`text-xs truncate ${u.unread_count > 0 ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
-                                        {u.unread_count > 0 ? (
-                                            u.last_message || "New message"
-                                        ) : (
-                                            u.last_message || <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Active now</span>
-                                        )}
-                                    </div>
-                                    {u.unread_count > 0 && (
-                                        <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-slate-900 text-[10px] font-bold rounded-full px-1">
-                                            {u.unread_count}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* Suggestions */}
-                    <div className="px-5 py-2 text-xs font-bold text-slate-500 mt-4">Suggestions</div>
-                    {users.filter(u => !friends.find(f => f.id === u.id)).map(u => (
-                        <div
-                            key={u.id}
-                            onClick={() => { navigate(`/chats/${u.id}`); }}
-                            className={`px-5 py-3 cursor-pointer flex items-center gap-3 hover:bg-slate-100 transition-colors ${activeChat.type === 'private' && activeChat.id === u.id ? 'bg-blue-50/50 border-l-2 border-cyber-primary' : ''}`}
-                        >
-                            <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 opacity-60">
-                                <img src={u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1">
-                                <div className="text-sm font-medium text-slate-900">{u.username}</div>
-                                <div className="text-xs text-slate-500">Suggested for you</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* RIGHT SIDE (Chat Window) */}
-            {activeChat.type === null ? (
-                <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col items-center justify-center bg-white`}>
-                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
-                        <MessageSquare size={40} />
-                    </div>
-                    <h2 className="text-xl font-bold text-slate-800">Your conversations</h2>
-                    <p className="text-slate-500 mb-6">Select a conversation to start messaging.</p>
-                    <div className="flex gap-4">
-                        <button className="px-4 py-2 bg-cyber-primary text-white font-medium rounded-lg shadow-sm hover:bg-cyber-primary/90">Start a Chat</button>
-                        <button onClick={() => setShowGroupModal(true)} className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-medium rounded-lg shadow-sm hover:bg-slate-50">Create a Group</button>
-                    </div>
-                </div>
-            ) : (
-                <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col bg-white md:rounded-l-none md:rounded-r-xl`}>
-                {/* Chat Header */}
-                <div className="h-16 border-b border-slate-200 flex items-center justify-between px-5 bg-white sticky top-0 bg-white/5 backdrop-blur-sm z-10">
-                    <div className="flex items-center gap-3 min-w-0">
-                        {activeChat.type === 'private' && (
-                            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-100 shadow-sm">
-                                <Shield size={14} /> End-to-end encrypted
-                            </div>
-                        )}
-                        <button onClick={() => setMobileView('list')} className="md:hidden text-slate-900 mr-2 flex-shrink-0"><ArrowLeft size={24} /></button>
-
-                        {activeChat.type === 'private' ? (
-                            <Link to={`/profile/${activeChat.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-slate-200">
-                                    <img src={activeChat.data.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data.username}`} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="text-sm font-bold text-slate-900 truncate hover:underline">{activeChat.data.username}</div>
-                                    <div className="text-xs text-slate-500 truncate">Active now</div>
-                                </div>
-                            </Link>
-                        ) : activeChat.type === 'group' ? (
-                            <>
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0"><Users size={16} /></div>
-                                <div className="min-w-0">
-                                    <div className="text-sm font-bold text-slate-900 truncate">{activeChat.data.name}</div>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0"><Hash size={16} /></div>
-                                <div className="min-w-0">
-                                    <div className="text-sm font-bold text-slate-900 truncate">Global Chat</div>
-                                    <div className="text-xs text-slate-500 truncate">Public</div>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Vibe Check Badge (live score from /api/chat/vibe) */}
-                        <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-800 ml-4 transition-all hover:bg-[#23293b] cursor-default group" title="Live Vibe Check AI">
-                            <span className="relative flex h-2 w-2">
-                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${vibe.score >= 80 ? 'bg-green-400' : vibe.score >= 40 ? 'bg-yellow-400' : 'bg-red-400'} opacity-75`}></span>
-                                <span className={`relative inline-flex rounded-full h-2 w-2 ${vibe.score >= 80 ? 'bg-green-500' : vibe.score >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
-                            </span>
-                            <span className={`text-xs font-bold ${vibe.loading ? 'text-gray-400' : vibe.score >= 80 ? 'bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent' : vibe.score >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
-                                {vibe.loading ? 'Checking…' : (vibe.score >= 80 ? 'Safe Vibe' : vibe.score >= 40 ? `Tense (${vibe.score})` : `Unsafe (${vibe.score})`)}
-                            </span>
-                            {/* Tooltip */}
-                            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity bg-black/90 p-2 rounded-lg text-xs w-48 text-center text-slate-300 z-50 border border-white/10">
-                                AI analyzing the last 10 messages.<br />Score: {vibe.score}/100 — {vibe.status}.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 md:gap-4 text-slate-900 flex-shrink-0">
-                        <Phone size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" onClick={() => startCall(false)} />
-                        <Video size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" onClick={() => startCall(true)} />
-                        <Info size={20} strokeWidth={1.5} className="cursor-pointer hover:opacity-70 md:w-6 md:h-6" />
-                    </div>
-                </div>
-
-                {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-1" onClick={() => setActiveMessageMenu(null)}>
-                    {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
-                            <div className="w-20 h-20 rounded-full border-2 border-white/10 flex items-center justify-center">
-                                {activeChat.type === 'global' ? <Hash size={40} /> : <UserIcon size={40} />}
-                            </div>
-                            <p>Say hello!</p>
-                        </div>
-                    )}
-
-                    {messages.map((msg, index) => {
-                        const isMe = msg.sender_id === user?.id;
-                        const senderUser = !isMe ? (users.find(u => u.id === msg.sender_id) || friends.find(f => f.id === msg.sender_id)) : null;
-
+                    {groups.map(g => {
+                        const isActive = activeChat.type === 'group' && activeChat.id === g.id;
                         return (
-                            <MessageBubble
-                                key={msg.id || index}
-                                message={msg}
-                                isOwn={isMe}
-                                formatTime={formatTimeForUser}
-                                senderUser={senderUser}
-                                activeChatType={activeChat.type}
-                                messages={messages}
-                                index={index}
-                                user={user}
-                                setActiveMessageMenu={setActiveMessageMenu}
-                                activeMessageMenu={activeMessageMenu}
-                                handleDeleteMessage={handleDeleteMessage}
-                            />
-                        );
+                            <Link key={\g-\\} to={\/chats/group/\\}
+                                className={\lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \\}
+                            >
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0 text-lg">
+                                    <Users size={20} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <h4 className="font-bold text-sm text-slate-900 truncate">{g.name}</h4>
+                                        <span className="text-[10px] font-medium text-slate-400">11:24 AM</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 truncate font-medium">You: Updated the deployment plan...</p>
+                                </div>
+                                {isActive && <div className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">3</div>}
+                            </Link>
+                        )
                     })}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input Area */}
-                <div className="p-4 bg-white border-t border-slate-200 sticky bottom-0 z-10 p-4">
-                    <div className="flex items-end gap-2">
-                        <button
-                            type="button"
-                            onClick={handleAiAssist}
-                            disabled={isAiLoading || !inputValue.trim()}
-                            title="AI Assist: improve grammar & tone"
-                            className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-                                isAiLoading
-                                    ? 'bg-cyber-primary/30 animate-pulse text-slate-900'
-                                    : inputValue.trim()
-                                    ? 'bg-gradient-to-tr from-purple-500 to-pink-500 text-slate-900 hover:scale-105'
-                                    : 'bg-white/5 text-slate-500 cursor-not-allowed'
-                            }`}
-                        >
-                            <Sparkles size={18} />
-                        </button>
-                        <div className="flex-1">
-                            <CosmicInput
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onSend={(e) => {
-                                    if (e) e.preventDefault();
-                                    sendMessage();
-                                }}
-                            />
-                        </div>
-                    </div>
+                    {/* Friends */}
+                    {friends.map(f => {
+                        const isActive = activeChat.type === 'private' && activeChat.id === f.id;
+                        return (
+                            <Link key={\-\\} to={\/chats/\\}
+                                className={\lex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer \\}
+                            >
+                                <div className="relative flex-shrink-0">
+                                    <img src={f.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\} className="w-12 h-12 rounded-full object-cover border border-slate-200" />
+                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <h4 className="font-bold text-sm text-slate-900 truncate">{f.username}</h4>
+                                        <span className="text-[10px] font-medium text-slate-400">10:24 AM</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 truncate font-medium">Are we still on for the project discussion today?</p>
+                                </div>
+                                {!isActive && <div className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">2</div>}
+                            </Link>
+                        )
+                    })}
                 </div>
             </div>
 
-            )}
+            {/* MAIN PANE */}
+            <div className={\\ flex-1 flex-col relative bg-white border-r border-slate-200 min-w-0\}>
+                
+                {activeChat.type ? (
+                    <>
+                        {/* Header */}
+                        <div className="h-16 px-4 md:px-6 flex justify-between items-center border-b border-slate-200 bg-white sticky top-0 z-20">
+                            <div className="flex items-center gap-3">
+                                <button className="md:hidden p-2 -ml-2 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => setMobileView('list')}>
+                                    <ArrowLeft size={20} />
+                                </button>
+                                
+                                {activeChat.type === 'private' ? (
+                                    <>
+                                        <div className="relative hidden sm:block">
+                                            <img src={activeChat.data?.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\} className="w-10 h-10 rounded-full object-cover" />
+                                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 leading-none">{activeChat.data?.username}</h3>
+                                            <p className="text-[11px] font-medium text-green-600 flex items-center gap-1 mt-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold hidden sm:flex">
+                                            <Users size={18} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 leading-none">{activeChat.data?.name}</h3>
+                                            <p className="text-[11px] font-medium text-slate-500 mt-1 flex items-center gap-1"><Users size={10}/> 8 members</p>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1 md:gap-2">
+                                <button onClick={() => startCall(false)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Phone size={18} /></button>
+                                <button onClick={() => startCall(true)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Video size={18} /></button>
+                                <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block">
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                </button>
+                                <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"><MoreHorizontal size={18} /></button>
+                            </div>
+                        </div>
+
+                        {/* Message Area */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white space-y-4 relative scroll-smooth">
+                            
+                            {/* Pinned Message (Mock) */}
+                            {activeChat.type === 'group' && (
+                                <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-md p-3 rounded-xl border border-blue-100 mb-6 flex items-start justify-between shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-0.5 text-blue-600">??</div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-900">Pinned Message</p>
+                                            <p className="text-xs text-slate-600 font-medium">Project deadline: 30th June 2026 | Please update your tasks by EOD.</p>
+                                        </div>
+                                    </div>
+                                    <button className="text-slate-400 hover:text-slate-600"><Plus className="w-4 h-4 rotate-45" /></button>
+                                </div>
+                            )}
+
+                            <div className="flex justify-center mb-6">
+                                <span className="bg-slate-100 text-slate-500 text-xs font-bold px-4 py-1 rounded-full">Today</span>
+                            </div>
+
+                            {messages.map((msg, index) => {
+                                const isMe = msg.sender_id === user?.id;
+                                const senderUser = !isMe ? (users.find(u => u.id === msg.sender_id) || friends.find(f => f.id === msg.sender_id)) : null;
+                                return (
+                                    <MessageBubble
+                                        key={msg.id || index}
+                                        message={msg}
+                                        isOwn={isMe}
+                                        formatTime={formatTimeForUser}
+                                        senderUser={senderUser}
+                                        activeChatType={activeChat.type}
+                                        messages={messages}
+                                        index={index}
+                                        user={user}
+                                        setActiveMessageMenu={setActiveMessageMenu}
+                                        activeMessageMenu={activeMessageMenu}
+                                        handleDeleteMessage={handleDeleteMessage}
+                                    />
+                                );
+                            })}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-3 md:p-4 bg-white border-t border-slate-200">
+                            <form 
+                                onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+                                className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-4 py-2"
+                            >
+                                <button type="button" className="text-slate-400 hover:text-blue-600 transition-colors p-1"><ImageIcon size={20} /></button>
+                                
+                                <input
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder={\Type a message to \\}
+                                    className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm text-slate-800 placeholder-slate-400"
+                                />
+
+                                <button type="button" onClick={handleAiAssist} disabled={isAiLoading || !inputValue.trim()} className={\	ext-slate-400 hover:text-blue-600 transition-colors p-1 \\} title="AI Polish">
+                                    <Sparkles size={18} />
+                                </button>
+                                <button type="button" className="text-slate-400 hover:text-blue-600 transition-colors p-1 hidden sm:block"><Smile size={20} /></button>
+                                
+                                <button 
+                                    type="submit" 
+                                    disabled={!inputValue.trim()}
+                                    className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:bg-slate-300 ml-1"
+                                >
+                                    <Send size={14} className="-ml-0.5" />
+                                </button>
+                            </form>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-6 bg-slate-50/50">
+                        <MessageSquare size={48} className="text-slate-300 mb-4" />
+                        <h3 className="text-xl font-bold text-slate-800 mb-2">Your Messages</h3>
+                        <p className="text-sm font-medium text-slate-500 max-w-sm text-center">Select a chat or start a new conversation to securely connect with your friends.</p>
+                        <button onClick={() => setShowGroupModal(true)} className="mt-6 bg-blue-600 text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-blue-700 shadow-sm transition-all">Start a Conversation</button>
+                    </div>
+                )}
+            </div>
+
+            {/* RIGHT SIDEBAR (Contact/Group Info) */}
+            <div className="hidden lg:flex w-[280px] xl:w-[320px] flex-col bg-slate-50 overflow-y-auto shrink-0 border-l border-slate-200">
+                {activeChat.type === 'private' && (
+                    <div className="p-6 text-center">
+                        <div className="flex justify-between w-full mb-4">
+                            <button className="text-slate-400 hover:text-slate-900"><ArrowLeft size={20}/></button>
+                            <button className="text-slate-400 hover:text-slate-900"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                        </div>
+                        <div className="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-2 border-white shadow-sm relative">
+                            <img src={activeChat.data?.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\} className="w-full h-full object-cover" />
+                        </div>
+                        <h2 className="text-xl font-bold text-slate-900 leading-tight">{activeChat.data?.username}</h2>
+                        <p className="text-xs font-bold text-green-600 flex items-center justify-center gap-1 mt-1 mb-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</p>
+                        <p className="text-xs text-slate-500 font-medium mb-6">Software Developer | Tech Enthusiast</p>
+                        
+                        <div className="flex justify-center gap-6 mb-8 border-b border-slate-200 pb-8">
+                            <button className="flex flex-col items-center gap-2 group">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors"><Phone size={18}/></div>
+                                <span className="text-[10px] font-bold text-blue-600">Audio Call</span>
+                            </button>
+                            <button className="flex flex-col items-center gap-2 group">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors"><Video size={18}/></div>
+                                <span className="text-[10px] font-bold text-blue-600">Video Call</span>
+                            </button>
+                            <button className="flex flex-col items-center gap-2 group">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-slate-200 transition-colors"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+                                <span className="text-[10px] font-bold text-slate-600">Search</span>
+                            </button>
+                            <button className="flex flex-col items-center gap-2 group">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-slate-200 transition-colors"><MoreHorizontal size={18}/></div>
+                                <span className="text-[10px] font-bold text-slate-600">More</span>
+                            </button>
+                        </div>
+                        
+                        <div className="text-left space-y-5">
+                            <div>
+                                <h4 className="text-xs font-bold text-slate-900 mb-1 flex items-center gap-2"><UserIcon size={14}/> About</h4>
+                                <p className="text-sm text-slate-500 ml-5 leading-snug">Building secure and meaningful conversations.</p>
+                            </div>
+                            
+                            <div className="border-t border-slate-200 pt-5">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2"><ImageIcon size={14}/> Media, Links and Files</h4>
+                                    <span className="text-xs font-bold text-slate-400">12 &gt;</span>
+                                </div>
+                                <div className="flex gap-2 mb-5">
+                                    <div className="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden shrink-0"><img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=100&h=100&fit=crop" className="w-full h-full object-cover"/></div>
+                                    <div className="w-16 h-16 rounded-xl bg-slate-800 shrink-0"></div>
+                                    <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center text-slate-400"><Info size={16}/></div>
+                                    <div className="w-16 h-16 rounded-xl bg-slate-700 shrink-0 flex items-center justify-center text-white font-bold text-xs">+9</div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center cursor-pointer group">
+                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg> Shared Files</div>
+                                        <span className="text-xs font-medium text-slate-400">12 files</span>
+                                    </div>
+                                    <div className="flex justify-between items-center cursor-pointer group">
+                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Shared Links</div>
+                                        <span className="text-xs font-medium text-slate-400">8 links</span>
+                                    </div>
+                                    <div className="flex justify-between items-center cursor-pointer group">
+                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><Sparkles className="w-4 h-4 text-slate-400"/> Starred Messages</div>
+                                        <span className="text-xs font-medium text-slate-400">3 messages</span>
+                                    </div>
+                                    <div className="flex justify-between items-center cursor-pointer group">
+                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><Bell className="w-4 h-4 text-slate-400"/> Notifications</div>
+                                        <span className="text-xs font-medium text-slate-400">All messages</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="border-t border-slate-200 pt-5">
+                                <button className="flex items-center gap-3 text-sm font-bold text-red-500 hover:text-red-600 w-full"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Block Contact</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {showGroupModal && (
                 <CreateGroupModal
                     token={token}
@@ -614,74 +660,48 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
     if (message.msg_type === 'call') {
         return (
             <div className="flex justify-center my-4">
-                <div className="bg-slate-100 px-4 py-1.5 rounded-full flex items-center gap-2 text-xs text-slate-600 border border-slate-200">
-                    <Phone size={12} className={message.content.includes("Ended") ? "text-red-400" : "text-green-400"} />
-                    <span className="font-medium">
-                        {message.sender_id === user.id ? "You" : message.sender_username} - {message.content}
-                    </span>
-                    <span className="text-gray-500">• {formatTime(message.created_at)}</span>
+                <div className="bg-slate-100 px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-slate-600 border border-slate-200">
+                    <Phone size={12} className={message.content.includes("Ended") ? "text-red-400" : "text-green-500"} />
+                    <span>{message.sender_id === user.id ? "You" : message.sender_username} - {message.content}</span>
+                    <span className="text-slate-400 ml-1">{formatTime(message.created_at)}</span>
                 </div>
             </div>
         );
     }
 
-    // Standard Text Message
     const showAvatar = !isOwn && (index === messages.length - 1 || messages[index + 1]?.sender_id !== message.sender_id);
 
     return (
-        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group mb-1 relative`}>
+        <div className={\lex \ group mb-2 relative\}>
             {!isOwn && (
-                <div className="w-7 h-7 flex-shrink-0 mr-2 flex items-end">
+                <div className="w-8 h-8 flex-shrink-0 mr-3 flex items-end">
                     {showAvatar ? (
                         <img
-                            src={senderUser?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.sender_username}`}
-                            className="w-7 h-7 rounded-full object-cover"
+                            src={senderUser?.profile_photo || \https://api.dicebear.com/7.x/avataaars/svg?seed=\\}
+                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
                             alt="avatar"
                         />
-                    ) : <div className="w-7" />}
+                    ) : <div className="w-8" />}
                 </div>
             )}
-            <div
+            <div className={\max-w-[70%] relative flex flex-col \\}>
+                {!isOwn && activeChatType !== 'private' && showAvatar && (
+                    <span className="text-[11px] font-bold text-slate-500 mb-1 ml-1">{message.sender_username}</span>
+                )}
                 
-                className={`max-w-[70%] px-4 py-2 rounded-2xl text-[15px] leading-snug relative break-words ${isOwn
-                    ? 'font-medium rounded-br-md shadow-md shadow-cyber-accent/20'
-                    : 'bg-white/10 text-slate-900 border border-white/10 rounded-bl-md'}`}
-            >
-                {/* Sender Name in Group/Global */}
-                {!isOwn && activeChatType !== 'private' && (index === 0 || messages[index - 1]?.sender_id !== message.sender_id) && (
-                    <div className="text-xs text-cyber-secondary mb-1 ml-1">{message.sender_username}</div>
-                )}
-
-                {message.is_unsent ? (
-                    <span className="italic opacity-60 text-sm flex items-center gap-1">
-                        <span className="inline-block w-3 h-3 border border-current rounded-full relative">
-                            <span className="absolute inset-0 m-auto w-3/4 h-[1px] bg-current rotate-45"></span>
-                        </span>
-                        Message unsent
-                    </span>
-                ) : (
-                    message.content
-                )}
-
-                <div className={`text-[10px] mt-1 opacity-70 flex items-center justify-end gap-1 font-medium ${isOwn ? 'text-cyber-background/70' : 'text-slate-500'}`}>
-                    {formatTime(message.created_at)}
+                <div className={\px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm \\}>
+                    {message.is_unsent ? (
+                        <span className="italic opacity-60 text-sm flex items-center gap-1">Message unsent</span>
+                    ) : (
+                        message.content
+                    )}
                 </div>
-
-                {/* Hover Options */}
-                <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? '-left-10' : '-right-10'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-2`}>
-                    <button onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === message.id ? null : message.id); }} className="text-gray-400 hover:text-gray-600">
-                        <MoreHorizontal size={16} />
-                    </button>
+                
+                <div className={\	ext-[10px] mt-1 font-bold \\}>
+                    {formatTime(message.created_at)} 
+                    {isOwn && <CheckCircle2 size={10} className="text-blue-500" strokeWidth={3}/>}
                 </div>
-
-                {/* Context Menu */}
-                {activeMessageMenu === message.id && (
-                    <div className="absolute top-full mt-2 z-50 bg-gray-800 shadow-lg rounded-lg border border-white/10 p-1 min-w-[120px]">
-                        {isOwn && <button onClick={() => handleDeleteMessage(message.id, 'everyone')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 text-red-500 rounded">Unsend</button>}
-                        <button onClick={() => handleDeleteMessage(message.id, 'me')} className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 text-gray-200 rounded">Delete for me</button>
-                    </div>
-                )}
             </div>
         </div>
     );
-};
+}
