@@ -59,14 +59,13 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (isLogin) {
-        const params = new URLSearchParams();
-        params.append('username', formData.email);
-        params.append('password', formData.password);
-
         const response = await fetch(getApiUrl('/api/auth/login'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: formData.email,
+            password: formData.password
+          })
         });
 
         const data = await response.json();
