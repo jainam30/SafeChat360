@@ -172,7 +172,14 @@ export default function Chat() {
         };
 
         socket.addEventListener('message', handleMessage);
-            <div className="flex h-full w-full bg-white overflow-hidden text-slate-900 font-sans">
+
+        return () => {
+            socket.removeEventListener('message', handleMessage);
+        };
+    }, [socket, activeChat, token]);
+
+    return (
+        <div className="flex h-full w-full bg-white overflow-hidden text-slate-900 font-sans">
             
             {/* MIDDLE PANE (Chat List) */}
             <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-[320px] lg:w-[340px] flex-col border-r border-slate-200 bg-slate-50 shrink-0`}>
