@@ -1,184 +1,69 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Bell, Search, User, X, Check, UserPlus, Menu } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
-import logoImg from '../../assets/safechat_logo.png'
-import { useAuth } from '../../context/AuthContext'
-import { useNotifications } from '../../context/NotificationContext'
-import CyberSearchInput from '../UI/CyberSearchInput'
+import React from 'react';
+import { Menu, Search, Phone, Video, Bell, ChevronDown } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Topbar({ onMenuClick }) {
-  const { user, logout } = useAuth()
-  const { notifications } = useNotifications()
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
-  const notificationRef = useRef(null)
-  const navigate = useNavigate()
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [notificationRef]);
-
-  const handleNotificationClick = () => {
-    setShowNotifications(!showNotifications)
-  }
+  const { user } = useAuth();
 
   return (
-    <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10 shadow-sm bg-cyber-background">
-      <div className="flex items-center gap-3">
-        {/* Mobile Menu Button */}
-        <button
-          onClick={onMenuClick}
-          className="md:hidden p-1.5 rounded-lg text-white hover:bg-white/10 transition-colors"
-        >
-          <Menu size={24} />
-        </button>
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 z-40 sticky top-0">
+      
+      {/* Mobile Menu Button */}
+      <button 
+        onClick={onMenuClick} 
+        className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg mr-2"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
-        <div className="flex items-center gap-2">
-          <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
-          <h1 className="hidden sm:block text-xl font-bold text-white header-glow drop-shadow-md">
-            SafeChat360
-          </h1>
+      {/* Global Search Bar */}
+      <div className="flex-1 max-w-2xl mx-auto md:ml-4">
+        <div className="relative group">
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search people, messages, groups, or settings..." 
+            className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl text-sm font-medium text-slate-700 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+          />
         </div>
-        <div className="h-4 w-px bg-white/20 hidden sm:block"></div>
-        <div className="text-sm font-medium text-cyber-muted hidden sm:block">Dashboard</div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Mobile Search Toggle */}
-        <button
-          className="md:hidden text-slate-200 hover:text-white"
-          onClick={() => setShowSearch(!showSearch)}
-        >
-          {showSearch ? <X size={20} /> : <Search size={20} />}
+      {/* Actions & Profile */}
+      <div className="hidden md:flex items-center gap-2 ml-6">
+        <button className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+          <Phone className="w-5 h-5" />
         </button>
+        <button className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+          <Video className="w-5 h-5" />
+        </button>
+        <button className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors relative">
+          <Bell className="w-5 h-5" />
+          <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
+        </button>
+        
+        <div className="h-8 w-px bg-slate-200 mx-2"></div>
 
-        {/* Desktop Search */}
-        <div className="hidden md:block transform scale-75 origin-left w-[350px] -my-2">
-          <CyberSearchInput placeholder="Search..." />
-        </div>
-
-        {/* Mobile Search Overlay */}
-        {showSearch && (
-          <div className="absolute top-16 left-0 right-0 bg-cyber-background/95 backdrop-blur-md p-4 border-b border-white/10 md:hidden z-50 flex justify-center animate-in slide-in-from-top-2">
-            <div className="w-full max-w-sm">
-              <CyberSearchInput placeholder="Search..." />
-            </div>
-          </div>
-        )}
-
-        {/* Notifications */}
-        <div className="relative" ref={notificationRef}>
-          <button
-            onClick={handleNotificationClick}
-            className="p-2 rounded-full hover:bg-white/10 text-cyber-text hover:text-white transition-colors relative"
-          >
-            <Bell size={20} />
-            {notifications.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-cyber-accent rounded-full animate-pulse shadow-lg shadow-cyber-accent/50"></span>
+        <button className="flex items-center gap-3 pl-2 pr-1 py-1 hover:bg-slate-50 rounded-lg transition-colors">
+          <div className="relative">
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="Profile" className="w-9 h-9 rounded-full object-cover" />
+            ) : (
+              <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-sm">
+                {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+              </div>
             )}
-          </button>
-
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 glass-card overflow-hidden transform origin-top-right transition-all animate-in fade-in slide-in-from-top-2 z-50 border border-white/10">
-              <div className="p-3 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h3 className="font-semibold text-white text-sm">Notifications</h3>
-                {notifications.length > 0 && (
-                  <span className="text-xs bg-cyber-primary/10 text-cyber-primary px-2 py-0.5 rounded-full font-medium">
-                    {notifications.length} New
-                  </span>
-                )}
-              </div>
-
-              <div className="max-h-[400px] overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-cyber-muted">
-                    <Bell size={32} className="mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">No new notifications</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-white/5">
-                    {notifications.map((notif) => (
-                      <div key={notif.id} className="p-4 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {
-                        if (notif.type === 'friend_request') {
-                          navigate('/friends');
-                          setShowNotifications(false);
-                        }
-                      }}>
-                        <div className="flex gap-3">
-                          <div className="mt-1">
-                            {notif.type === 'friend_request' ? (
-                              <div className="w-8 h-8 rounded-full bg-cyber-primary/20 flex items-center justify-center text-cyber-primary">
-                                <UserPlus size={16} />
-                              </div>
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-cyber-muted">
-                                <Bell size={16} />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm text-white">
-                              <span className="font-semibold">{notif.requester_name || 'Someone'}</span> sent you a friend request
-                            </p>
-                            <p className="text-xs text-cyber-muted mt-1">
-                              {new Date(notif.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          {notif.type === 'friend_request' && (
-                            <div className="self-center">
-                              <button className="text-cyber-primary hover:text-cyber-secondary text-xs font-medium px-2 py-1 bg-cyber-primary/5 rounded hover:bg-cyber-primary/10 transition-colors">
-                                View
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="h-8 w-px bg-white/10"></div>
-
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <div className="text-sm font-medium text-cyber-text">{user?.email?.split('@')[0]}</div>
+            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
           </div>
-          <Link to="/account" className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyber-secondary to-cyber-accent p-[2px] cursor-pointer hover:scale-105 transition-transform shadow-lg shadow-cyber-accent/20">
-            <div className="h-full w-full rounded-full bg-cyber-background flex items-center justify-center overflow-hidden border border-transparent">
-              <img
-                src={user?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`}
-                alt={user?.username}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`;
-                }}
-              />
-            </div>
-          </Link>
-          <button
-            onClick={logout}
-            className="ml-2 px-3 py-1.5 rounded-lg border border-cyber-danger/30 text-cyber-danger hover:bg-cyber-danger/10 hover:border-cyber-danger/50 transition-all font-medium flex items-center justify-center"
-            title="Logout"
-          >
-            <span className="hidden sm:inline">Logout</span>
-            <span className="sm:hidden transform rotate-90 scale-125">⏻</span>
-          </button>
-        </div>
+          <div className="text-left hidden lg:block">
+            <p className="text-sm font-bold text-slate-900 leading-none">{user?.full_name || user?.username || 'User'}</p>
+            <p className="text-[11px] font-medium text-green-600 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
+            </p>
+          </div>
+          <ChevronDown className="w-4 h-4 text-slate-400 ml-1 hidden lg:block" />
+        </button>
       </div>
-    </header >
-  )
+
+    </header>
+  );
 }

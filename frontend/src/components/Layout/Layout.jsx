@@ -2,33 +2,33 @@ import React, { useState } from 'react'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import FloatingModeration from './FloatingModeration'
-import { Menu } from 'lucide-react'
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-transparent text-cyber-text overflow-hidden relative">
-      {/* Background ambient glow - handled by AnimatedBackground */}{/* Replaced by AnimatedBackground component */}{/* Mobile Menu Button - Visible only on mobile when sidebar closed */}
-
+    <div className="h-screen w-screen flex bg-white font-sans text-slate-900 overflow-hidden">
+      
       {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
         <div
-          className="absolute inset-0 bg-black/50 z-20 md:hidden backdrop-blur-sm"
+          className="absolute inset-0 bg-slate-900/20 z-40 md:hidden backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
+      {/* Left Navigation Sidebar */}
       <Sidebar mobileOpen={sidebarOpen} setMobileOpen={setSidebarOpen} />
 
-      <div className="flex-1 flex flex-col relative z-10 h-screen overflow-hidden">
-        <div className="md:pl-0">
-          <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        </div>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative h-screen overflow-hidden min-w-0">
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-white scroll-smooth relative">
           {children}
         </main>
       </div>
+
+      <FloatingModeration />
     </div>
   )
 }

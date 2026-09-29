@@ -72,8 +72,8 @@ export default function App() {
       <AuthProvider>
         <CallProvider>
           <NotificationProvider>
-            <div className="min-h-screen bg-cyber-background text-cyber-text font-sans relative">
-              <AnimatedBackground />
+            <div className="min-h-screen bg-white text-slate-900 font-sans relative">
+              
               <GlobalCallUI />
               <div className="relative z-10 h-full">
                 <Toaster position="top-right" toastOptions={{
