@@ -8,7 +8,7 @@ def init_firebase():
         # Check if already initialized to avoid errors on reload
         if not firebase_admin._apps:
             # 1. Try Environment Variable (For Vercel/Production)
-            firebase_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+            firebase_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON") or os.environ.get("firebase_service_account_json")
             
             if firebase_json:
                 try:
