@@ -330,6 +330,31 @@ export default function AuthPage() {
                 </div>
               </div>
 
+              {!isLogin && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700">Mobile number</label>
+                  <div className="flex gap-2">
+                    <select 
+                      name="countryCode" value={formData.countryCode} onChange={handleInputChange} 
+                      className="w-24 pl-3 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm bg-white"
+                    >
+                      <option value="+1">+1 (US)</option>
+                      <option value="+44">+44 (UK)</option>
+                      <option value="+91">+91 (IN)</option>
+                      <option value="+61">+61 (AU)</option>
+                    </select>
+                    <div className="relative flex-1">
+                      <input 
+                        type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} required={!isLogin}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
+                        placeholder="Mobile number"
+                      />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700">Password</label>
                 <div className="relative">
