@@ -21,8 +21,8 @@ def init_firebase():
                     print(f"Error parsing FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
 
             # 2. Try Local File (For Local Dev)
-            # Path to serviceAccountKey.json
-            cred_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "serviceAccountKey.json")
+            # Path to serviceAccountKey.json (in backend root)
+            cred_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "serviceAccountKey.json")
             
             if os.path.exists(cred_path):
                 cred = credentials.Certificate(cred_path)
