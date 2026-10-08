@@ -18,6 +18,10 @@ class AuthService:
     async def register(self, req: RegisterRequest) -> dict:
         init_firebase()
         
+        import firebase_admin
+        if not firebase_admin._apps:
+            raise APIException(status_code=500, detail="Backend configuration error: Firebase Admin is not initialized. Please check FIREBASE_SERVICE_ACCOUNT_JSON environment variable on the server.")
+
         try:
             decoded_token = firebase_auth.verify_id_token(req.firebase_token)
             firebase_email = decoded_token.get('email')

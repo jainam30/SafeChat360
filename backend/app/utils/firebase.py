@@ -12,13 +12,24 @@ def init_firebase():
             
             if firebase_json:
                 try:
-                    cred_dict = json.loads(firebase_json)
+                    # Render sometimes escapes newlines as literal '\n' characters in env vars
+                    cleaned_json = firebase_json.replace('\\n', '\n')
+                    cred_dict = json.loads(cleaned_json, strict=False)
                     cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
                     print("Firebase Admin Initialized from Environment Variable")
                     return
                 except json.JSONDecodeError as e:
                     print(f"Error parsing FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
+                    # Try one more fallback (if they just pasted raw unescaped newlines)
+                    try:
+                        cred_dict = json.loads(firebase_json.replace('\n', '\\n'), strict=False)
+                        cred = credentials.Certificate(cred_dict)
+                        firebase_admin.initialize_app(cred)
+                        print("Firebase Admin Initialized from Environment Variable (Fallback)")
+                        return
+                    except Exception as e2:
+                        print(f"Fallback JSON parsing failed: {e2}")
 
             # 2. Try Local File (For Local Dev)
             # Path to serviceAccountKey.json (in backend root)
