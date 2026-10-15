@@ -1,3 +1,5 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Type, Smile, Music, Trash2, Send } from 'lucide-react';
 import { getApiUrl } from '../config';
 
 const MOCK_MUSIC_TRACKS = [

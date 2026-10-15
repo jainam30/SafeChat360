@@ -1,3 +1,6 @@
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Clock } from 'lucide-react';
 import { getApiUrl } from '../config';
 
 const StoryViewer = ({ story, onClose }) => {

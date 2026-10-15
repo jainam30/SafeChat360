@@ -100,15 +100,17 @@ export default function App() {
                   <Route path="/chats/:conversationId" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
                   <Route path="/chats/group/:groupId" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
                   <Route path="/social" element={<ProtectedRoute><Layout><SocialFeed /></Layout></ProtectedRoute>} />
-                                    <Route path="/groups" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
+                  <Route path="/explore" element={<ProtectedRoute><Layout><SocialFeed /></Layout></ProtectedRoute>} />
+                  <Route path="/groups" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
                   <Route path="/groups/:groupId" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
                   <Route path="/contacts" element={<ProtectedRoute><Layout><Friends /></Layout></ProtectedRoute>} />
-                                    <Route path="/saved" element={<ProtectedRoute><Layout><SavedItems /></Layout></ProtectedRoute>} />
+                  <Route path="/friends" element={<Navigate to="/contacts" replace />} />
+                  <Route path="/saved" element={<ProtectedRoute><Layout><SavedItems /></Layout></ProtectedRoute>} />
                   <Route path="/media" element={<ProtectedRoute><Layout><Media /></Layout></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
-                  <Route path="/security" element={<ProtectedRoute><Layout><Security /></Layout></ProtectedRoute>} />
+                  <Route path="/security" element={<Navigate to="/settings?tab=security" replace />} />
                   <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-                  <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
+                  <Route path="/help" element={<Navigate to="/settings?tab=help" replace />} />
 
                   {/* Profile & Content Routes */}
                   <Route path="/profile" element={<ProtectedRoute><Layout><UserProfile /></Layout></ProtectedRoute>} />

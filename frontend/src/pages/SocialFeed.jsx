@@ -3,11 +3,13 @@ import { formatTimeForUser, formatDateForUser } from '../utils/dateFormatter';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
-import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile, Bookmark } from 'lucide-react';
+import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile, Bookmark, Plus } from 'lucide-react';
 import ChatBotCard from '../components/UI/ChatBotCard';
 import StoryViewer from '../components/StoryViewer';
+import StoryEditor from '../components/StoryEditor';
 
 const SocialFeed = () => {
+    const { token, user } = useAuth();
     const [posts, setPosts] = useState([]);
     const [newPost, setNewPost] = useState('');
     const [mediaFile, setMediaFile] = useState(null);
@@ -17,6 +19,9 @@ const SocialFeed = () => {
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [friends, setFriends] = useState([]);
     const [showUserSelector, setShowUserSelector] = useState(false);
+    const [stories, setStories] = useState([]);
+    const [selectedStory, setSelectedStory] = useState(null);
+    const [showStoryEditor, setShowStoryEditor] = useState(false);
 
     // Actions State
     const [editingPost, setEditingPost] = useState(null); // Post being edited
@@ -52,16 +57,29 @@ const SocialFeed = () => {
     }, [posts, activeTab, friends, user]);
 
     const [submitting, setSubmitting] = useState(false);
-    const { token, user } = useAuth();
     const fileInputRef = React.useRef(null);
     const editFileInputRef = React.useRef(null);
 
     useEffect(() => {
         fetchPosts();
         fetchFriends();
+        fetchStories();
     }, [token]);
 
-    // ... existing fetch functions ...
+    const fetchStories = async () => {
+        if (!token) return;
+        try {
+            const res = await fetch(getApiUrl('/api/social/stories'), {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) setStories(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch stories", err);
+        }
+    };
 
     const fetchPosts = async () => {
         if (!token) return;
@@ -482,12 +500,69 @@ const SocialFeed = () => {
                     ))}
                 </div>
 
-            {/* Share Box / Chat Bot Interface */}
-            
-            <div className="mb-6">
-                <StoryViewer token={token} user={user} friends={friends} />
+            {/* Stories Tray */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-6">
+                <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
+                    {/* Add Story Button */}
+                    <div 
+                        onClick={() => setShowStoryEditor(true)}
+                        className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+                    >
+                        <div className="w-16 h-16 rounded-full border-2 border-dashed border-blue-400 p-0.5 relative group-hover:border-blue-600 transition-colors bg-blue-50/50 flex items-center justify-center">
+                            <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} className="w-full h-full object-cover" alt="Me" />
+                                ) : (
+                                    <div className="text-blue-600 font-bold text-base">
+                                        {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                <Plus className="w-3 h-3" strokeWidth={3} />
+                            </div>
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-700">Add Story</span>
+                    </div>
+
+                    {/* Community Stories */}
+                    {stories.map(story => (
+                        <div 
+                            key={story.id} 
+                            onClick={() => setSelectedStory(story)}
+                            className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+                        >
+                            <div className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 group-hover:scale-105 transition-transform shadow-sm">
+                                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-100 flex items-center justify-center">
+                                    <img 
+                                        src={story.user_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${story.username || 'user'}`} 
+                                        className="w-full h-full object-cover" 
+                                        alt={story.username || 'Story'} 
+                                    />
+                                </div>
+                            </div>
+                            <span className="text-[11px] font-medium text-slate-700 truncate w-14 text-center">{story.username || 'User'}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
-\n                <div className="w-full mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {selectedStory && (
+                <StoryViewer story={selectedStory} onClose={() => setSelectedStory(null)} />
+            )}
+
+            {showStoryEditor && (
+                <StoryEditor
+                    token={token}
+                    onClose={() => setShowStoryEditor(false)}
+                    onPublished={() => {
+                        setShowStoryEditor(false);
+                        fetchStories();
+                    }}
+                />
+            )}
+
+            <div className="w-full mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <ChatBotCard
                     content={newPost}
                     onChange={(e) => setNewPost(e.target.value)}

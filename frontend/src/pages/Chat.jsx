@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import {
     Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video,
     Sparkles, Trash2, Undo2, MoreHorizontal, ArrowLeft, Image as ImageIcon,
-    Smile, Heart, Info
+    Smile, Heart, Info, Bell, CheckCircle2
 } from 'lucide-react';
 import CreateGroupModal from '../components/CreateGroupModal';
 import CosmicInput from '../components/UI/CosmicInput';
@@ -22,6 +22,16 @@ export default function Chat() {
     const { conversationId, groupId } = useParams();
     const navigate = useNavigate();
     const [activeChat, setActiveChat] = useState({ type: null, id: null, data: null });
+    const [users, setUsers] = useState([]);
+    const [friends, setFriends] = useState([]);
+    const [groups, setGroups] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [inputValue, setInputValue] = useState('');
+    const [showGroupModal, setShowGroupModal] = useState(false);
+    const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
+    const [vibe, setVibe] = useState({ score: 100, status: 'safe', loading: false });
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const [groupMembers, setGroupMembers] = useState([]);
 
     useEffect(() => {
         if (conversationId) {
@@ -39,17 +49,6 @@ export default function Chat() {
             setMobileView('list');
         }
     }, [conversationId, groupId, friends, users, groups]);
-    const [users, setUsers] = useState([]);
-    const [friends, setFriends] = useState([]);
-    const [groups, setGroups] = useState([]);
-    const [messages, setMessages] = useState([]);
-    const [inputValue, setInputValue] = useState('');
-    const [showGroupModal, setShowGroupModal] = useState(false);
-
-    const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
-
-    const [vibe, setVibe] = useState({ score: 100, status: 'safe', loading: false });
-    const [isAiLoading, setIsAiLoading] = useState(false);
 
     const messagesEndRef = useRef(null);
     const activeChatRef = useRef(activeChat);
@@ -60,6 +59,32 @@ export default function Chat() {
     useEffect(() => {
         activeChatRef.current = activeChat;
     }, [activeChat]);
+
+    // Fetch Group Members when active group changes
+    useEffect(() => {
+        if (!token || activeChat.type !== 'group' || !activeChat.id) {
+            setGroupMembers([]);
+            return;
+        }
+        let isCancelled = false;
+        const fetchMembers = async () => {
+            try {
+                const res = await fetch(getApiUrl(`/api/groups/${activeChat.id}/members`), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok && !isCancelled) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        setGroupMembers(data);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch group members", err);
+            }
+        };
+        fetchMembers();
+        return () => { isCancelled = true; };
+    }, [activeChat.type, activeChat.id, token]);
 
     // Fetch Initial Data
     useEffect(() => {
@@ -85,10 +110,13 @@ export default function Chat() {
         fetchData();
     }, [token]);
 
-    // Fetch History
+    // Fetch History with AbortController to prevent race condition
     useEffect(() => {
+        if (!token || !activeChat.type) return;
+        const controller = new AbortController();
+        let isCancelled = false;
+
         const fetchHistory = async () => {
-            if (!token) return;
             setMessages([]);
 
             try {
@@ -100,10 +128,11 @@ export default function Chat() {
                 }
 
                 const res = await fetch(getApiUrl(url), {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    signal: controller.signal
                 });
 
-                if (res.ok) {
+                if (res.ok && !isCancelled) {
                     const history = await res.json();
                     setMessages(history);
                     // Mark fetched messages as read (powers unread badges server-side)
@@ -119,11 +148,18 @@ export default function Chat() {
                     }
                 }
             } catch (err) {
-                console.error("Failed to fetch history", err);
+                if (err.name !== 'AbortError') {
+                    console.error("Failed to fetch history", err);
+                }
             }
         };
         fetchHistory();
-    }, [activeChat, token]);
+
+        return () => {
+            isCancelled = true;
+            controller.abort();
+        };
+    }, [activeChat.type, activeChat.id, token]);
 
     // WebSocket Listeners (using global socket)
     useEffect(() => {
@@ -140,8 +176,8 @@ export default function Chat() {
                     const currentActive = activeChatRef.current;
                     const isRelevant =
                         (currentActive.type === 'global' && !data.receiver_id && !data.group_id) ||
-                        (currentActive.type === 'private' && (data.sender_id === currentActive.id || data.receiver_id === currentActive.id)) ||
-                        (currentActive.type === 'group' && data.group_id === currentActive.id);
+                        (currentActive.type === 'private' && (String(data.sender_id) === String(currentActive.id) || String(data.receiver_id) === String(currentActive.id))) ||
+                        (currentActive.type === 'group' && String(data.group_id) === String(currentActive.id));
 
                     if (isRelevant) {
                         setMessages(prev => {
@@ -152,7 +188,7 @@ export default function Chat() {
                         // Background Notification Logic
                         if (data.sender_id && !data.group_id) {
                             setFriends(prev => prev.map(f => {
-                                if (f.id === data.sender_id) {
+                                if (String(f.id) === String(data.sender_id)) {
                                     return { ...f, unread_count: (f.unread_count || 0) + 1, last_message: data.content };
                                 }
                                 return f;
@@ -391,7 +427,7 @@ export default function Chat() {
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-1">
                     {/* Groups */}
                     {groups.map(g => {
-                        const isActive = activeChat.type === 'group' && activeChat.id === g.id;
+                        const isActive = activeChat.type === 'group' && String(activeChat.id) === String(g.id);
                         return (
                             <Link key={`g-${g.id}`} to={`/chats/group/${g.id}`}
                                 className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive ? 'bg-blue-50 border-l-[3px] border-blue-600' : 'hover:bg-slate-100 border-l-[3px] border-transparent'}`}
@@ -402,17 +438,15 @@ export default function Chat() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center mb-1">
                                         <h4 className="font-bold text-sm text-slate-900 truncate">{g.name}</h4>
-                                        <span className="text-[10px] font-medium text-slate-400">11:24 AM</span>
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate font-medium">You: Updated the deployment plan...</p>
+                                    <p className="text-xs text-slate-500 truncate font-medium">{g.description || 'Group conversation'}</p>
                                 </div>
-                                {isActive && <div className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">3</div>}
                             </Link>
                         )
                     })}
                     {/* Friends */}
                     {friends.map(f => {
-                        const isActive = activeChat.type === 'private' && activeChat.id === f.id;
+                        const isActive = activeChat.type === 'private' && String(activeChat.id) === String(f.id);
                         return (
                             <Link key={`f-${f.id}`} to={`/chats/${f.id}`}
                                 className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive ? 'bg-blue-50 border-l-[3px] border-blue-600' : 'hover:bg-slate-100 border-l-[3px] border-transparent'}`}
@@ -424,11 +458,10 @@ export default function Chat() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center mb-1">
                                         <h4 className="font-bold text-sm text-slate-900 truncate">{f.username}</h4>
-                                        <span className="text-[10px] font-medium text-slate-400">10:24 AM</span>
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate font-medium">Are we still on for the project discussion today?</p>
+                                    <p className="text-xs text-slate-500 truncate font-medium">{f.last_message || 'Tap to chat'}</p>
                                 </div>
-                                {!isActive && <div className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">2</div>}
+                                {f.unread_count > 0 && <div className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">{f.unread_count}</div>}
                             </Link>
                         )
                     })}
@@ -465,15 +498,21 @@ export default function Chat() {
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-slate-900 leading-none">{activeChat.data?.name}</h3>
-                                            <p className="text-[11px] font-medium text-slate-500 mt-1 flex items-center gap-1"><Users size={10}/> 8 members</p>
+                                            <p className="text-[11px] font-medium text-slate-500 mt-1 flex items-center gap-1">
+                                                <Users size={12}/> {groupMembers.length > 0 ? `${groupMembers.length} members` : 'Group chat'}
+                                            </p>
                                         </div>
                                     </>
                                 )}
                             </div>
                             
                             <div className="flex items-center gap-1 md:gap-2">
-                                <button onClick={() => startCall(false)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Phone size={18} /></button>
-                                <button onClick={() => startCall(true)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Video size={18} /></button>
+                                {activeChat.type === 'private' && (
+                                    <>
+                                        <button onClick={() => startCall(false)} title="Start Voice Call" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Phone size={18} /></button>
+                                        <button onClick={() => startCall(true)} title="Start Video Call" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Video size={18} /></button>
+                                    </>
+                                )}
                                 <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block">
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                                 </button>
@@ -484,17 +523,15 @@ export default function Chat() {
                         {/* Message Area */}
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white space-y-4 relative scroll-smooth">
                             
-                            {/* Pinned Message (Mock) */}
-                            {activeChat.type === 'group' && (
+                            {activeChat.type === 'group' && activeChat.data?.description && (
                                 <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-md p-3 rounded-xl border border-blue-100 mb-6 flex items-start justify-between shadow-sm">
                                     <div className="flex items-start gap-3">
                                         <div className="mt-0.5 text-blue-600">📌</div>
                                         <div>
-                                            <p className="text-xs font-bold text-slate-900">Pinned Message</p>
-                                            <p className="text-xs text-slate-600 font-medium">Project deadline: 30th June 2026 | Please update your tasks by EOD.</p>
+                                            <p className="text-xs font-bold text-slate-900">Group Topic</p>
+                                            <p className="text-xs text-slate-600 font-medium">{activeChat.data.description}</p>
                                         </div>
                                     </div>
-                                    <button className="text-slate-400 hover:text-slate-600"><Plus className="w-4 h-4 rotate-45" /></button>
                                 </div>
                             )}
 
@@ -570,80 +607,73 @@ export default function Chat() {
             <div className="hidden lg:flex w-[280px] xl:w-[320px] flex-col bg-slate-50 overflow-y-auto shrink-0 border-l border-slate-200">
                 {activeChat.type === 'private' && (
                     <div className="p-6 text-center">
-                        <div className="flex justify-between w-full mb-4">
-                            <button className="text-slate-400 hover:text-slate-900"><ArrowLeft size={20}/></button>
-                            <button className="text-slate-400 hover:text-slate-900"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-                        </div>
                         <div className="w-24 h-24 rounded-full mx-auto mb-3 overflow-hidden border-2 border-white shadow-sm relative">
                             <img src={activeChat.data?.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat.data?.username}`} className="w-full h-full object-cover" />
                         </div>
                         <h2 className="text-xl font-bold text-slate-900 leading-tight">{activeChat.data?.username}</h2>
                         <p className="text-xs font-bold text-green-600 flex items-center justify-center gap-1 mt-1 mb-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</p>
-                        <p className="text-xs text-slate-500 font-medium mb-6">Software Developer | Tech Enthusiast</p>
+                        <p className="text-xs text-slate-500 font-medium mb-6">SafeChat360 Verified User</p>
                         
                         <div className="flex justify-center gap-6 mb-8 border-b border-slate-200 pb-8">
-                            <button className="flex flex-col items-center gap-2 group">
+                            <button onClick={() => startCall(false)} className="flex flex-col items-center gap-2 group">
                                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors"><Phone size={18}/></div>
                                 <span className="text-[10px] font-bold text-blue-600">Audio Call</span>
                             </button>
-                            <button className="flex flex-col items-center gap-2 group">
+                            <button onClick={() => startCall(true)} className="flex flex-col items-center gap-2 group">
                                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors"><Video size={18}/></div>
                                 <span className="text-[10px] font-bold text-blue-600">Video Call</span>
-                            </button>
-                            <button className="flex flex-col items-center gap-2 group">
-                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-slate-200 transition-colors"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
-                                <span className="text-[10px] font-bold text-slate-600">Search</span>
-                            </button>
-                            <button className="flex flex-col items-center gap-2 group">
-                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-slate-200 transition-colors"><MoreHorizontal size={18}/></div>
-                                <span className="text-[10px] font-bold text-slate-600">More</span>
                             </button>
                         </div>
                         
                         <div className="text-left space-y-5">
                             <div>
                                 <h4 className="text-xs font-bold text-slate-900 mb-1 flex items-center gap-2"><UserIcon size={14}/> About</h4>
-                                <p className="text-sm text-slate-500 ml-5 leading-snug">Building secure and meaningful conversations.</p>
-                            </div>
-                            
-                            <div className="border-t border-slate-200 pt-5">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2"><ImageIcon size={14}/> Media, Links and Files</h4>
-                                    <span className="text-xs font-bold text-slate-400">12 &gt;</span>
-                                </div>
-                                <div className="flex gap-2 mb-5">
-                                    <div className="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden shrink-0"><img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=100&h=100&fit=crop" className="w-full h-full object-cover"/></div>
-                                    <div className="w-16 h-16 rounded-xl bg-slate-800 shrink-0"></div>
-                                    <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center text-slate-400"><Info size={16}/></div>
-                                    <div className="w-16 h-16 rounded-xl bg-slate-700 shrink-0 flex items-center justify-center text-white font-bold text-xs">+9</div>
-                                </div>
-                                
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center cursor-pointer group">
-                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg> Shared Files</div>
-                                        <span className="text-xs font-medium text-slate-400">12 files</span>
-                                    </div>
-                                    <div className="flex justify-between items-center cursor-pointer group">
-                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Shared Links</div>
-                                        <span className="text-xs font-medium text-slate-400">8 links</span>
-                                    </div>
-                                    <div className="flex justify-between items-center cursor-pointer group">
-                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><Sparkles className="w-4 h-4 text-slate-400"/> Starred Messages</div>
-                                        <span className="text-xs font-medium text-slate-400">3 messages</span>
-                                    </div>
-                                    <div className="flex justify-between items-center cursor-pointer group">
-                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700 group-hover:text-slate-900"><Bell className="w-4 h-4 text-slate-400"/> Notifications</div>
-                                        <span className="text-xs font-medium text-slate-400">All messages</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="border-t border-slate-200 pt-5">
-                                <button className="flex items-center gap-3 text-sm font-bold text-red-500 hover:text-red-600 w-full"><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Block Contact</button>
+                                <p className="text-sm text-slate-500 ml-5 leading-snug">Private conversation protected by end-to-end encryption.</p>
                             </div>
                         </div>
                     </div>
                 )}
+
+                {activeChat.type === 'group' && (
+                    <div className="p-6 text-center">
+                        <div className="w-20 h-20 rounded-full mx-auto mb-3 bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl shadow-sm">
+                            <Users size={32} />
+                        </div>
+                        <h2 className="text-xl font-bold text-slate-900 leading-tight">{activeChat.data?.name}</h2>
+                        <p className="text-xs text-slate-500 font-medium mt-1 mb-4">{groupMembers.length} active members</p>
+                        
+                        {activeChat.data?.description && (
+                            <div className="text-left bg-white p-3 rounded-xl border border-slate-200 mb-5 shadow-sm">
+                                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">About Group</h4>
+                                <p className="text-xs text-slate-700 leading-relaxed">{activeChat.data.description}</p>
+                            </div>
+                        )}
+
+                        <div className="text-left">
+                            <h4 className="text-xs font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <Users size={14}/> Group Members ({groupMembers.length})
+                            </h4>
+                            <div className="space-y-2 max-h-72 overflow-y-auto">
+                                {groupMembers.map((member, mIdx) => (
+                                    <div key={member.id || mIdx} className="flex items-center gap-3 p-2 rounded-xl bg-white border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                                        <img 
+                                            src={member.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.username}`} 
+                                            className="w-8 h-8 rounded-full object-cover border border-slate-200" 
+                                            alt=""
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold text-slate-900 truncate">
+                                                {member.username} {member.id === user?.id ? '(You)' : ''}
+                                            </p>
+                                            <p className="text-[10px] text-slate-400 capitalize">{member.role || 'Member'}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
 
             {showGroupModal && (

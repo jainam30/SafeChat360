@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck, Check } from 'lucide-react';
+import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck, Check, Phone } from 'lucide-react';
 import { getApiUrl, getDeviceId } from '../config';
-import { Phone } from 'lucide-react';
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { parsePhoneNumber } from 'libphonenumber-js';
@@ -19,7 +18,7 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form State
-    const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     fullName: '',
     username: '',
     email: '',
@@ -27,7 +26,8 @@ export default function AuthPage() {
     countryCode: '+91',
     password: '',
     confirmPassword: '',
-    agreeTerms: false
+    agreeTerms: false,
+    rememberMe: false
   });
 
   // Switch between login and register based on pathname
@@ -363,7 +363,7 @@ export default function AuthPage() {
                     <label className="text-sm font-semibold text-slate-700">Full name</label>
                     <div className="relative">
                       <input 
-                        type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} required
+                        type="text" name="fullName" value={formData.fullName || ''} onChange={handleInputChange} required
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
                         placeholder="Enter your full name"
                       />
@@ -374,7 +374,7 @@ export default function AuthPage() {
                     <label className="text-sm font-semibold text-slate-700">Username</label>
                     <div className="relative">
                       <input 
-                        type="text" name="username" value={formData.username} onChange={handleInputChange} required
+                        type="text" name="username" value={formData.username || ''} onChange={handleInputChange} required
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
                         placeholder="Choose a username"
                       />
@@ -388,7 +388,7 @@ export default function AuthPage() {
                 <label className="text-sm font-semibold text-slate-700">Email address</label>
                 <div className="relative">
                   <input 
-                    type="email" name="email" value={formData.email} onChange={handleInputChange} required
+                    type="email" name="email" value={formData.email || ''} onChange={handleInputChange} required
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
                     placeholder="you@example.com"
                   />
@@ -401,7 +401,7 @@ export default function AuthPage() {
                   <label className="text-sm font-semibold text-slate-700">Mobile number</label>
                   <div className="flex gap-2">
                     <select 
-                      name="countryCode" value={formData.countryCode} onChange={handleInputChange} 
+                      name="countryCode" value={formData.countryCode || '+91'} onChange={handleInputChange} 
                       className="w-24 pl-3 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm bg-white"
                     >
                       <option value="+1">+1 (US)</option>
@@ -411,7 +411,7 @@ export default function AuthPage() {
                     </select>
                     <div className="relative flex-1">
                       <input 
-                        type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} required={!isLogin}
+                        type="tel" name="phoneNumber" value={formData.phoneNumber || ''} onChange={handleInputChange} required={!isLogin}
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
                         placeholder="Mobile number"
                       />
@@ -425,7 +425,7 @@ export default function AuthPage() {
                 <label className="text-sm font-semibold text-slate-700">Password</label>
                 <div className="relative">
                   <input 
-                    type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleInputChange} required
+                    type={showPassword ? "text" : "password"} name="password" value={formData.password || ''} onChange={handleInputChange} required
                     className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
                     placeholder={isLogin ? "Enter your password" : "Create a strong password"}
                   />
@@ -441,7 +441,7 @@ export default function AuthPage() {
                   <label className="text-sm font-semibold text-slate-700">Confirm password</label>
                   <div className="relative">
                     <input 
-                      type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} required
+                      type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword || ''} onChange={handleInputChange} required
                       className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm"
                       placeholder="Confirm your password"
                     />
@@ -457,7 +457,13 @@ export default function AuthPage() {
                 <div className="flex items-center justify-between mt-2">
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <div className="relative flex items-center justify-center">
-                      <input type="checkbox" className="peer sr-only" />
+                      <input 
+                        type="checkbox" 
+                        name="rememberMe" 
+                        checked={Boolean(formData.rememberMe)} 
+                        onChange={handleInputChange} 
+                        className="peer sr-only" 
+                      />
                       <div className="w-4 h-4 border-2 border-slate-300 rounded bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
                       <Check className="w-3 h-3 text-white absolute opacity-0 peer-checked:opacity-100 pointer-events-none" />
                     </div>

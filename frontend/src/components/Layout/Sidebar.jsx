@@ -8,20 +8,12 @@ const getNavItems = (userRole) => {
   const isMod = userRole === 'admin' || userRole === 'moderator';
   
   const baseItems = [
-    { to: '/dashboard', label: 'Home', icon: Home },
+    { to: '/dashboard', label: 'Dashboard', icon: Home },
     { to: '/chats', label: 'Chats', icon: MessageSquare, id: 'chats' },
-    { to: '/groups', label: 'Groups', icon: Users, id: 'groups' },
-    { to: '/contacts', label: 'Contacts', icon: User, id: 'contacts' }, // Using contacts for both Friends/Contacts
+    { to: '/social', label: 'Social Feed', icon: Users, id: 'social' },
+    { to: '/contacts', label: 'Contacts', icon: User, id: 'contacts' },
     { to: '/media', label: 'Media', icon: ImageIcon, id: 'media' },
-    { to: '/saved', label: 'Saved Items', icon: Bookmark, id: 'saved' },
-    { to: '/social', label: 'Stories', icon: Clock },
-    
-    
-    { to: '/explore', label: 'Explore', icon: Search },
-    { to: '/notifications', label: 'Notifications', icon: Bell, id: 'notifications' },
-    { to: '/settings', label: 'Settings', icon: Settings },
-    { to: '/security', label: 'Security & Privacy', icon: Shield },
-    { to: '/help', label: 'Help & Support', icon: HelpCircle },
+    { to: '/settings', label: 'Settings', icon: Settings, id: 'settings' },
   ];
 
   if (isMod) {
@@ -35,7 +27,7 @@ const getNavItems = (userRole) => {
 };
 
 export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
-  const { friendRequests, notifications } = useNotifications() || { friendRequests: 0, notifications: [] };
+  const { friendRequests, unreadMessages } = useNotifications() || { friendRequests: 0, unreadMessages: 0 };
   const { user } = useAuth();
   const navigate = useNavigate();
   const items = getNavItems(user?.role);
@@ -58,9 +50,8 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
         {items.map(it => {
           const Icon = it.icon;
           let badgeCount = 0;
-          if (it.id === 'contacts') badgeCount = friendRequests;
-          if (it.id === 'notifications') badgeCount = notifications?.filter(n => !n.read)?.length || 0;
-          if (it.id === 'chats') badgeCount = 3; // Mocking 3 unread for design fidelity
+          if (it.id === 'contacts') badgeCount = friendRequests || 0;
+          if (it.id === 'chats') badgeCount = unreadMessages || 0;
 
           return (
             <NavLink
@@ -88,19 +79,15 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
         })}
       </nav>
 
-      {/* Bottom Storage Widget */}
+      {/* Bottom Security Info */}
       <div className="p-4 mx-4 mb-4 mt-2 bg-slate-50 rounded-xl border border-slate-100">
-        <div className="flex items-center gap-2 text-slate-900 font-bold text-sm mb-3">
-          <Cloud className="w-5 h-5 text-blue-500" />
-          Secure Storage
+        <div className="flex items-center gap-2 text-slate-900 font-bold text-xs mb-1">
+          <Shield className="w-4 h-4 text-emerald-500" />
+          End-to-End Encrypted
         </div>
-        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden mb-2">
-          <div className="h-full bg-blue-500 w-[32%] rounded-full"></div>
-        </div>
-        <p className="text-xs text-slate-500 mb-4 font-medium">3.2 GB of 10 GB used</p>
-        <button className="w-full py-2 bg-white border border-blue-200 text-blue-600 font-bold text-sm rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-          Upgrade
-        </button>
+        <p className="text-[11px] text-slate-500 leading-snug font-medium">
+          Messages & private data are protected with verified E2EE.
+        </p>
       </div>
     </aside>
   );

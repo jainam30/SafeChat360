@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, Camera, Save, Lock, Shield, AlertCircle } from 'lucide-react';

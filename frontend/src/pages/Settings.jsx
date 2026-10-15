@@ -1,60 +1,130 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl } from '../config';
+import toast from 'react-hot-toast';
 import { 
     User, Shield, Lock, Bell, Palette, HelpCircle, 
-    Camera, Mail, Phone, AlertTriangle, Trash2
+    Camera, Mail, Phone, AlertTriangle, Trash2, Settings as SettingsIcon,
+    Save, CheckCircle2
 } from 'lucide-react';
+import Security from './Security';
+import Help from './Help';
 
 export default function Settings() {
-    const { user, logout } = useAuth();
-    const [activeTab, setActiveTab] = useState('account');
+    const { user, setUser, token } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialTab = searchParams.get('tab') || 'account';
+    const [activeTab, setActiveTab] = useState(initialTab);
+
+    // Form state for account settings
+    const [fullName, setFullName] = useState(user?.full_name || '');
+    const [username, setUsername] = useState(user?.username || '');
+    const [saving, setSaving] = useState(false);
+
+    // Sync active tab with URL search parameter
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['account', 'privacy', 'security', 'notifications', 'appearance', 'help'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
+
+    // Keep form state in sync with loaded user
+    useEffect(() => {
+        if (user) {
+            setFullName(user.full_name || '');
+            setUsername(user.username || '');
+        }
+    }, [user]);
+
+    const handleTabChange = (tabId) => {
+        setActiveTab(tabId);
+        setSearchParams({ tab: tabId });
+    };
+
+    const handleSaveAccount = async (e) => {
+        if (e) e.preventDefault();
+        if (!token) return;
+        setSaving(true);
+        try {
+            const res = await axios.put(getApiUrl('/api/users/me'), {
+                full_name: fullName,
+                username: username
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data) {
+                toast.success("Profile updated successfully!");
+                if (setUser) {
+                    setUser(prev => ({ ...prev, full_name: fullName, username: username }));
+                }
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.detail || "Failed to update profile");
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const menuItems = [
         { id: 'account', label: 'Account', icon: <User size={18}/> },
-        { id: 'privacy', label: 'Privacy', icon: <Shield size={18}/> },
-        { id: 'security', label: 'Security', icon: <Lock size={18}/> },
+        { id: 'security', label: 'Security & Privacy', icon: <Shield size={18}/> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={18}/> },
-        { id: 'appearance', label: 'Appearance', icon: <Palette size={18}/> },
+        { id: 'appearance', label: 'Preferences', icon: <Palette size={18}/> },
         { id: 'help', label: 'Help & Support', icon: <HelpCircle size={18}/> },
     ];
 
     const renderAccountSettings = () => (
-        <div className="max-w-3xl">
+        <form onSubmit={handleSaveAccount} className="max-w-3xl">
             <h2 className="text-xl font-bold text-slate-900 mb-6">Account Settings</h2>
             
             {/* Profile Information */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
                 <div className="p-4 border-b border-slate-100">
                     <h3 className="font-bold text-slate-900">Profile Information</h3>
-                    <p className="text-xs text-slate-500">Update your photo and personal details.</p>
+                    <p className="text-xs text-slate-500">Update your public name and handle.</p>
                 </div>
                 <div className="p-6">
                     <div className="flex items-center gap-6 mb-8">
                         <div className="relative">
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'user'}`} className="w-20 h-20 rounded-full object-cover border border-slate-200" alt="avatar"/>
-                            <button className="absolute bottom-0 right-0 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600 shadow-sm">
-                                <Camera size={12}/>
-                            </button>
+                            {user?.avatar_url ? (
+                                <img src={user.avatar_url} className="w-20 h-20 rounded-full object-cover border border-slate-200" alt="avatar"/>
+                            ) : (
+                                <div className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl">
+                                    {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                            )}
                         </div>
-                        <div className="flex gap-3">
-                            <button className="px-4 py-2 bg-blue-50 text-blue-600 font-bold text-sm rounded-lg hover:bg-blue-100 transition-colors">Change Photo</button>
-                            <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-50 transition-colors">Remove</button>
+                        <div>
+                            <p className="font-bold text-slate-900 text-base">{user?.full_name || user?.username || 'SafeChat User'}</p>
+                            <p className="text-xs text-slate-500">@{user?.username || 'user'}</p>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-2">
+                                <CheckCircle2 size={12} /> Active Account
+                            </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                         <div>
                             <label className="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
-                            <input type="text" defaultValue={user?.full_name || 'Jainam Jain'} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                            <input 
+                                type="text" 
+                                value={fullName} 
+                                onChange={(e) => setFullName(e.target.value)}
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" 
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-700 mb-1.5">Username</label>
-                            <input type="text" defaultValue={user?.username || 'jainamjain'} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                            <input 
+                                type="text" 
+                                value={username} 
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" 
+                            />
                         </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Bio</label>
-                        <textarea rows="3" defaultValue="Software Developer | Tech Enthusiast | Explorer 🚀" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none resize-none"></textarea>
                     </div>
                 </div>
             </div>
@@ -63,7 +133,7 @@ export default function Settings() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
                 <div className="p-4 border-b border-slate-100">
                     <h3 className="font-bold text-slate-900">Contact Information</h3>
-                    <p className="text-xs text-slate-500">Manage your email and phone number.</p>
+                    <p className="text-xs text-slate-500">Your registered contact information.</p>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -71,55 +141,70 @@ export default function Settings() {
                             <label className="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input type="email" defaultValue={user?.email || 'jainamjainrj03@gmail.com'} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                                <input 
+                                    type="email" 
+                                    disabled
+                                    value={user?.email || 'N/A'} 
+                                    className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-500 cursor-not-allowed outline-none" 
+                                />
                             </div>
+                            <p className="text-[10px] text-slate-400 mt-1">Verified with SafeChat360 authentication</p>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Phone Number</label>
+                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Account Role</label>
                             <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input type="tel" defaultValue="+91 9876543210" className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 outline-none" />
+                                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input 
+                                    type="text" 
+                                    disabled
+                                    value={user?.role ? user.role.toUpperCase() : 'USER'} 
+                                    className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-500 cursor-not-allowed outline-none font-bold" 
+                                />
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Account Management */}
-            <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden mb-6">
-                <div className="p-4 border-b border-red-100 bg-red-50/50">
-                    <h3 className="font-bold text-red-600 flex items-center gap-2"><AlertTriangle size={16}/> Danger Zone</h3>
-                    <p className="text-xs text-red-500/80">Irreversible account actions.</p>
-                </div>
-                <div className="p-6 space-y-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h4 className="font-bold text-slate-900 text-sm">Deactivate Account</h4>
-                            <p className="text-xs text-slate-500">Temporarily disable your account and hide your profile.</p>
-                        </div>
-                        <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-50 transition-colors shrink-0">Deactivate</button>
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                        <div>
-                            <h4 className="font-bold text-slate-900 text-sm">Delete Account</h4>
-                            <p className="text-xs text-slate-500">Permanently delete your account and all your data.</p>
-                        </div>
-                        <button className="px-4 py-2 bg-red-50 text-red-600 font-bold text-sm rounded-lg hover:bg-red-100 transition-colors shrink-0 flex items-center gap-2"><Trash2 size={16}/> Delete Account</button>
                     </div>
                 </div>
             </div>
 
             <div className="flex justify-end">
-                <button className="px-6 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Save Changes</button>
+                <button 
+                    type="submit"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                >
+                    <Save size={16} />
+                    {saving ? "Saving..." : "Save Profile Changes"}
+                </button>
             </div>
-        </div>
+        </form>
     );
 
-    const renderMockContent = (title) => (
-        <div className="max-w-3xl flex flex-col items-center justify-center text-slate-500 py-20">
-            <Settings size={48} className="text-slate-200 mb-4"/>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">{title} Settings</h2>
-            <p className="text-sm font-medium">This section is currently under construction in the mock.</p>
+    const renderPreferences = () => (
+        <div className="max-w-3xl">
+            <h2 className="text-xl font-bold text-slate-900 mb-6">Preferences & Notifications</h2>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                        <h4 className="font-bold text-slate-900 text-sm">Desktop Notifications</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">Receive alerts when messages or calls arrive</p>
+                    </div>
+                    <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full">Enabled</span>
+                </div>
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                        <h4 className="font-bold text-slate-900 text-sm">Sound Alerts</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">Play ringing chime for incoming 1-to-1 WebRTC calls</p>
+                    </div>
+                    <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full">Enabled</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h4 className="font-bold text-slate-900 text-sm">Theme Appearance</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">Current UI design system is Clean White & Slate</p>
+                    </div>
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">Light Mode</span>
+                </div>
+            </div>
         </div>
     );
 
@@ -137,7 +222,7 @@ export default function Settings() {
                     {menuItems.map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => handleTabChange(item.id)}
                             className={`flex items-center gap-3 w-full p-3 rounded-xl font-bold text-sm transition-colors ${
                                 activeTab === item.id 
                                 ? 'bg-blue-50 text-blue-600' 
@@ -152,9 +237,13 @@ export default function Settings() {
             </div>
 
             {/* MAIN PANE */}
-            <div className="flex-1 overflow-y-auto min-w-0 p-6 md:p-8 bg-slate-50">
-                {activeTab === 'account' ? renderAccountSettings() : renderMockContent(menuItems.find(i => i.id === activeTab)?.label)}
+            <div className="flex-1 overflow-y-auto min-w-0 p-4 sm:p-6 md:p-8 bg-slate-50">
+                {activeTab === 'account' && renderAccountSettings()}
+                {(activeTab === 'security' || activeTab === 'privacy') && <Security />}
+                {activeTab === 'help' && <Help />}
+                {(activeTab === 'notifications' || activeTab === 'appearance') && renderPreferences()}
             </div>
         </div>
     );
 }
+

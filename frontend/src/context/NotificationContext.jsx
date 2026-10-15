@@ -95,8 +95,56 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [token, user]);
 
+    const markAsRead = async (notificationId) => {
+        if (!token) return;
+        if (typeof notificationId === 'string' && notificationId.startsWith('req-')) {
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
+            setFriendRequests(prev => Math.max(0, prev - 1));
+            return;
+        }
+        try {
+            const res = await fetch(getApiUrl(`/api/notifications/${notificationId}/read`), {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
+                setUnreadMessages(prev => Math.max(0, prev - 1));
+            }
+        } catch (e) {
+            console.error("Failed to mark notification as read", e);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        if (!token) return;
+        try {
+            const res = await fetch(getApiUrl('/api/notifications/read-all'), {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                setUnreadMessages(0);
+                toast.success('All notifications marked as read');
+            }
+        } catch (e) {
+            console.error("Failed to mark all notifications as read", e);
+        }
+    };
+
+    const totalUnread = friendRequests + unreadMessages;
+
     return (
-        <NotificationContext.Provider value={{ friendRequests, unreadMessages, notifications, checkNotifications }}>
+        <NotificationContext.Provider value={{
+            friendRequests,
+            unreadMessages,
+            totalUnread,
+            notifications,
+            checkNotifications,
+            markAsRead,
+            markAllAsRead
+        }}>
             {children}
         </NotificationContext.Provider>
     );

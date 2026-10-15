@@ -1,99 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { 
-    Users, UserPlus, Search, Download, MessageSquare, Phone, 
-    Video, MoreVertical, Check, X, Building, Code, Plane 
+    Users, UserPlus, Search, MessageSquare, Check, X, 
+    UserCheck, RefreshCw
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function Contacts() {
     const { token, user } = useAuth();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const [activeTab, setActiveTab] = useState('all');
     const [friends, setFriends] = useState([]);
     const [requests, setRequests] = useState([]);
+    const [suggestions, setSuggestions] = useState([]);
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+    const [processingId, setProcessingId] = useState(null);
 
     useEffect(() => {
-        if (token) {
-            fetchFriends();
-            fetchRequests();
-            fetchGroups();
+        const queryFromUrl = searchParams.get('search');
+        if (queryFromUrl) {
+            setSearchQuery(queryFromUrl);
         }
-    }, [token]);
+    }, [searchParams]);
 
-    const fetchFriends = async () => {
+    const fetchAllData = async () => {
+        if (!token) return;
         setLoading(true);
         try {
-            const res = await fetch(getApiUrl('/api/friends/'), { headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) setFriends((await res.json()) || []);
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [fRes, rRes, gRes, sRes] = await Promise.allSettled([
+                fetch(getApiUrl('/api/friends/'), { headers }),
+                fetch(getApiUrl('/api/friends/requests'), { headers }),
+                fetch(getApiUrl('/api/groups/'), { headers }),
+                fetch(getApiUrl('/api/friends/suggestions'), { headers })
+            ]);
+
+            if (fRes.status === 'fulfilled' && fRes.value.ok) {
+                const data = await fRes.value.json();
+                setFriends(Array.isArray(data) ? data : []);
+            }
+            if (rRes.status === 'fulfilled' && rRes.value.ok) {
+                const data = await rRes.value.json();
+                setRequests(Array.isArray(data) ? data : []);
+            }
+            if (gRes.status === 'fulfilled' && gRes.value.ok) {
+                const data = await gRes.value.json();
+                setGroups(Array.isArray(data) ? data : []);
+            }
+            if (sRes.status === 'fulfilled' && sRes.value.ok) {
+                const data = await sRes.value.json();
+                setSuggestions(Array.isArray(data) ? data : []);
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Failed to load contacts data", e);
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchRequests = async () => {
-        try {
-            const res = await fetch(getApiUrl('/api/friends/requests'), { headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) setRequests((await res.json()) || []);
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    const fetchGroups = async () => {
-        try {
-            const res = await fetch(getApiUrl('/api/groups/'), { headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) setGroups((await res.json()) || []);
-        } catch (e) {
-            console.error(e);
-        }
-    };
+    useEffect(() => {
+        fetchAllData();
+    }, [token]);
 
     const acceptRequest = async (friendshipId) => {
+        setProcessingId(friendshipId);
         try {
-            const res = await fetch(getApiUrl(`/api/friends/accept/${friendshipId}`), { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(getApiUrl(`/api/friends/accept/${friendshipId}`), { 
+                method: 'POST', 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
             if (res.ok) {
-                fetchRequests();
-                fetchFriends();
+                toast.success("Friend request accepted!");
+                fetchAllData();
+            } else {
+                toast.error("Failed to accept request");
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            toast.error("Error accepting request");
+        } finally {
+            setProcessingId(null);
+        }
     };
 
-    // Mock data for UI design fidelity
-    const recentlyContacted = [
-        { id: 1, name: 'Priya Mehta', image: 'https://i.pravatar.cc/150?u=priya', online: true },
-        { id: 2, name: 'Rohan Kumar', image: 'https://i.pravatar.cc/150?u=rohan', online: true },
-        { id: 3, name: 'Neha Jain', image: 'https://i.pravatar.cc/150?u=neha', online: true },
-        { id: 4, name: 'Aarav Sharma', image: 'https://i.pravatar.cc/150?u=aarav', online: true },
-        { id: 5, name: 'Sneha Patel', image: 'https://i.pravatar.cc/150?u=sneha', online: false },
-        { id: 6, name: 'Karan Singh', image: 'https://i.pravatar.cc/150?u=karan', online: true },
-    ];
+    const sendFriendRequest = async (targetUserId) => {
+        setProcessingId(targetUserId);
+        try {
+            const res = await fetch(getApiUrl(`/api/friends/request/${targetUserId}`), {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                toast.success("Friend request sent!");
+                setSuggestions(prev => prev.filter(s => s.id !== targetUserId));
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                toast.error(errData.detail || "Failed to send request");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("Error sending request");
+        } finally {
+            setProcessingId(null);
+        }
+    };
 
-    const suggestedPeople = [
-        { id: 1, name: 'Divya Patel', mutual: '12 mutual friends', image: 'https://i.pravatar.cc/150?u=divya' },
-        { id: 2, name: 'Arjun Mehta', mutual: '8 mutual friends', image: 'https://i.pravatar.cc/150?u=arjun' },
-        { id: 3, name: 'Kavya Singh', mutual: '5 mutual friends', image: 'https://i.pravatar.cc/150?u=kavya' },
-    ];
+    // Filter contacts based on search and active tab
+    const filteredFriends = friends.filter(friend => {
+        const name = (friend.username || friend.full_name || '').toLowerCase();
+        const matchesSearch = name.includes(searchQuery.toLowerCase());
+        if (!matchesSearch) return false;
 
-    const allContacts = friends.length > 0 ? friends : [
-        { id: 1, name: 'Priya Mehta', status: 'Online', online: true, image: 'https://i.pravatar.cc/150?u=priya' },
-        { id: 2, name: 'Rohan Kumar', status: 'Online', online: true, image: 'https://i.pravatar.cc/150?u=rohan' },
-        { id: 3, name: 'Neha Jain', status: 'Online', online: true, image: 'https://i.pravatar.cc/150?u=neha' },
-        { id: 4, name: 'Aarav Sharma', status: 'Last seen 10 minutes ago', online: false, image: 'https://i.pravatar.cc/150?u=aarav' },
-        { id: 5, name: 'Sneha Patel', status: 'Last seen 1 hour ago', online: false, image: 'https://i.pravatar.cc/150?u=sneha' },
-    ];
-
-    const displayGroups = groups.length > 0 ? groups : [
-        { id: 1, name: 'Project Team', members: '8 members', icon: <Building className="text-white w-5 h-5"/>, color: 'bg-indigo-500' },
-        { id: 2, name: 'College Friends', members: '32 members', icon: <Users className="text-white w-5 h-5"/>, color: 'bg-blue-500' },
-        { id: 3, name: 'Tech Discussions', members: '56 members', icon: <Code className="text-white w-5 h-5"/>, color: 'bg-teal-500' },
-        { id: 4, name: 'Travel Buddies', members: '15 members', icon: <Plane className="text-white w-5 h-5"/>, color: 'bg-sky-500' },
-    ];
+        if (activeTab === 'online') {
+            return friend.is_online || friend.online;
+        }
+        return true;
+    });
 
     return (
         <div className="flex flex-col xl:flex-row h-full w-full bg-white md:bg-transparent">
@@ -104,189 +132,281 @@ export default function Contacts() {
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900 leading-tight">Contacts</h1>
-                            <p className="text-sm font-medium text-slate-500 mt-1">People you know, chat with, and stay connected</p>
+                            <h1 className="text-2xl font-bold text-slate-900 leading-tight">Contacts & Friends</h1>
+                            <p className="text-sm font-medium text-slate-500 mt-1">Manage your connections and discover new community members</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 font-bold text-sm rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                                <Download size={16} /> Import Contacts
+                            <button 
+                                onClick={fetchAllData}
+                                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+                                title="Refresh contacts"
+                            >
+                                <RefreshCw size={14} className={loading ? "animate-spin text-blue-600" : ""} /> Refresh
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                                <UserPlus size={16} /> Add Contact
+                            <button 
+                                onClick={() => setActiveTab('suggestions')}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                            >
+                                <UserPlus size={14} /> Find People
                             </button>
                         </div>
                     </div>
 
                     {/* Tabs */}
                     <div className="flex items-center gap-6 border-b border-slate-200">
-                        {['All Contacts', 'Online', 'Followers', 'Following', 'Blocked'].map((tab) => (
+                        {[
+                            { id: 'all', label: `All Contacts (${friends.length})` },
+                            { id: 'online', label: 'Online Now' },
+                            { id: 'requests', label: `Requests (${requests.length})` },
+                            { id: 'suggestions', label: 'Suggested' }
+                        ].map((tab) => (
                             <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab.toLowerCase())}
-                                className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
-                                    activeTab === tab.toLowerCase() 
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`pb-3 text-xs font-bold border-b-2 transition-colors ${
+                                    activeTab === tab.id 
                                     ? 'border-blue-600 text-blue-600' 
                                     : 'border-transparent text-slate-500 hover:text-slate-800'
                                 }`}
                             >
-                                {tab}
+                                {tab.label}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <div className="p-6 pt-4 space-y-8">
+                <div className="p-6 pt-4 space-y-6">
                     
-                    {/* Recently Contacted */}
-                    <div>
-                        <h2 className="text-sm font-bold text-slate-900 mb-4">Recently Contacted</h2>
-                        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-                            {recentlyContacted.map(contact => (
-                                <div key={contact.id} className="flex flex-col items-center gap-2 flex-shrink-0 cursor-pointer">
-                                    <div className="relative">
-                                        <img src={contact.image} className="w-[60px] h-[60px] rounded-full object-cover border border-slate-200" alt={contact.name} />
-                                        {contact.online && (
-                                            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
-                                        )}
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-800 w-16 text-center truncate">{contact.name}</span>
-                                </div>
-                            ))}
-                            <button className="w-[60px] h-[60px] rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors flex-shrink-0">
-                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                            </button>
-                        </div>
+                    {/* Search Bar */}
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                            type="text" 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search contacts by name or username..." 
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                        />
                     </div>
 
-                    {/* All Contacts List */}
-                    <div>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold text-slate-900">All Contacts ({allContacts.length})</h2>
-                            <div className="relative w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search contacts..." 
-                                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                />
-                            </div>
-                        </div>
+                    {/* TAB: ALL / ONLINE CONTACTS */}
+                    {(activeTab === 'all' || activeTab === 'online') && (
+                        <div>
+                            {filteredFriends.length > 0 ? (
+                                <div className="space-y-1.5">
+                                    {filteredFriends.map((contact) => (
+                                        <div 
+                                            key={contact.id} 
+                                            className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-2xl transition-colors border border-transparent hover:border-slate-100 group"
+                                        >
+                                            <div className="flex items-center gap-3.5 min-w-0">
+                                                <div className="relative shrink-0">
+                                                    <img 
+                                                        src={contact.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.username}`} 
+                                                        className="w-11 h-11 rounded-full object-cover border border-slate-200" 
+                                                        alt="" 
+                                                    />
+                                                    {(contact.is_online || contact.online) && (
+                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h3 className="font-bold text-sm text-slate-900 truncate">
+                                                        {contact.full_name || contact.username}
+                                                    </h3>
+                                                    <p className="text-xs text-slate-400 truncate">
+                                                        @{contact.username}
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                        <div className="space-y-1">
-                            {allContacts.map((contact, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-colors group border border-transparent hover:border-slate-100">
-                                    <div className="flex items-center gap-4">
-                                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                                        <div className="relative">
-                                            <img src={contact.profile_photo || contact.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.username || contact.name}`} className="w-12 h-12 rounded-full object-cover border border-slate-200" alt="avatar" />
-                                            {contact.online && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>}
-                                            {contact.status === 'Last seen 10 minutes ago' && <div className="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-white rounded-full"></div>}
-                                            {contact.status === 'Last seen 1 hour ago' && <div className="absolute bottom-0 right-0 w-3 h-3 bg-slate-400 border-2 border-white rounded-full"></div>}
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => navigate(`/chats/${contact.id}`)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition-colors"
+                                                >
+                                                    <MessageSquare size={14} />
+                                                    <span>Chat</span>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-900">{contact.username || contact.name}</h3>
-                                            <p className={`text-xs font-medium mt-0.5 ${contact.online ? 'text-green-600' : 'text-slate-500'}`}>
-                                                {contact.online ? (
-                                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</span>
-                                                ) : (
-                                                    contact.status || 'Offline'
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><MessageSquare size={18}/></button>
-                                        <button className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"><Phone size={18}/></button>
-                                        <button className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><Video size={18}/></button>
-                                        <button className="p-2 text-slate-400 hover:bg-slate-200 rounded-lg transition-colors"><MoreVertical size={18}/></button>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="p-12 text-center text-slate-400">
+                                    <Users className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+                                    <p className="text-sm font-bold text-slate-700">No contacts found</p>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        {searchQuery ? "No contacts match your search query." : "You haven't connected with any friends yet."}
+                                    </p>
+                                    {!searchQuery && (
+                                        <button
+                                            onClick={() => setActiveTab('suggestions')}
+                                            className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition-colors"
+                                        >
+                                            Explore Suggested People
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
+
+                    {/* TAB: REQUESTS */}
+                    {activeTab === 'requests' && (
+                        <div>
+                            {requests.length > 0 ? (
+                                <div className="space-y-3 max-w-xl">
+                                    {requests.map((req) => (
+                                        <div key={req.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <img 
+                                                    src={req.requester_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_name || req.requester_username}`} 
+                                                    className="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0" 
+                                                    alt="" 
+                                                />
+                                                <div className="min-w-0">
+                                                    <h4 className="text-sm font-bold text-slate-900 truncate">
+                                                        {req.requester_name || req.requester_username || 'SafeChat User'}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-400">Sent a friend request</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    disabled={processingId === req.id}
+                                                    onClick={() => acceptRequest(req.id)} 
+                                                    className="flex items-center gap-1 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
+                                                >
+                                                    <Check size={14} /> Accept
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-12 text-center text-slate-400">
+                                    <UserCheck className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+                                    <p className="text-sm font-bold text-slate-700">No pending friend requests</p>
+                                    <p className="text-xs text-slate-400 mt-1">When someone sends you a friend request, it will appear here.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* TAB: SUGGESTIONS */}
+                    {activeTab === 'suggestions' && (
+                        <div>
+                            {suggestions.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+                                    {suggestions.map((person) => (
+                                        <div key={person.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between shadow-sm">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <img 
+                                                    src={person.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${person.username}`} 
+                                                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" 
+                                                    alt="" 
+                                                />
+                                                <div className="min-w-0">
+                                                    <h4 className="text-xs font-bold text-slate-900 truncate">{person.username}</h4>
+                                                    <p className="text-[10px] text-slate-400 truncate">{person.full_name || `@${person.username}`}</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                disabled={processingId === person.id}
+                                                onClick={() => sendFriendRequest(person.id)}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-colors border border-blue-200 disabled:opacity-50 shrink-0"
+                                            >
+                                                <UserPlus size={13} />
+                                                <span>{processingId === person.id ? "Adding..." : "Add"}</span>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-12 text-center text-slate-400">
+                                    <Users className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+                                    <p className="text-sm font-bold text-slate-700">No suggestions right now</p>
+                                    <p className="text-xs text-slate-400 mt-1">Check back later for new connections.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                 </div>
             </div>
 
-            {/* RIGHT SIDEBAR (Requests & Suggestions) */}
+            {/* RIGHT SIDEBAR (Requests & Groups Overview) */}
             <div className="w-full xl:w-[320px] bg-slate-50 border-l border-slate-200 overflow-y-auto shrink-0 p-5 space-y-8 hidden lg:block">
                 
-                {/* Friend Requests */}
+                {/* Friend Requests Sidebar */}
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-sm font-bold text-slate-900">Friend Requests (3)</h2>
-                        <button className="text-xs font-bold text-blue-600 hover:underline">See All</button>
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            Requests ({requests.length})
+                        </h2>
                     </div>
-                    <div className="space-y-3">
-                        {/* Mocking requests if none from backend for UI fidelity */}
-                        {(requests.length > 0 ? requests : [
-                            { id: 1, requester_username: 'Rahul Gupta', mutual: '5 mutual friends', image: 'https://i.pravatar.cc/150?u=rahul' },
-                            { id: 2, requester_username: 'Ishita Sharma', mutual: '3 mutual friends', image: 'https://i.pravatar.cc/150?u=ishita' },
-                            { id: 3, requester_username: 'Manav Soni', mutual: '7 mutual friends', image: 'https://i.pravatar.cc/150?u=manav' }
-                        ]).map((req, idx) => (
-                            <div key={idx} className="flex flex-col gap-2 p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <img src={req.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_username}`} className="w-10 h-10 rounded-full object-cover" alt="avatar" />
-                                    <div>
-                                        <h4 className="text-sm font-bold text-slate-900">{req.requester_username}</h4>
-                                        <p className="text-[11px] font-medium text-slate-500">{req.mutual || '2 mutual friends'}</p>
+                    {requests.length > 0 ? (
+                        <div className="space-y-2.5">
+                            {requests.slice(0, 3).map((req) => (
+                                <div key={req.id} className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                    <div className="flex items-center gap-2.5 mb-2.5">
+                                        <img 
+                                            src={req.requester_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_name || 'user'}`} 
+                                            className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0" 
+                                            alt="" 
+                                        />
+                                        <div className="min-w-0">
+                                            <h4 className="text-xs font-bold text-slate-900 truncate">{req.requester_name || req.requester_username || 'User'}</h4>
+                                            <p className="text-[10px] text-slate-400">Friend request</p>
+                                        </div>
                                     </div>
+                                    <button 
+                                        onClick={() => acceptRequest(req.id)}
+                                        className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
+                                    >
+                                        Accept Request
+                                    </button>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => acceptRequest(req.id)} className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors">Accept</button>
-                                    <button className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition-colors">Decline</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-slate-400 italic">No incoming requests</p>
+                    )}
                 </div>
 
-                {/* Suggested People */}
+                {/* My Groups Sidebar */}
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-sm font-bold text-slate-900">Suggested People</h2>
-                        <button className="text-xs font-bold text-blue-600 hover:underline">See All</button>
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            My Groups ({groups.length})
+                        </h2>
+                        <Link to="/chats" className="text-xs font-semibold text-blue-600 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4">
-                        {suggestedPeople.map(person => (
-                            <div key={person.id} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <img src={person.image} className="w-10 h-10 rounded-full object-cover" alt={person.name} />
-                                    <div>
-                                        <h4 className="text-sm font-bold text-slate-900">{person.name}</h4>
-                                        <p className="text-[11px] font-medium text-slate-500">{person.mutual}</p>
+                    {groups.length > 0 ? (
+                        <div className="space-y-2">
+                            {groups.slice(0, 5).map(group => (
+                                <div 
+                                    key={group.id} 
+                                    onClick={() => navigate(`/chats/group/${group.id}`)}
+                                    className="flex items-center justify-between p-2.5 hover:bg-white rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200 hover:shadow-sm"
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shrink-0 font-bold text-xs">
+                                            <Users size={14} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="text-xs font-bold text-slate-900 truncate">{group.name}</h4>
+                                            <p className="text-[10px] text-slate-400 truncate">{group.description || 'Group'}</p>
+                                        </div>
                                     </div>
+                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Open</span>
                                 </div>
-                                <button className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors">
-                                    Follow
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* My Groups */}
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-sm font-bold text-slate-900">My Groups</h2>
-                        <button className="text-xs font-bold text-blue-600 hover:underline">See All</button>
-                    </div>
-                    <div className="space-y-3">
-                        {displayGroups.map(group => (
-                            <div key={group.id} className="flex items-center justify-between p-2 hover:bg-white rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200 hover:shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl ${group.color || 'bg-indigo-500'} flex items-center justify-center`}>
-                                        {group.icon || <Users className="text-white w-5 h-5"/>}
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-slate-900">{group.name}</h4>
-                                        <p className="text-[11px] font-medium text-slate-500">{group.members || '0 members'}</p>
-                                    </div>
-                                </div>
-                                <button className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">View</button>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-slate-400 italic">No groups joined</p>
+                    )}
                 </div>
 
             </div>
