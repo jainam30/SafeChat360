@@ -23,9 +23,7 @@ class ConnectionManager:
         self.registry.add(ctx)
         self.metrics.increment("active_websocket_connections")
         
-        from app.events.types import BaseEvent
-        class ConnectionOpenedEvent(BaseEvent):
-            event_type = "ConnectionOpened"
+        from app.events.types import ConnectionOpenedEvent
             
         await self.event_bus.publish(ConnectionOpenedEvent(
             actor_id=ctx.user_id,
@@ -38,9 +36,7 @@ class ConnectionManager:
             self.registry.remove(user_id, device_id)
             self.metrics.decrement("active_websocket_connections")
             
-            from app.events.types import BaseEvent
-            class ConnectionClosedEvent(BaseEvent):
-                event_type = "ConnectionClosed"
+            from app.events.types import ConnectionClosedEvent
                 
             await self.event_bus.publish(ConnectionClosedEvent(
                 actor_id=user_id,

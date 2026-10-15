@@ -6,7 +6,7 @@ import axios from 'axios';
 import { auth } from '../firebase';
 import { sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, getDeviceId } from '../config';
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
@@ -78,7 +78,8 @@ export default function VerifyEmail() {
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
       const res = await axios.post(getApiUrl('/api/auth/verify-identity'), {
-        firebase_token: idToken
+        firebase_token: idToken,
+        device_id: getDeviceId()
       });
       const data = res.data;
       const accessToken = data.access_token || data.data?.access_token;

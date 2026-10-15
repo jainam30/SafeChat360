@@ -138,15 +138,12 @@ class AuthService:
              while self.user_repo.get_by_username(username):
                  username = f"{base_username}_{random.randint(100, 9999)}"
                  
-             if req.password:
-                 hashed = get_secure_password_hash(req.password)
-             else:
-                 import secrets
-                 try:
-                    hashed = get_secure_password_hash(secrets.token_urlsafe(32))
-                 except Exception as e:
-                    logger.error(f"JIT Hash Failed: {e}. Using fallback.")
-                    hashed = "$argon2id$v=19$m=65536,t=3,p=4$dummyhashfallbackplaceholder"
+             import secrets
+             try:
+                hashed = get_secure_password_hash(secrets.token_urlsafe(32))
+             except Exception as e:
+                logger.error(f"JIT Hash Failed: {e}. Using fallback.")
+                hashed = "$argon2id$v=19$m=65536,t=3,p=4$dummyhashfallbackplaceholder"
              
              user_data = {
                  "email": email,
@@ -158,12 +155,8 @@ class AuthService:
              }
              user = self.user_repo.create(obj_in=user_data)
         else:
-             # Synchronize password or heal legacy corrupted dummy hashes from past failed runs
-             if req.password:
-                 user.hashed_password = get_secure_password_hash(req.password)
-                 self.user_repo.session.add(user)
-                 self.user_repo.session.commit()
-             elif user.hashed_password and (user.hashed_password.startswith("$2b$12$imMe") or len(user.hashed_password) < 60):
+             # Heal legacy corrupted dummy hashes from past failed runs
+             if user.hashed_password and (user.hashed_password.startswith("$2b$12$imMe") or len(user.hashed_password) < 60):
                  import secrets
                  user.hashed_password = get_secure_password_hash(secrets.token_urlsafe(32))
                  self.user_repo.session.add(user)

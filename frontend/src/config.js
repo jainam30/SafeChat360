@@ -11,3 +11,17 @@ export const getApiUrl = (path) => {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     return `${API_URL}${normalizedPath}`;
 };
+
+// Unique, persistent device identifier stored in localStorage
+export const getDeviceId = () => {
+    try {
+        let id = localStorage.getItem("safechat_device_id");
+        if (!id) {
+            id = "dev_" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36)));
+            localStorage.setItem("safechat_device_id", id);
+        }
+        return id;
+    } catch (e) {
+        return "dev_fallback";
+    }
+};

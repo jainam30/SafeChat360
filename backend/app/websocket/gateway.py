@@ -25,7 +25,13 @@ def verify_ws_token(token: Optional[str]) -> Optional[int]:
     if not token:
         return None
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], audience="safechat360-clients")
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            audience="safechat360-clients",
+            issuer="safechat360"
+        )
         subject = payload.get("sub")
         if subject is None:
             return None

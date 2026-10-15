@@ -24,6 +24,16 @@ class DeviceService:
             select(UserSession).where(UserSession.user_id == user_id, UserSession.is_active == True)
         ).all()
 
+    def is_device_trusted(self, user_id: int, device_id: str) -> bool:
+        device = self.db.exec(
+            select(UserSession).where(
+                UserSession.user_id == user_id,
+                UserSession.device_id == device_id,
+                UserSession.is_active == True
+            )
+        ).first()
+        return device is not None
+
     async def register_device(self, user_id: int, device_id: str, user_agent: str, ip_address: str) -> UserSession:
         """
         Creates or updates a device record upon login.

@@ -260,12 +260,12 @@ async def test_auth_verify_identity_jit_and_collision_handling(monkeypatch):
     assert new_user.role == "user"
 
 @pytest.mark.asyncio
-async def test_auth_verify_identity_password_sync(monkeypatch):
+async def test_auth_verify_identity_heals_corrupted_hash(monkeypatch):
     repo = MockUserRepo()
     session_svc = MockSessionService()
     auth_svc = AuthService(repo, session_svc)
 
-    # Seed user with legacy dummy hash
+    # Seed user with legacy corrupted dummy hash
     user = repo.create({
         "email": "charu@example.com",
         "username": "charu",
@@ -279,24 +279,19 @@ async def test_auth_verify_identity_password_sync(monkeypatch):
         "email_verified": True
     })
 
-    # Verify identity and pass new password to sync
-    await auth_svc.verify_identity(VerifyRequest(
+    # Verify identity without sending plaintext passwords
+    tokens = await auth_svc.verify_identity(VerifyRequest(
         firebase_token="valid_fb_token",
-        password="NewSecurePassword456",
         device_id="desktop_browser"
     ))
 
-    # User's password should now verify against NewSecurePassword456!
-    from app.utils.security import verify_password
-    is_valid, _ = verify_password("NewSecurePassword456", user.hashed_password)
-    assert is_valid is True
+    assert "access_token" in tokens
+    # User's corrupted hash must be healed to a secure Argon2id hash
+    assert not user.hashed_password.startswith("$2b$12$imMe")
+    assert len(user.hashed_password) >= 60
 
 def test_jwt_claims_and_audience():
     from app.services.session.service import SessionService
-    from app.cache.service import CacheService
-    from app.events.bus import EventBus
-    from app.audit.service import AuditService
-    from app.services.devices.service import DeviceService
     from app.core.config import settings
     from jose import jwt
 
@@ -315,7 +310,13 @@ def test_jwt_claims_and_audience():
     })
 
     # Decode and check claims
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM], audience="safechat360-clients")
+    payload = jwt.decode(
+        token, 
+        settings.SECRET_KEY, 
+        algorithms=[settings.ALGORITHM], 
+        audience="safechat360-clients",
+        issuer="safechat360"
+    )
     assert payload["sub"] == "42"
     assert payload["email"] == "alice@example.com"
     assert payload["username"] == "alice"
@@ -333,7 +334,7 @@ def test_websocket_token_verification():
 
     svc = SessionService(None, None, None, None)
     
-    # 1. Valid Token
+    # 1. Valid Token with correct issuer and audience
     valid_token = svc.create_access_token(data={"sub": "101", "device_id": "ws_client"})
     assert verify_ws_token(valid_token) == 101
 
@@ -341,43 +342,94 @@ def test_websocket_token_verification():
     expired_token = svc.create_access_token(data={"sub": "101"}, expires_delta=timedelta(seconds=-10))
     assert verify_ws_token(expired_token) is None
 
-    # 3. Token with Wrong Audience
-    wrong_aud_token = jwt.encode({"sub": "101", "aud": "evil-client"}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    assert verify_ws_token(wrong_aud_token) is None
+    # 3. Invalid Signature (wrong secret key)
+    wrong_sig_token = jwt.encode(
+        {"sub": "101", "aud": "safechat360-clients", "iss": "safechat360"},
+        "totally-wrong-secret-key-that-does-not-match",
+        algorithm="HS256"
+    )
+    assert verify_ws_token(wrong_sig_token) is None
 
-    # 4. Token without sub
+    # 4. Token without sub claim
     no_sub_token = svc.create_access_token(data={"email": "test@example.com"})
     assert verify_ws_token(no_sub_token) is None
 
-    # 5. Empty token
+    # 5. Invalid Issuer
+    wrong_issuer_token = jwt.encode(
+        {"sub": "101", "aud": "safechat360-clients", "iss": "untrusted-issuer"},
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+    assert verify_ws_token(wrong_issuer_token) is None
+
+    # 6. Invalid Audience
+    wrong_aud_token = jwt.encode(
+        {"sub": "101", "aud": "evil-client-audience", "iss": "safechat360"},
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+    assert verify_ws_token(wrong_aud_token) is None
+
+    # 7. Empty or None token
     assert verify_ws_token(None) is None
     assert verify_ws_token("") is None
 
-def test_cors_exception_origin_check():
-    from app.core.exceptions import _get_cors_headers
-    from starlette.datastructures import Headers
+def test_websocket_endpoint_mismatched_client_identity():
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+    from app.main import app
+    from app.services.session.service import SessionService
 
-    class DummyRequest:
-        def __init__(self, origin):
-            self.headers = Headers({"origin": origin} if origin else {})
+    client = TestClient(app)
+    svc = SessionService(None, None, None, None)
+    token = svc.create_access_token(data={"sub": "2", "device_id": "dev_test"})
 
-    # 1. Allowed Production Domain
-    h1 = _get_cors_headers(DummyRequest("https://safe-chat360.vercel.app"))
-    assert h1.get("Access-Control-Allow-Origin") == "https://safe-chat360.vercel.app"
+    # 1. Mismatched client ID (token is for user 2, client requests user 9999)
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect("/api/chat/ws/9999?token=" + token):
+            pass
+    assert exc_info.value.code == 4003
 
-    # 2. Allowed Vercel Preview Domain
-    h2 = _get_cors_headers(DummyRequest("https://safe-chat360-preview-abc.vercel.app"))
-    assert h2.get("Access-Control-Allow-Origin") == "https://safe-chat360-preview-abc.vercel.app"
+    # 2. Invalid / forged token
+    with pytest.raises(WebSocketDisconnect) as exc_info2:
+        with client.websocket_connect("/api/chat/ws/2?token=invalid_token_123"):
+            pass
+    assert exc_info2.value.code == 4001
 
-    # 3. Allowed Localhost Domain
-    h3 = _get_cors_headers(DummyRequest("http://localhost:5173"))
-    assert h3.get("Access-Control-Allow-Origin") == "http://localhost:5173"
+def test_asgi_middleware_cors_and_exception_stack():
+    from fastapi.testclient import TestClient
+    from app.main import app
 
-    # 4. Disallowed External Attacker Domain
-    h4 = _get_cors_headers(DummyRequest("https://evil-attacker.vercel.app"))
-    assert "Access-Control-Allow-Origin" not in h4
+    client = TestClient(app, raise_server_exceptions=False)
 
-    # 5. Completely Unrelated Origin
-    h5 = _get_cors_headers(DummyRequest("https://attacker.com"))
-    assert "Access-Control-Allow-Origin" not in h5
+    # 1. Normal route with approved production origin
+    r1 = client.get("/health", headers={"Origin": "https://safe-chat360.vercel.app"})
+    assert r1.status_code == 200
+    assert r1.headers.get("access-control-allow-origin") == "https://safe-chat360.vercel.app"
+    assert r1.headers.get("access-control-allow-credentials") == "true"
+
+    # 2. Normal route with approved local development origin
+    r2 = client.get("/health", headers={"Origin": "http://localhost:5173"})
+    assert r2.status_code == 200
+    assert r2.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+    # 3. Normal route with arbitrary, unapproved *.vercel.app origin (MUST BE DENIED)
+    r3 = client.get("/health", headers={"Origin": "https://random-attacker.vercel.app"})
+    assert r3.status_code == 200
+    assert r3.headers.get("access-control-allow-origin") is None
+
+    # 4. APIException response with approved origin
+    r4 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://safe-chat360.vercel.app"})
+    assert r4.status_code == 401
+    assert r4.headers.get("access-control-allow-origin") == "https://safe-chat360.vercel.app"
+
+    # 5. APIException response with arbitrary, unapproved *.vercel.app origin (MUST BE DENIED)
+    r5 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://random-attacker.vercel.app"})
+    assert r5.status_code == 401
+    assert r5.headers.get("access-control-allow-origin") is None
+
+    # 6. APIException response with external attacker origin (MUST BE DENIED)
+    r6 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://malicious-website.com"})
+    assert r6.status_code == 401
+    assert r6.headers.get("access-control-allow-origin") is None
 

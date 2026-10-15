@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck, Check } from 'lucide-react';
-import { getApiUrl } from '../config';
+import { getApiUrl, getDeviceId } from '../config';
 import { Phone } from 'lucide-react';
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -61,7 +61,7 @@ export default function AuthPage() {
       const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firebase_token: token, device_id: navigator.userAgent }),
+        body: JSON.stringify({ firebase_token: token, device_id: getDeviceId() }),
       });
 
       const verifyData = await verifyRes.json();
@@ -123,8 +123,7 @@ export default function AuthPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 firebase_token: token,
-                password: password,
-                device_id: navigator.userAgent
+                device_id: getDeviceId()
               })
             });
 
@@ -147,7 +146,8 @@ export default function AuthPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             identifier: identifier,
-            password: password
+            password: password,
+            device_id: getDeviceId()
           })
         });
 
