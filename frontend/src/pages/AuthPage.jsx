@@ -6,7 +6,7 @@ import { Shield, Users, Lock, Eye, EyeOff, ShieldCheck, Check } from 'lucide-rea
 import { getApiUrl } from '../config';
 import { Phone } from 'lucide-react';
 import { auth } from '../firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { parsePhoneNumber } from 'libphonenumber-js';
 
 export default function AuthPage() {
@@ -65,13 +65,14 @@ export default function AuthPage() {
       });
 
       const verifyData = await verifyRes.json();
+      const accessToken = verifyData.access_token || verifyData.data?.access_token;
 
-      if (verifyRes.ok && verifyData.access_token) {
+      if (verifyRes.ok && accessToken) {
         toast.success("Google Login successful!");
-        login(verifyData.access_token);
+        login(accessToken);
         navigate('/dashboard');
       } else {
-        throw new Error((typeof verifyData.detail === 'string' ? verifyData.detail : JSON.stringify(verifyData.detail)) || "Google Login failed.");
+        throw new Error((typeof verifyData.detail === 'string' ? verifyData.detail : verifyData.message) || "Google Login failed.");
       }
     } catch (error) {
       console.error(error);
@@ -100,22 +101,64 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (isLogin) {
+        const identifier = formData.email.trim();
+        const password = formData.password;
+        let token = null;
+
+        // 1. If identifier is an email, attempt Firebase authentication first
+        if (identifier.includes('@')) {
+          try {
+            const userCredential = await signInWithEmailAndPassword(auth, identifier, password);
+            token = await userCredential.user.getIdToken();
+          } catch (fbErr) {
+            console.warn("Firebase sign-in attempt code:", fbErr.code);
+          }
+        }
+
+        // If Firebase issued a valid token, verify identity with the backend
+        if (token) {
+          try {
+            const verifyRes = await fetch(getApiUrl('/api/auth/verify-identity'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                firebase_token: token,
+                device_id: navigator.userAgent
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            const accessToken = verifyData.access_token || verifyData.data?.access_token;
+            if (verifyRes.ok && accessToken) {
+              toast.success('Successfully logged in!');
+              login(accessToken);
+              navigate('/dashboard');
+              return;
+            }
+          } catch (verifyErr) {
+            console.warn("Backend verify-identity failed, falling back to direct login:", verifyErr);
+          }
+        }
+
+        // 2. Direct backend login fallback (handles username logins and database-managed credentials)
         const response = await fetch(getApiUrl('/api/auth/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            identifier: formData.email,
-            password: formData.password
+            identifier: identifier,
+            password: password
           })
         });
 
         const data = await response.json();
-        if (response.ok) {
-          login(data.access_token);
+        const accessToken = data.access_token || data.data?.access_token;
+        if (response.ok && accessToken) {
+          login(accessToken);
           toast.success('Successfully logged in!');
           navigate('/dashboard');
         } else {
-          toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Login failed. Check credentials.');
+          const errMsg = (typeof data.detail === 'string' ? data.detail : data.message) || 'Login failed. Check credentials.';
+          toast.error(errMsg);
         }
       } else {
         const fullPhoneNumber = formData.countryCode + formData.phoneNumber.trim();
@@ -137,29 +180,44 @@ export default function AuthPage() {
           return;
         }
 
+        const email = formData.email.trim();
+        const password = formData.password;
         let firebaseUser;
         let token;
+
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           firebaseUser = userCredential.user;
           token = await firebaseUser.getIdToken();
         } catch (firebaseErr) {
           if (firebaseErr.code === 'auth/email-already-in-use') {
-            toast.success("Account already exists! Redirecting to Login...");
-            setTimeout(() => navigate('/login'), 2000);
+            // PARTIAL-REGISTRATION RECOVERY:
+            // The Firebase account already exists (e.g. from an earlier interrupted backend sync).
+            // Attempt sign-in to recover the ID token and complete backend sync seamlessly!
+            try {
+              const userCredential = await signInWithEmailAndPassword(auth, email, password);
+              firebaseUser = userCredential.user;
+              token = await firebaseUser.getIdToken();
+            } catch (signInErr) {
+              toast.error("This email is already registered in Firebase. Please sign in or use Forgot Password.");
+              setTimeout(() => navigate('/login'), 2000);
+              return;
+            }
+          } else {
+            toast.error(firebaseErr.message || 'Firebase account creation failed.');
+            setLoading(false);
             return;
           }
-          throw new Error(firebaseErr.message);
         }
 
         const response = await fetch(getApiUrl('/api/auth/register'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-            username: formData.username,
-            full_name: formData.fullName,
+            email: email,
+            password: password,
+            username: formData.username.trim(),
+            full_name: formData.fullName.trim(),
             phone_number: fullPhoneNumber,
             firebase_token: token
           })
@@ -169,14 +227,21 @@ export default function AuthPage() {
         
         if (response.ok) {
           toast.success('Account created successfully!');
-          if (data.access_token) {
-            login(data.access_token);
+          const accessToken = data.access_token || data.data?.access_token;
+          if (accessToken) {
+            login(accessToken);
             navigate('/dashboard');
           } else {
             navigate('/login');
           }
         } else {
-          toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Registration failed');
+          const errMsg = (typeof data.detail === 'string' ? data.detail : data.message) || 'Registration failed';
+          if (errMsg.includes("Email already registered")) {
+            toast.success("Account already exists! Redirecting to login...");
+            setTimeout(() => navigate('/login'), 1500);
+          } else {
+            toast.error(errMsg);
+          }
         }
       }
     } catch (err) {

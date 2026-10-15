@@ -33,14 +33,29 @@ class SessionService:
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         return encoded_jwt
 
-    async def create_session(self, user_id: int, device_id: str, user_agent: str, ip: str) -> Dict[str, str]:
+    async def create_session(
+        self, 
+        user_id: int, 
+        device_id: str, 
+        user_agent: str, 
+        ip: str,
+        email: Optional[str] = None,
+        username: Optional[str] = None,
+        role: Optional[str] = None
+    ) -> Dict[str, str]:
         # 1. Register/Update Device
         await self.device_service.register_device(user_id, device_id, user_agent, ip)
         
-        # 2. Issue Access Token
-        access_token = self.create_access_token(
-            data={"sub": str(user_id), "device_id": device_id}
-        )
+        # 2. Issue Access Token with identity claims
+        token_data = {"sub": str(user_id), "device_id": device_id}
+        if email:
+            token_data["email"] = email
+        if username:
+            token_data["username"] = username
+        if role:
+            token_data["role"] = role
+
+        access_token = self.create_access_token(data=token_data)
         
         # 3. Issue Refresh Token (Opaque Hash)
         # We don't store plain tokens in DB, we use cache/hash

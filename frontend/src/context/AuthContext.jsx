@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { getApiUrl } from "../config";
+import { auth } from "../firebase";
+import { signOut } from "firebase/auth";
 
 const AuthContext = createContext();
 
@@ -103,7 +105,12 @@ export function AuthProvider({ children }) {
     setUser(decodeToken(newToken));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn("Firebase sign out:", e);
+    }
     setToken(null);
     setUser(null);
   };

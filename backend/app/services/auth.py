@@ -60,14 +60,20 @@ class AuthService:
             user_id=user.id,
             device_id="unknown_device_register",
             user_agent="Register",
-            ip="127.0.0.1"
+            ip="127.0.0.1",
+            email=user.email,
+            username=user.username,
+            role=user.role
         )
         
         return {
             "status": "success", 
+            "access_token": tokens["access_token"],
+            "token_type": "bearer",
             "data": {
                 "id": user.id, 
                 "email": user.email, 
+                "username": user.username,
                 "role": user.role,
                 "access_token": tokens["access_token"]
             }
@@ -102,7 +108,10 @@ class AuthService:
             user_id=user.id,
             device_id=req.device_id,
             user_agent="Login",
-            ip="127.0.0.1"
+            ip="127.0.0.1",
+            email=user.email,
+            username=user.username,
+            role=user.role
         )
 
         return tokens
@@ -127,11 +136,12 @@ class AuthService:
                  import random
                  username = f"{username}{random.randint(100, 999)}"
                  
+             import secrets
              try:
-                hashed = get_secure_password_hash("fb_place")
+                hashed = get_secure_password_hash(secrets.token_urlsafe(32))
              except Exception as e:
                 logger.error(f"JIT Hash Failed: {e}. Using fallback.")
-                hashed = "$2b$12$imMeVPcMyn9md.m/..//dummyhashfallbackignoredanyway"
+                hashed = "$argon2id$v=19$m=65536,t=3,p=4$dummyhashfallbackplaceholder"
              
              user_data = {
                  "email": email,
@@ -142,13 +152,22 @@ class AuthService:
                  "role": "user"
              }
              user = self.user_repo.create(obj_in=user_data)
+        else:
+             # Heal legacy corrupted dummy hashes from past failed runs
+             if user.hashed_password and user.hashed_password.startswith("$2b$12$imMe") and len(user.hashed_password) < 60:
+                 import secrets
+                 user.hashed_password = get_secure_password_hash(secrets.token_urlsafe(32))
+                 self.user_repo.session.add(user)
+                 self.user_repo.session.commit()
 
         # Let SessionService handle device tracking 
-        # (Though we might want to revoke old sessions if we enforce 1 device)
         tokens = await self.session_service.create_session(
             user_id=user.id,
             device_id=req.device_id,
             user_agent="VerifyIdentity",
-            ip="127.0.0.1"
+            ip="127.0.0.1",
+            email=user.email,
+            username=user.username,
+            role=user.role
         )
         return tokens

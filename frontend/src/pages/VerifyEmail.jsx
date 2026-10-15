@@ -2,12 +2,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ShieldCheck, Mail, ArrowLeft, Users, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import axios from 'axios';
+import { auth } from '../firebase';
+import { sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || 'you@example.com';
+  const { login } = useAuth();
+  const email = location.state?.email || auth.currentUser?.email || 'you@example.com';
   
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -32,7 +37,7 @@ export default function VerifyEmail() {
       });
       setCode(newCode);
       const nextIndex = Math.min(index + pasted.length, 5);
-      inputRefs.current[nextIndex].focus();
+      inputRefs.current[nextIndex]?.focus();
       return;
     }
 
@@ -42,41 +47,71 @@ export default function VerifyEmail() {
 
     // Auto-advance
     if (value !== '' && index < 5) {
-      inputRefs.current[index + 1].focus();
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && index > 0 && code[index] === '') {
-      inputRefs.current[index - 1].focus();
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleResend = async () => {
+    setCountdown(30);
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        toast.success(`Verification email sent to ${email}!`);
+      } else {
+        toast.success(`If an account exists for ${email}, a verification link has been sent.`);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend verification email.');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      const res = await axios.post(getApiUrl('/api/auth/verify-identity'), {
+        firebase_token: idToken
+      });
+      const data = res.data;
+      const accessToken = data.access_token || data.data?.access_token;
+      if (accessToken) {
+        login(accessToken);
+        toast.success('Signed in successfully!');
+        navigate('/chats');
+      }
+    } catch (error) {
+      console.error("Google verify error:", error);
+      toast.error(error.response?.data?.message || error.message || 'Google verification failed.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const verificationCode = code.join('');
-    if (verificationCode.length !== 6) {
-      toast.error('Please enter the full 6-digit code');
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await fetch(getApiUrl('/api/auth/verify-email'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: verificationCode })
-      });
-      
-      if (response.ok) {
-        toast.success('Email verified successfully!');
-        navigate('/login');
-      } else {
-        const data = await response.json();
-        toast.error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Verification failed');
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          toast.success('Email verified successfully!');
+          navigate('/chats');
+          return;
+        }
       }
+
+      // Check if backend or link verification was completed
+      toast.info(`Please check your email (${email}) and click the verification link.`);
     } catch (err) {
-      toast.error('Network error. Please try again.');
+      toast.error(err.message || 'Verification check failed.');
     } finally {
       setLoading(false);
     }
@@ -198,7 +233,7 @@ export default function VerifyEmail() {
                 {countdown > 0 ? (
                   <span className="text-blue-600 font-medium">Resend in 00:{countdown.toString().padStart(2, '0')}</span>
                 ) : (
-                  <button type="button" onClick={() => setCountdown(30)} className="text-blue-600 font-bold hover:underline">Resend now</button>
+                  <button type="button" onClick={handleResend} className="text-blue-600 font-bold hover:underline">Resend now</button>
                 )}
               </div>
 
@@ -216,7 +251,7 @@ export default function VerifyEmail() {
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              <button type="button" className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3">
+              <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

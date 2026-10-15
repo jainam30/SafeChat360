@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ShieldCheck, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getApiUrl } from '../config';
+import { auth } from '../firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -12,18 +13,24 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch(getApiUrl('/api/auth/forgot-password'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      // Always show success to prevent email enumeration, but backend decides if real
+      await sendPasswordResetEmail(auth, email.trim());
       setSubmitted(true);
-      toast.success('Reset link sent if the email exists.');
+      toast.success('Reset link sent! Please check your email inbox.');
     } catch (err) {
-      toast.error('Network error. Please try again.');
+      console.warn("Password reset notice:", err.code);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+        // Protect against email enumeration
+        setSubmitted(true);
+        toast.success('If an account exists with this email, a reset link has been sent.');
+      } else {
+        toast.error(err.message || 'Failed to send reset email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
