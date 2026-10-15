@@ -200,4 +200,184 @@ async def test_auth_register_duplicate_checks(monkeypatch):
     assert reg_result["status"] == "success"
     assert "access_token" in reg_result
     assert "access_token" in reg_result["data"]
+    # Check that role is user
+    assert reg_result["data"]["role"] == "user"
+
+@pytest.mark.asyncio
+async def test_auth_register_prevents_role_escalation(monkeypatch):
+    repo = MockUserRepo()
+    session_svc = MockSessionService()
+    auth_svc = AuthService(repo, session_svc)
+
+    from firebase_admin import auth as firebase_auth
+    monkeypatch.setattr(firebase_auth, "verify_id_token", lambda tok, **kwargs: {"email": "hacker@example.com"})
+
+    # Attempt to pass role="admin"
+    reg_result = await auth_svc.register(RegisterRequest(
+        email="hacker@example.com",
+        username="hacker_user",
+        phone_number="+1888777666",
+        password="SecretPassword123",
+        role="admin",
+        firebase_token="valid_token"
+    ))
+    assert reg_result["data"]["role"] == "user"
+    saved_user = repo.get_by_email("hacker@example.com")
+    assert saved_user.role == "user"
+
+@pytest.mark.asyncio
+async def test_auth_verify_identity_jit_and_collision_handling(monkeypatch):
+    repo = MockUserRepo()
+    session_svc = MockSessionService()
+    auth_svc = AuthService(repo, session_svc)
+
+    # Pre-populate a user with username 'john'
+    repo.create({
+        "email": "existing_john@example.com",
+        "username": "john",
+        "hashed_password": "somehash",
+        "role": "user"
+    })
+
+    from firebase_admin import auth as firebase_auth
+    monkeypatch.setattr(firebase_auth, "verify_id_token", lambda tok, **kwargs: {
+        "email": "john@anotherdomain.com",
+        "name": "John Doe",
+        "email_verified": True
+    })
+
+    # Verify identity for john@anotherdomain.com - should JIT provision and avoid username collision
+    tokens = await auth_svc.verify_identity(VerifyRequest(
+        firebase_token="valid_fb_token",
+        device_id="mobile_app"
+    ))
+    assert "access_token" in tokens
+
+    new_user = repo.get_by_email("john@anotherdomain.com")
+    assert new_user is not None
+    assert new_user.username != "john" # Must have resolved collision
+    assert new_user.username.startswith("john_")
+    assert new_user.role == "user"
+
+@pytest.mark.asyncio
+async def test_auth_verify_identity_password_sync(monkeypatch):
+    repo = MockUserRepo()
+    session_svc = MockSessionService()
+    auth_svc = AuthService(repo, session_svc)
+
+    # Seed user with legacy dummy hash
+    user = repo.create({
+        "email": "charu@example.com",
+        "username": "charu",
+        "hashed_password": "$2b$12$imMeVPcMyn9md.m/..//dummyhashfallbackignoredanyway",
+        "role": "user"
+    })
+
+    from firebase_admin import auth as firebase_auth
+    monkeypatch.setattr(firebase_auth, "verify_id_token", lambda tok, **kwargs: {
+        "email": "charu@example.com",
+        "email_verified": True
+    })
+
+    # Verify identity and pass new password to sync
+    await auth_svc.verify_identity(VerifyRequest(
+        firebase_token="valid_fb_token",
+        password="NewSecurePassword456",
+        device_id="desktop_browser"
+    ))
+
+    # User's password should now verify against NewSecurePassword456!
+    from app.utils.security import verify_password
+    is_valid, _ = verify_password("NewSecurePassword456", user.hashed_password)
+    assert is_valid is True
+
+def test_jwt_claims_and_audience():
+    from app.services.session.service import SessionService
+    from app.cache.service import CacheService
+    from app.events.bus import EventBus
+    from app.audit.service import AuditService
+    from app.services.devices.service import DeviceService
+    from app.core.config import settings
+    from jose import jwt
+
+    class DummyCache: pass
+    class DummyBus: pass
+    class DummyAudit: pass
+    class DummyDevices: pass
+
+    svc = SessionService(DummyCache(), DummyBus(), DummyAudit(), DummyDevices())
+    token = svc.create_access_token(data={
+        "sub": "42",
+        "email": "alice@example.com",
+        "username": "alice",
+        "role": "user",
+        "device_id": "dev_123"
+    })
+
+    # Decode and check claims
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM], audience="safechat360-clients")
+    assert payload["sub"] == "42"
+    assert payload["email"] == "alice@example.com"
+    assert payload["username"] == "alice"
+    assert payload["role"] == "user"
+    assert payload["aud"] == "safechat360-clients"
+    assert payload["iss"] == "safechat360"
+    assert "exp" in payload
+
+def test_websocket_token_verification():
+    from app.websocket.gateway import verify_ws_token
+    from app.services.session.service import SessionService
+    from jose import jwt
+    from app.core.config import settings
+    from datetime import datetime, timedelta
+
+    svc = SessionService(None, None, None, None)
+    
+    # 1. Valid Token
+    valid_token = svc.create_access_token(data={"sub": "101", "device_id": "ws_client"})
+    assert verify_ws_token(valid_token) == 101
+
+    # 2. Expired Token
+    expired_token = svc.create_access_token(data={"sub": "101"}, expires_delta=timedelta(seconds=-10))
+    assert verify_ws_token(expired_token) is None
+
+    # 3. Token with Wrong Audience
+    wrong_aud_token = jwt.encode({"sub": "101", "aud": "evil-client"}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    assert verify_ws_token(wrong_aud_token) is None
+
+    # 4. Token without sub
+    no_sub_token = svc.create_access_token(data={"email": "test@example.com"})
+    assert verify_ws_token(no_sub_token) is None
+
+    # 5. Empty token
+    assert verify_ws_token(None) is None
+    assert verify_ws_token("") is None
+
+def test_cors_exception_origin_check():
+    from app.core.exceptions import _get_cors_headers
+    from starlette.datastructures import Headers
+
+    class DummyRequest:
+        def __init__(self, origin):
+            self.headers = Headers({"origin": origin} if origin else {})
+
+    # 1. Allowed Production Domain
+    h1 = _get_cors_headers(DummyRequest("https://safe-chat360.vercel.app"))
+    assert h1.get("Access-Control-Allow-Origin") == "https://safe-chat360.vercel.app"
+
+    # 2. Allowed Vercel Preview Domain
+    h2 = _get_cors_headers(DummyRequest("https://safe-chat360-preview-abc.vercel.app"))
+    assert h2.get("Access-Control-Allow-Origin") == "https://safe-chat360-preview-abc.vercel.app"
+
+    # 3. Allowed Localhost Domain
+    h3 = _get_cors_headers(DummyRequest("http://localhost:5173"))
+    assert h3.get("Access-Control-Allow-Origin") == "http://localhost:5173"
+
+    # 4. Disallowed External Attacker Domain
+    h4 = _get_cors_headers(DummyRequest("https://evil-attacker.vercel.app"))
+    assert "Access-Control-Allow-Origin" not in h4
+
+    # 5. Completely Unrelated Origin
+    h5 = _get_cors_headers(DummyRequest("https://attacker.com"))
+    assert "Access-Control-Allow-Origin" not in h5
 

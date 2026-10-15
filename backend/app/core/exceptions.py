@@ -1,6 +1,22 @@
+import re
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from .logger import logger
+from app.core.config import settings
+
+_ALLOWED_ORIGIN_REGEX = re.compile(r"^https://(safe-chat360|safechat360)(-[a-zA-Z0-9_-]+)?\.vercel\.app$")
+
+def _get_cors_headers(request: Request) -> dict:
+    origin = request.headers.get("origin")
+    if not origin:
+        return {}
+    allowed = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+    if origin in allowed or _ALLOWED_ORIGIN_REGEX.match(origin):
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true"
+        }
+    return {}
 
 class APIException(Exception):
     def __init__(self, message: str = None, status_code: int = status.HTTP_400_BAD_REQUEST, errors: list = None, detail: str = None):
@@ -13,11 +29,7 @@ class APIException(Exception):
 
 async def custom_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled Exception: {str(exc)}", exc_info=True)
-    origin = request.headers.get("origin")
-    headers = {}
-    if origin:
-        headers["Access-Control-Allow-Origin"] = origin
-        headers["Access-Control-Allow-Credentials"] = "true"
+    headers = _get_cors_headers(request)
         
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -33,11 +45,7 @@ async def custom_exception_handler(request: Request, exc: Exception):
     )
 
 async def api_exception_handler(request: Request, exc: APIException):
-    origin = request.headers.get("origin")
-    headers = {}
-    if origin:
-        headers["Access-Control-Allow-Origin"] = origin
-        headers["Access-Control-Allow-Credentials"] = "true"
+    headers = _get_cors_headers(request)
 
     return JSONResponse(
         status_code=exc.status_code,

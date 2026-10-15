@@ -71,7 +71,7 @@ origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if o
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"^https://(safe-chat360|safechat360)(-[a-zA-Z0-9_-]+)?\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

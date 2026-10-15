@@ -51,7 +51,7 @@ class AuthService:
             "phone_number": req.phone_number,
             "hashed_password": hashed,
             "full_name": req.full_name,
-            "role": req.role or "user"
+            "role": "user"
         }
         user = self.user_repo.create(obj_in=user_data)
         
@@ -125,23 +125,28 @@ class AuthService:
             raise APIException(status_code=401, detail=f"Identity verification failed: {str(e)}")
             
         email = decoded_token.get('email')
-        
+        if not email:
+            raise APIException(status_code=400, detail="Firebase token does not contain a verified email address")
+            
         user = self.user_repo.get_by_email(email)
         
         if not user:
              logger.info(f"JIT Provisioning: Creating user for {email}")
-             username = email.split('@')[0]
-             
-             if self.user_repo.get_by_username(username):
-                 import random
-                 username = f"{username}{random.randint(100, 999)}"
+             base_username = email.split('@')[0]
+             username = base_username
+             import random
+             while self.user_repo.get_by_username(username):
+                 username = f"{base_username}_{random.randint(100, 9999)}"
                  
-             import secrets
-             try:
-                hashed = get_secure_password_hash(secrets.token_urlsafe(32))
-             except Exception as e:
-                logger.error(f"JIT Hash Failed: {e}. Using fallback.")
-                hashed = "$argon2id$v=19$m=65536,t=3,p=4$dummyhashfallbackplaceholder"
+             if req.password:
+                 hashed = get_secure_password_hash(req.password)
+             else:
+                 import secrets
+                 try:
+                    hashed = get_secure_password_hash(secrets.token_urlsafe(32))
+                 except Exception as e:
+                    logger.error(f"JIT Hash Failed: {e}. Using fallback.")
+                    hashed = "$argon2id$v=19$m=65536,t=3,p=4$dummyhashfallbackplaceholder"
              
              user_data = {
                  "email": email,
@@ -153,8 +158,12 @@ class AuthService:
              }
              user = self.user_repo.create(obj_in=user_data)
         else:
-             # Heal legacy corrupted dummy hashes from past failed runs
-             if user.hashed_password and user.hashed_password.startswith("$2b$12$imMe") and len(user.hashed_password) < 60:
+             # Synchronize password or heal legacy corrupted dummy hashes from past failed runs
+             if req.password:
+                 user.hashed_password = get_secure_password_hash(req.password)
+                 self.user_repo.session.add(user)
+                 self.user_repo.session.commit()
+             elif user.hashed_password and (user.hashed_password.startswith("$2b$12$imMe") or len(user.hashed_password) < 60):
                  import secrets
                  user.hashed_password = get_secure_password_hash(secrets.token_urlsafe(32))
                  self.user_repo.session.add(user)

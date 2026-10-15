@@ -17,6 +17,7 @@ class LoginRequest(BaseModel):
 
 class VerifyRequest(BaseModel):
     firebase_token: str
+    password: Optional[str] = None
     device_id: str = "unknown_device"
 
 class TokenResponse(BaseModel):
