@@ -3,19 +3,15 @@ from sqlmodel import Session, select
 from typing import List
 from app.db import get_session
 from app.models import ModerationLog, User
-from app.deps import get_current_user
+from app.deps import require_moderator
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 
 @router.get("/queue", response_model=List[ModerationLog])
 def get_review_queue(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
-    # Only allow admins or moderators (add role check if needed, strictly assuming "moderator" or "admin" role exists, 
-    # but for MVP allowing any auth user or checking role='admin')
-    # if current_user.role != "admin": raise ...
-    
     # Fetch logs that are flagged and status is pending
     statement = select(ModerationLog).where(
         ModerationLog.is_flagged == True,
@@ -30,7 +26,7 @@ def resolve_log(
     log_id: int,
     action: str = Body(..., embed=True), # "dismiss" or "confirm"
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
     log = session.get(ModerationLog, log_id)
     if not log:

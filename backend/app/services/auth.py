@@ -1,7 +1,12 @@
 from app.repositories.user import UserRepository
 from app.utils.security import get_secure_password_hash, verify_password
 from app.utils.firebase import init_firebase
-from firebase_admin import auth as firebase_auth
+try:
+    import firebase_admin
+    from firebase_admin import auth as firebase_auth
+except ImportError:
+    firebase_admin = None
+    firebase_auth = None
 import hashlib
 from app.schemas.auth import RegisterRequest, LoginRequest, VerifyRequest
 from app.core.exceptions import APIException
@@ -18,8 +23,7 @@ class AuthService:
     async def register(self, req: RegisterRequest) -> dict:
         init_firebase()
         
-        import firebase_admin
-        if not firebase_admin._apps:
+        if not firebase_admin or not firebase_admin._apps:
             raise APIException(status_code=500, detail="Backend configuration error: Firebase Admin is not initialized. Please check FIREBASE_SERVICE_ACCOUNT_JSON environment variable on the server.")
 
         try:

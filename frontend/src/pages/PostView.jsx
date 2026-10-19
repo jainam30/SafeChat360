@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import { formatTimeForUser, formatDateForUser } from '../utils/dateFormatter';
 import { Shield, User, Clock, Heart, MessageCircle, Share2, AlertTriangle, ArrowLeft } from 'lucide-react';
 
@@ -112,9 +112,9 @@ const PostView = () => {
                     {post.media_url && (
                         <div className="rounded-xl overflow-hidden border border-cyber-border bg-black/5 shadow-inner">
                             {post.media_type === 'video' ? (
-                                <video src={post.media_url} controls className="w-full max-h-[600px] object-contain" />
+                                <video src={resolveMediaUrl(post.media_url)} controls className="w-full max-h-[600px] object-contain" />
                             ) : (
-                                <img src={post.media_url} alt="Post content" className="w-full max-h-[600px] object-contain" />
+                                <img src={resolveMediaUrl(post.media_url)} alt="Post content" className="w-full max-h-[600px] object-contain" />
                             )}
                         </div>
                     )}

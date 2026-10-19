@@ -87,7 +87,7 @@ class ChatService:
             receiver_id=req.receiver_id,
             group_id=req.group_id,
             content=req.content,
-            type="text"
+            type=getattr(req, "type", "text") or "text"
         )
         
         # Dispatch to Pipeline
@@ -125,38 +125,49 @@ class ChatService:
              except ValueError:
                  group_id = None
                  
-        msg_type = message_data.get("msg_type", "text")
+        msg_type = message_data.get("msg_type") or message_data.get("type", "text")
         
-        if msg_type in ["call-request", "call-response", "offer", "answer", "ice-candidate", "hang-up"]:
-             from datetime import datetime
-             entity = MessageEntity(
-                 conversation_id="",
-                 sender_id=current_user.id,
-                 sender_username=current_user.username,
-                 receiver_id=receiver_id,
-                 group_id=group_id,
-                 content=content or msg_type,
-                 type=msg_type,
-                 created_at=datetime.utcnow()
-             )
-             recipients = []
-             if receiver_id:
-                 recipients.append(receiver_id)
-             await self.delivery.deliver_message(entity, recipients)
-             
-             if msg_type in ["answer", "hang-up"]:
-                  log_entity = MessageEntity(
-                       conversation_id="",
-                       sender_id=current_user.id,
-                       sender_username=current_user.username,
-                       receiver_id=receiver_id,
-                       group_id=group_id,
-                       content=f"Voice Call {'Started' if msg_type == 'answer' else 'Ended'}",
-                       type="call",
-                       created_at=datetime.utcnow()
-                  )
-                  await self.pipeline.process(log_entity)
-             return {}
+        webrtc_signals = {"call-request", "call-response", "offer", "answer", "ice-candidate", "hang-up"}
+        if msg_type in webrtc_signals:
+            if not receiver_id or receiver_id == current_user.id:
+                logger.warning(f"Invalid receiver_id {receiver_id} for WebRTC signal {msg_type}")
+                return {}
+
+            import json
+            from datetime import datetime
+
+            signal_payload = {
+                "type": msg_type,
+                "msg_type": msg_type,
+                "sender_id": current_user.id,
+                "sender_username": current_user.username,
+                "receiver_id": receiver_id,
+                "isVideo": message_data.get("isVideo", False),
+            }
+            if "sdp" in message_data:
+                signal_payload["sdp"] = message_data["sdp"]
+            if "candidate" in message_data:
+                signal_payload["candidate"] = message_data["candidate"]
+            if "response" in message_data:
+                signal_payload["response"] = message_data["response"]
+
+            # Route directly to recipient's personal Pub/Sub channel
+            channel = f"user:{receiver_id}"
+            await self.delivery.pubsub.publish(channel, json.dumps(signal_payload))
+
+            if msg_type in ["answer", "hang-up"]:
+                log_entity = MessageEntity(
+                    conversation_id="",
+                    sender_id=current_user.id,
+                    sender_username=current_user.username,
+                    receiver_id=receiver_id,
+                    group_id=group_id,
+                    content=f"{'Video' if message_data.get('isVideo') else 'Voice'} Call {'Started' if msg_type == 'answer' else 'Ended'}",
+                    type="call",
+                    created_at=datetime.utcnow()
+                )
+                await self.pipeline.process(log_entity)
+            return {}
              
         entity = MessageEntity(
             conversation_id="",

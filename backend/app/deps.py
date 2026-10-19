@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlmodel import Session
 from app.db import get_session
+from app.models import User
 
 from app.utils.security import SECRET_KEY, ALGORITHM
 
@@ -44,6 +45,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
     if user is None:
         raise credentials_exception
     return user
+
+
+async def require_moderator(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in ["admin", "moderator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator or administrator privileges required",
+        )
+    return current_user
 
 
 from app.repositories.user import UserRepository

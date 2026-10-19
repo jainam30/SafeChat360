@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import { 
     Bookmark, Search, ThumbsUp, MessageSquare, 
     Share2, Compass, Trash2
@@ -150,7 +150,7 @@ export default function SavedItems() {
 
                                     {post.media_url && (
                                         <div className="rounded-xl overflow-hidden max-h-48 mb-3 bg-slate-900">
-                                            <img src={post.media_url} className="w-full h-44 object-cover" alt="" />
+                                            <img src={resolveMediaUrl(post.media_url)} className="w-full h-44 object-cover" alt="" />
                                         </div>
                                     )}
                                 </div>

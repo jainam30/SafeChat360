@@ -23,15 +23,41 @@ async def lifespan(app: FastAPI):
         SQLModel.metadata.create_all(engine)
         logger.info("Tables created.")
         
-        # AUTO-MIGRATION: Fix missing 'type' column for existing production DB
+        # AUTO-MIGRATION: Fix missing columns for existing production DB
         try:
             from sqlalchemy import text
             with engine.connect() as connection:
-                connection.execute(text("ALTER TABLE message ADD COLUMN type VARCHAR DEFAULT 'text'"))
+                connection.execute(text("ALTER TABLE message ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'text'"))
+                connection.execute(text("ALTER TABLE message ADD COLUMN IF NOT EXISTS is_unsent BOOLEAN DEFAULT FALSE"))
+                connection.execute(text("ALTER TABLE message ADD COLUMN IF NOT EXISTS deleted_by_ids TEXT"))
+                connection.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS username VARCHAR"))
+                connection.execute(text("ALTER TABLE story ADD COLUMN IF NOT EXISTS music_url VARCHAR"))
+                connection.execute(text("ALTER TABLE story ADD COLUMN IF NOT EXISTS overlays TEXT"))
+                connection.execute(text("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS trust_score INTEGER DEFAULT 100"))
                 connection.commit()
-            logger.info("MIGRATION SUCCESS: Added 'type' column to message table.")
+            logger.info("MIGRATION SUCCESS: Schema columns verified and updated.")
         except Exception as e:
-            logger.info(f"MIGRATION INFO: Column 'type' likely exists or other error. {e}")
+            logger.info(f"MIGRATION INFO: Note on column migration: {e}")
+        
+        # AUTO-INDEXING: Add performance composite indexes
+        try:
+            from sqlalchemy import text
+            with engine.connect() as connection:
+                indexes = [
+                    "CREATE INDEX IF NOT EXISTS ix_user_username_lower ON \"user\" (lower(username))",
+                    "CREATE INDEX IF NOT EXISTS ix_friendship_composite ON friendship (user_id, friend_id, status)",
+                    "CREATE INDEX IF NOT EXISTS ix_friendship_requests ON friendship (friend_id, status)",
+                    "CREATE INDEX IF NOT EXISTS ix_message_private ON message (sender_id, receiver_id, created_at DESC)",
+                    "CREATE INDEX IF NOT EXISTS ix_message_receiver ON message (receiver_id, created_at DESC)",
+                    "CREATE INDEX IF NOT EXISTS ix_message_group ON message (group_id, created_at DESC)",
+                    "CREATE INDEX IF NOT EXISTS ix_notification_user_created ON notification (user_id, created_at DESC)"
+                ]
+                for idx_sql in indexes:
+                    connection.execute(text(idx_sql))
+                connection.commit()
+            logger.info("INDEXING SUCCESS: Performance indexes applied.")
+        except Exception as e:
+            logger.info(f"INDEXING INFO: Note on index creation: {e}")
         
         # Initialize Firebase
         logger.info("Initializing Firebase...")
@@ -57,12 +83,15 @@ app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Security: Rate Limiting
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from app.limiter import limiter
+try:
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+    from app.limiter import limiter
 
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+except ImportError:
+    pass
 
 # CORS setup - drop wildcard entries; a wildcard origin is incompatible with
 # credentialed requests and unsafe.
@@ -97,13 +126,6 @@ app.include_router(pki.router)
 from app.routes import debug
 app.include_router(debug.router)
 
-from fastapi import WebSocket
-
-# MANUAL FIX: Register WebSocket explicitly in main app to bypass Router issues
-@app.websocket("/api/chat/ws/{client_id}")
-async def ws_proxy(websocket: WebSocket, client_id: str, token: str = None):
-    # Delegate to the logic in chat.py
-    await chat.websocket_endpoint(websocket, client_id, token)
 from app.routes import upload
 app.include_router(upload.router)
 

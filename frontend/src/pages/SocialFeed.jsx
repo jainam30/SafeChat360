@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatTimeForUser, formatDateForUser } from '../utils/dateFormatter';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import { Shield, Send, AlertTriangle, User, Clock, Camera, Heart, MessageCircle, Share2, MoreHorizontal, Users, Check, Edit2, Trash2, Copy, Link as LinkIcon, Video, Image, Smile, Bookmark, Plus } from 'lucide-react';
 import ChatBotCard from '../components/UI/ChatBotCard';
 import StoryViewer from '../components/StoryViewer';
@@ -651,9 +651,9 @@ const SocialFeed = () => {
                             {post.media_url && (
                                 <div className="rounded-xl overflow-hidden border border-slate-200 bg-black/5 shadow-inner">
                                     {post.media_type === 'video' ? (
-                                        <video src={post.media_url} controls className="w-full max-h-[500px] object-contain" />
+                                        <video src={resolveMediaUrl(post.media_url)} controls className="w-full max-h-[500px] object-contain" />
                                     ) : (
-                                        <img src={post.media_url} alt="Post content" className="w-full max-h-[500px] object-contain" />
+                                        <img src={resolveMediaUrl(post.media_url)} alt="Post content" className="w-full max-h-[500px] object-contain" />
                                     )}
                                 </div>
                             )}

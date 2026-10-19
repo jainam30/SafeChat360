@@ -82,3 +82,35 @@ class UserService:
             "created_at": user.created_at,
             "is_self": user.id == current_user.id
         }
+
+    def get_user_by_username_profile(self, username: str, current_user: User, friend_repo=None) -> dict:
+        user = self.user_repo.get_by_username(username)
+        if not user:
+            raise APIException(status_code=404, detail="User not found")
+
+        status = "none"
+        friendship_id = None
+        if friend_repo is not None:
+            f = friend_repo.get_friendship(current_user.id, user.id)
+            if f:
+                if f.status == "accepted":
+                    status = "accepted"
+                elif f.status == "pending":
+                    status = "incoming_request" if f.friend_id == current_user.id else "outgoing_request"
+                elif f.status == "rejected":
+                    status = "rejected"
+                friendship_id = f.id
+
+        return {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.full_name,
+            "profile_photo": user.profile_photo,
+            "trust_score": user.trust_score,
+            "role": user.role,
+            "created_at": user.created_at,
+            "is_self": user.id == current_user.id,
+            "friendship_status": status,
+            "friendship_id": friendship_id
+        }
+

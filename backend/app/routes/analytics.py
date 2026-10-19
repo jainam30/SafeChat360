@@ -4,14 +4,14 @@ from typing import List, Dict
 from datetime import datetime, timedelta
 from app.db import get_session
 from app.models import ModerationLog, User, Post
-from app.deps import get_current_user
+from app.deps import require_moderator
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 @router.get("/stats")
 def get_stats(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
     # Total flagged vs safe (from ModerationLog)
     total_logs = session.exec(select(func.count(ModerationLog.id))).one()
@@ -48,7 +48,7 @@ def get_stats(
 def get_trends(
     days: int = 7,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
     # Get counts for last N days
     # NOTE: We fetch raw data and aggregate in Python to support both SQLite (dev) and PostgreSQL (prod)

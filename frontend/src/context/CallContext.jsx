@@ -105,6 +105,13 @@ export const CallProvider = ({ children }) => {
                                 offerData: data
                             };
                         });
+                    } else if (data.type === 'hang-up' || (data.type === 'call-response' && (data.response === 'reject' || data.response === 'rejected'))) {
+                        setCallData(prev => {
+                            if (prev && prev.isIncoming && prev.caller?.id === data.sender_id) {
+                                return null;
+                            }
+                            return prev;
+                        });
                     }
                 } catch (e) { }
             };
@@ -140,6 +147,7 @@ export const CallProvider = ({ children }) => {
     } = useWebRTC({
         user,
         socket: socket,
+        token: token,
         isIncoming: callData?.isIncoming,
         isVideo: callData?.isVideo,
         caller: callData?.caller,

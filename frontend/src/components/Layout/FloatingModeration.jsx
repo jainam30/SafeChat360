@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MessageSquare, Image, Mic, Film, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function FloatingModeration() {
+    const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const navigate = useNavigate();
+
+    // Only authorized moderators or admins have access to moderation test tools
+    if (user?.role !== 'admin' && user?.role !== 'moderator') {
+        return null;
+    }
 
     const toggleOpen = () => setIsOpen(!isOpen);
 

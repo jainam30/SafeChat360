@@ -8,6 +8,30 @@ from app.services.messaging.delivery import DeliveryService
 
 router = APIRouter(prefix="/api/friends", tags=["friends"])
 
+from pydantic import BaseModel
+
+class FriendRequestBody(BaseModel):
+    friend_id: int
+
+@router.post("/request")
+async def send_friend_request_body(
+    body: FriendRequestBody,
+    current_user: User = Depends(get_current_user),
+    service: FriendService = Depends(get_friend_service)
+):
+    result = await service.send_friend_request(body.friend_id, current_user)
+    delivery: DeliveryService = get_delivery_service()
+    await delivery.broadcast_event(
+        {
+            "type": "notification",
+            "event": "friend_request",
+            "sender_username": current_user.username,
+            "sender_id": current_user.id
+        },
+        recipient_ids=[body.friend_id]
+    )
+    return result
+
 @router.post("/request/{friend_id}")
 async def send_friend_request(
     friend_id: int, 
@@ -57,6 +81,14 @@ async def accept_request(
     )
     return {"status": "success", "message": result["message"]}
 
+@router.post("/reject/{friendship_id}")
+def reject_request(
+    friendship_id: int,
+    current_user: User = Depends(get_current_user),
+    service: FriendService = Depends(get_friend_service)
+):
+    return service.reject_request(friendship_id, current_user)
+
 @router.get("/")
 def get_my_friends(
     current_user: User = Depends(get_current_user),
@@ -67,14 +99,17 @@ def get_my_friends(
 @router.get("/search")
 def search_users(
     q: str = "",
+    limit: int = 20,
     current_user: User = Depends(get_current_user),
     service: FriendService = Depends(get_friend_service)
 ):
-    return service.search_users(q, current_user)
+    return service.search_users(q, current_user, limit=limit)
 
 @router.get("/suggestions")
 def get_friend_suggestions(
+    limit: int = 10,
     current_user: User = Depends(get_current_user),
     service: FriendService = Depends(get_friend_service)
 ):
-    return service.get_friend_suggestions(current_user)
+    return service.get_friend_suggestions(current_user, limit=limit)
+

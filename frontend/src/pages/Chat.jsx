@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { formatTimeForUser } from '../utils/dateFormatter';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import toast from 'react-hot-toast';
 import {
     Send, User as UserIcon, Users, Hash, Plus, MessageSquare, Phone, Video,
@@ -33,25 +33,66 @@ export default function Chat() {
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [groupMembers, setGroupMembers] = useState([]);
 
+    // Chat Header & Menu States
+    const [showChatMenu, setShowChatMenu] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const chatMenuRef = useRef(null);
+
+    const getMutedChats = () => {
+        try {
+            return JSON.parse(localStorage.getItem(`muted_chats_${user?.id}`) || '[]');
+        } catch {
+            return [];
+        }
+    };
+
+    // Close menu when clicking outside
     useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) {
+                setShowChatMenu(false);
+            }
+        };
+        if (showChatMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [showChatMenu]);
+
+    useEffect(() => {
+        setShowChatMenu(false);
+        setIsSearchOpen(false);
+        setSearchQuery('');
         if (conversationId) {
             const id = parseInt(conversationId);
             const u = friends.find(f => f.id === id) || users.find(u => u.id === id);
             setActiveChat({ type: 'private', id, data: u || { username: '...', id } });
             setMobileView('chat');
+            setIsMuted(getMutedChats().includes(id));
         } else if (groupId) {
             const id = parseInt(groupId);
             const g = groups.find(g => g.id === id);
             setActiveChat({ type: 'group', id, data: g || { name: '...', id } });
             setMobileView('chat');
+            setIsMuted(getMutedChats().includes(id));
         } else {
             setActiveChat({ type: null, id: null, data: null });
             setMobileView('list');
+            setIsMuted(false);
         }
     }, [conversationId, groupId, friends, users, groups]);
 
     const messagesEndRef = useRef(null);
     const activeChatRef = useRef(activeChat);
+    const chatFileInputRef = useRef(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     const [activeMessageMenu, setActiveMessageMenu] = useState(null);
 
@@ -290,14 +331,16 @@ export default function Chat() {
         startCallContext(activeChat.data, isVideo);
     };
 
-    const sendMessage = async () => {
-        if (!inputValue.trim()) return;
+    const sendMessage = async (overrideContent = null, overrideType = 'text') => {
+        const contentToSend = overrideContent !== null ? overrideContent : inputValue;
+        if (!contentToSend.trim()) return;
 
         try {
             const body = {
-                content: inputValue,
+                content: contentToSend,
                 receiver_id: activeChat.type === 'private' ? activeChat.id : null,
-                group_id: activeChat.type === 'group' ? activeChat.id : null
+                group_id: activeChat.type === 'group' ? activeChat.id : null,
+                type: overrideType
             };
 
             const res = await fetch(getApiUrl('/api/chat/send'), {
@@ -312,10 +355,6 @@ export default function Chat() {
             if (!res.ok) {
                 if (res.status === 401) {
                     alert("Session expired. Please log in again.");
-                    // Force logout or redirect
-                    // Since we have logout from useAuth(), let's use it? 
-                    // But logout() is not destructured in the first line of Chat component yet.
-                    // Let's reload to be safe and force auth check
                     window.location.href = '/login';
                     return;
                 }
@@ -325,8 +364,6 @@ export default function Chat() {
                     const err = await res.json();
                     errorMsg = (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail)) || errorMsg;
                 } catch (jsonErr) {
-                    const text = await res.text();
-                    console.error("Non-JSON error response:", text);
                     errorMsg = `Server Error: ${res.status}`;
                 }
                 alert(errorMsg);
@@ -338,11 +375,53 @@ export default function Chat() {
                 if (prev.find(m => m.id === sentMsg.id)) return prev;
                 return [...prev, sentMsg];
             });
-            setInputValue('');
+            if (overrideContent === null) {
+                setInputValue('');
+            }
 
         } catch (err) {
             console.error("HTTP Send failed", err);
             alert("Connection error: " + err.message);
+        }
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Image exceeds 10MB limit.");
+            return;
+        }
+
+        setIsUploadingImage(true);
+        const toastId = toast.loading("Uploading image attachment...");
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch(getApiUrl('/api/upload'), {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || "Upload failed");
+            }
+
+            const data = await res.json();
+            await sendMessage(data.url, 'image');
+            toast.success("Image sent!", { id: toastId });
+        } catch (err) {
+            console.error("Image upload failed", err);
+            toast.error(err.message || "Failed to upload image", { id: toastId });
+        } finally {
+            setIsUploadingImage(false);
+            if (chatFileInputRef.current) chatFileInputRef.current.value = '';
         }
     };
 
@@ -476,7 +555,7 @@ export default function Chat() {
                         {/* Header */}
                         <div className="h-16 px-4 md:px-6 flex justify-between items-center border-b border-slate-200 bg-white sticky top-0 z-20">
                             <div className="flex items-center gap-3">
-                                <button className="md:hidden p-2 -ml-2 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => setMobileView('list')}>
+                                <button className="md:hidden p-2 -ml-2 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => { setMobileView('list'); navigate('/chats'); }}>
                                     <ArrowLeft size={20} />
                                 </button>
                                 
@@ -506,19 +585,133 @@ export default function Chat() {
                                 )}
                             </div>
                             
-                            <div className="flex items-center gap-1 md:gap-2">
+                            <div className="flex items-center gap-1">
                                 {activeChat.type === 'private' && (
                                     <>
-                                        <button onClick={() => startCall(false)} title="Start Voice Call" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Phone size={18} /></button>
-                                        <button onClick={() => startCall(true)} title="Start Video Call" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"><Video size={18} /></button>
+                                        <button 
+                                            onClick={() => startCall(false)} 
+                                            title="Start Voice Call" 
+                                            aria-label="Start voice call"
+                                            className="p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors flex items-center justify-center"
+                                        >
+                                            <Phone size={18} />
+                                        </button>
+                                        <button 
+                                            onClick={() => startCall(true)} 
+                                            title="Start Video Call" 
+                                            aria-label="Start video call"
+                                            className="p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors flex items-center justify-center"
+                                        >
+                                            <Video size={18} />
+                                        </button>
                                     </>
                                 )}
-                                <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block">
+                                <button 
+                                    onClick={() => setIsSearchOpen(prev => !prev)} 
+                                    title="Search Conversation" 
+                                    aria-label="Search conversation"
+                                    className={`p-2 rounded-lg transition-colors flex items-center justify-center ${isSearchOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+                                >
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                                 </button>
-                                <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"><MoreHorizontal size={18} /></button>
+                                
+                                <div className="relative" ref={chatMenuRef}>
+                                    <button 
+                                        onClick={() => setShowChatMenu(prev => !prev)} 
+                                        aria-label="Chat options"
+                                        aria-expanded={showChatMenu}
+                                        className={`p-2 rounded-lg transition-colors flex items-center justify-center ${showChatMenu ? 'bg-slate-200 text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}
+                                    >
+                                        <MoreHorizontal size={18} />
+                                    </button>
+                                    
+                                    {showChatMenu && (
+                                        <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-sm animate-in fade-in zoom-in-95 duration-100">
+                                            {activeChat.type === 'private' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setShowChatMenu(false);
+                                                        navigate(`/profile/${activeChat.data?.id}`);
+                                                    }}
+                                                    className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium"
+                                                >
+                                                    <UserIcon size={16} className="text-slate-500" />
+                                                    <span>View Profile</span>
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setShowChatMenu(false);
+                                                    setIsSearchOpen(true);
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium"
+                                            >
+                                                <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                                <span>Search Messages</span>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowChatMenu(false);
+                                                    const muted = getMutedChats();
+                                                    const chatId = activeChat.id;
+                                                    let nextMuted;
+                                                    if (muted.includes(chatId)) {
+                                                        nextMuted = muted.filter(id => id !== chatId);
+                                                        setIsMuted(false);
+                                                        toast.success("Notifications unmuted for this chat");
+                                                    } else {
+                                                        nextMuted = [...muted, chatId];
+                                                        setIsMuted(true);
+                                                        toast.success("Notifications muted for this chat");
+                                                    }
+                                                    localStorage.setItem(`muted_chats_${user?.id}`, JSON.stringify(nextMuted));
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium"
+                                            >
+                                                <Bell size={16} className={isMuted ? "text-amber-500" : "text-slate-500"} />
+                                                <span>{isMuted ? "Unmute Notifications" : "Mute Notifications"}</span>
+                                            </button>
+                                            <div className="h-px bg-slate-100 my-1" />
+                                            <button
+                                                onClick={() => {
+                                                    setShowChatMenu(false);
+                                                    setShowClearConfirm(true);
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-red-600 hover:bg-red-50 flex items-center gap-2.5 font-medium"
+                                            >
+                                                <Trash2 size={16} />
+                                                <span>Clear Chat History</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+
+                        {/* Search Bar when toggled */}
+                        {isSearchOpen && (
+                            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 animate-in fade-in duration-150">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search messages in this conversation..."
+                                    className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    autoFocus
+                                />
+                                {searchQuery && (
+                                    <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                                        {messages.filter(m => m.content && m.content.toLowerCase().includes(searchQuery.toLowerCase())).length} found
+                                    </span>
+                                )}
+                                <button
+                                    onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}
+                                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2 py-1"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        )}
 
                         {/* Message Area */}
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white space-y-4 relative scroll-smooth">
@@ -539,7 +732,9 @@ export default function Chat() {
                                 <span className="bg-slate-100 text-slate-500 text-xs font-bold px-4 py-1 rounded-full">Today</span>
                             </div>
 
-                            {messages.map((msg, index) => {
+                            {messages
+                                .filter(msg => !searchQuery.trim() || (msg.content && msg.content.toLowerCase().includes(searchQuery.toLowerCase())))
+                                .map((msg, index) => {
                                 const isMe = msg.sender_id === user?.id;
                                 const senderUser = !isMe ? (users.find(u => u.id === msg.sender_id) || friends.find(f => f.id === msg.sender_id)) : null;
                                 return (
@@ -568,7 +763,22 @@ export default function Chat() {
                                 onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
                                 className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-4 py-2"
                             >
-                                <button type="button" className="text-slate-400 hover:text-blue-600 transition-colors p-1"><ImageIcon size={20} /></button>
+                                <input
+                                    ref={chatFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleImageUpload}
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={() => chatFileInputRef.current?.click()}
+                                    disabled={isUploadingImage}
+                                    className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                                    title="Send image"
+                                >
+                                    <ImageIcon size={20} className={isUploadingImage ? 'animate-pulse text-blue-500' : ''} />
+                                </button>
                                 
                                 <input
                                     type="text"
@@ -683,6 +893,36 @@ export default function Chat() {
                     onCreated={handleGroupCreated}
                 />
             )}
+
+            {showClearConfirm && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">Clear Chat History?</h3>
+                        <p className="text-sm text-slate-500 mb-6">Are you sure you want to clear your local view of this conversation?</p>
+                        <div className="flex gap-3 justify-center">
+                            <button
+                                onClick={() => setShowClearConfirm(false)}
+                                className="px-4 py-2 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold text-sm transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setMessages([]);
+                                    setShowClearConfirm(false);
+                                    toast.success("Chat history cleared from view");
+                                }}
+                                className="px-4 py-2 rounded-xl text-white bg-red-600 hover:bg-red-700 font-semibold text-sm transition-colors shadow-sm"
+                            >
+                                Clear History
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -725,6 +965,15 @@ const MessageBubble = ({ message, isOwn, formatTime, senderUser, activeChatType,
                 <div className={`px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm ${isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 border border-slate-200/60 rounded-bl-sm whitespace-pre-wrap'}`}>
                     {message.is_unsent ? (
                         <span className="italic opacity-60 text-sm flex items-center gap-1">Message unsent</span>
+                    ) : (message.type === 'image' || message.msg_type === 'image' || (typeof message.content === 'string' && (message.content.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i) || message.content.startsWith('/uploads/')))) ? (
+                        <div className="rounded-xl overflow-hidden max-w-xs my-1 bg-black/5">
+                            <img
+                                src={resolveMediaUrl(message.content)}
+                                alt="Attachment"
+                                className="w-full max-h-72 object-cover rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
+                                onClick={() => window.open(resolveMediaUrl(message.content), '_blank')}
+                            />
+                        </div>
                     ) : (
                         message.content
                     )}

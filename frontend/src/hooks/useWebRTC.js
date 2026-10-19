@@ -1,16 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getApiUrl } from '../config';
 
-const SERVERS = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' }
-    ]
+let cachedIceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
+];
+
+export const checkIsSecureContext = () => {
+    if (typeof window === 'undefined') return true;
+    if (window.isSecureContext) return true;
+    const host = window.location.hostname;
+    if (['localhost', '127.0.0.1', '::1', '[::1]'].includes(host) || host.endsWith('.localhost')) {
+        return true;
+    }
+    if (window.location.protocol === 'https:') return true;
+    return false;
 };
 
-export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUser, offerData, onClose }) => {
+export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUser, offerData, onClose, token }) => {
     // State
     const [status, setStatus] = useState('idle');
     const [localStream, setLocalStream] = useState(null);
@@ -24,6 +34,17 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
     const remoteStreamRef = useRef(null);
     const candidatesQueue = useRef([]);
     const noAnswerTimeout = useRef(null);
+
+    // Refs for live closure access
+    const callerRef = useRef(caller);
+    const targetUserRef = useRef(targetUser);
+    const isIncomingRef = useRef(isIncoming);
+
+    useEffect(() => {
+        callerRef.current = caller;
+        targetUserRef.current = targetUser;
+        isIncomingRef.current = isIncoming;
+    }, [caller, targetUser, isIncoming]);
 
     // Audio Context
     const audioCtxRef = useRef(null);
@@ -102,41 +123,72 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
     useEffect(() => {
         if (status === 'calling') {
             noAnswerTimeout.current = setTimeout(() => {
-                console.log("Call timed out");
+                console.log("[WebRTC] Call timed out - no answer after 20s");
                 setError("No answer.");
-                endCall(true);
+                setTimeout(() => {
+                    endCall(true);
+                }, 2000);
             }, 20000);
         } else if (noAnswerTimeout.current) clearTimeout(noAnswerTimeout.current);
         return () => { if (noAnswerTimeout.current) clearTimeout(noAnswerTimeout.current); };
     }, [status]);
 
+    // Fetch ICE servers on mount or token change
+    useEffect(() => {
+        const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null);
+        if (!authToken) return;
+        fetch(getApiUrl('/api/chat/ice-servers'), {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            if (data?.ice_servers && Array.isArray(data.ice_servers)) {
+                cachedIceServers = data.ice_servers;
+                console.log("[WebRTC] Retrieved dynamic ICE servers:", cachedIceServers.length);
+            }
+        })
+        .catch(err => {
+            console.warn("[WebRTC] Failed to fetch dynamic ICE servers, using fallback STUN:", err);
+        });
+    }, [token]);
+
     // Initialize PeerConnection
     const createPeerConnection = useCallback(() => {
         if (peerConnection.current) return peerConnection.current;
         console.log("Creating RTCPeerConnection");
-        const pc = new RTCPeerConnection(SERVERS);
+        const pc = new RTCPeerConnection({ iceServers: cachedIceServers });
 
         pc.onicecandidate = (event) => {
             if (event.candidate && socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'ice-candidate',
-                    candidate: event.candidate,
-                    receiver_id: isIncoming ? caller.id : targetUser.id
-                }));
+                const targetId = isIncomingRef.current ? callerRef.current?.id : targetUserRef.current?.id;
+                if (targetId) {
+                    socket.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        candidate: event.candidate,
+                        receiver_id: targetId
+                    }));
+                }
             }
         };
 
         pc.oniceconnectionstatechange = () => {
-            if (pc.iceConnectionState === 'failed') {
+            console.log("ICE connection state:", pc.iceConnectionState);
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                setStatus('connected');
+                stopAudio();
+            } else if (pc.iceConnectionState === 'failed') {
                 setError("Connection failed");
                 endCall();
             }
         };
 
-        pc.connectionstatechange = () => {
+        pc.onconnectionstatechange = () => {
+            console.log("Peer connection state:", pc.connectionState);
             if (pc.connectionState === 'connected') {
                 setStatus('connected');
                 stopAudio();
+            } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                endCall(false);
             }
         };
 
@@ -185,15 +237,26 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             if (status === 'idle' || status === 'incoming') return;
             if (localStreamRef.current) return;
 
-            // HTTPS Check
-            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                setError("Get Media Failed: HTTPS Required");
-                console.error("getUserMedia requires HTTPS!");
+            // 1. Secure Context & Device Availability Check
+            const isSecure = checkIsSecureContext();
+            if (!isSecure && !navigator?.mediaDevices?.getUserMedia) {
+                const msg = "Camera/Mic requires a Secure Context (HTTPS or localhost). On mobile LAN, use an HTTPS tunnel or configure HTTPS in Vite.";
+                console.error("[WebRTC] Insecure context detected:", window.location.origin);
+                setError(msg);
+                setTimeout(() => { endCall(true); }, 5000);
+                return;
+            }
+
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                const msg = "Media devices API is not supported in this browser.";
+                console.error("[WebRTC] navigator.mediaDevices not supported");
+                setError(msg);
+                setTimeout(() => { endCall(true); }, 4000);
                 return;
             }
 
             try {
-                console.log("Acquiring local media...");
+                console.log("[WebRTC] Acquiring local media (HQ)...");
                 // Attempt high quality first
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: isVideo ? { facingMode: 'user' } : false, // facingMode for mobile
@@ -206,7 +269,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
                 if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
 
-                console.log("Got local media (HQ)", stream.id);
+                console.log("[WebRTC] Got local media (HQ):", stream.id);
                 setLocalStream(stream);
                 localStreamRef.current = stream;
                 // Sync initial toggle states (in case they were toggled before media was ready)
@@ -216,7 +279,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 if (status === 'calling') createOffer(stream);
 
             } catch (err) {
-                console.warn("HQ Media Failed, trying basic...", err);
+                console.warn("[WebRTC] HQ Media Failed, trying basic...", err);
                 try {
                     // Fallback to basic constraints
                     const stream = await navigator.mediaDevices.getUserMedia({
@@ -226,7 +289,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
                     if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
 
-                    console.log("Got local media (Basic)", stream.id);
+                    console.log("[WebRTC] Got local media (Basic):", stream.id);
                     setLocalStream(stream);
                     localStreamRef.current = stream;
                     stream.getAudioTracks().forEach(t => t.enabled = micEnabled);
@@ -235,11 +298,24 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                     if (status === 'calling') createOffer(stream);
 
                 } catch (fallbackErr) {
-                    console.error("Media Error:", fallbackErr);
-                    // More specific error messages
-                    if (fallbackErr.name === 'NotAllowedError') setError("Permission denied. Allow Camera/Mic.");
-                    else if (fallbackErr.name === 'NotFoundError') setError("No camera/mic found.");
-                    else setError("Could not access media.");
+                    console.error("[WebRTC] Media Acquisition Error:", fallbackErr);
+                    let errMessage = "Could not access camera/microphone.";
+                    if (fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError') {
+                        errMessage = "Permission denied. Please allow Camera/Microphone access in your browser.";
+                    } else if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
+                        errMessage = "No camera or microphone found on this device.";
+                    } else if (fallbackErr.name === 'NotReadableError' || fallbackErr.name === 'TrackStartError') {
+                        errMessage = "Camera or microphone is already in use by another application.";
+                    } else if (fallbackErr.name === 'OverconstrainedError') {
+                        errMessage = "Requested camera resolution or constraints are not supported.";
+                    } else if (fallbackErr.message) {
+                        errMessage = `Media error: ${fallbackErr.message}`;
+                    }
+                    setError(errMessage);
+                    // Bounded dismissal so call does not hang at CALLING... forever
+                    setTimeout(() => {
+                        endCall(true);
+                    }, 4000);
                 }
             }
         };
@@ -293,7 +369,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                 }
 
                 else if (data.type === 'call-response') {
-                    if (data.response === 'reject') {
+                    if (data.response === 'reject' || data.response === 'rejected') {
                         setStatus('rejected');
                         setTimeout(onClose, 2000);
                     } else if (data.response === 'busy') {
@@ -328,7 +404,12 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
                         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                         // Flush candidates
                         while (candidatesQueue.current.length) {
-                            await pc.addIceCandidate(candidatesQueue.current.shift());
+                            const cand = candidatesQueue.current.shift();
+                            try {
+                                await pc.addIceCandidate(cand);
+                            } catch (e) {
+                                console.warn("Error adding queued ICE candidate on answer:", e);
+                            }
                         }
                     } else {
                         console.warn("Ignored Answer in wrong state:", pc?.signalingState);
@@ -371,34 +452,63 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
             await pc.setLocalDescription(offer);
 
-            if (socket && socket.readyState === WebSocket.OPEN) {
+            const recipientId = targetUserRef.current?.id || targetUser?.id;
+            if (socket && socket.readyState === WebSocket.OPEN && recipientId) {
                 socket.send(JSON.stringify({
                     type: 'offer',
                     sdp: offer,
                     sender_id: user.id,
-                    receiver_id: targetUser.id,
+                    sender_username: user?.username || user?.display_name || user?.email,
+                    receiver_id: recipientId,
                     isVideo
                 }));
             } else {
-                setError("Connection lost.");
+                setError("Connection lost: WebSocket not connected.");
+                setTimeout(() => { endCall(true); }, 3000);
             }
         } catch (e) {
             console.error("Create Offer Failed", e);
             setError("Failed to start call");
+            setTimeout(() => { endCall(true); }, 3000);
         }
     };
 
     const acceptCall = async () => {
         try {
             stopAudio(); // Stop ringing
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: isVideo,
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
+            
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                const isSecure = checkIsSecureContext();
+                const msg = !isSecure 
+                    ? "Camera/Mic requires a Secure Context (HTTPS or localhost)."
+                    : "Media devices API is not supported in this browser.";
+                setError(msg);
+                setTimeout(() => { rejectCall(); }, 4000);
+                return;
+            }
+
+            // Resilient media capture: try requested constraints, fall back to basic audio if camera is absent/blocked
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: isVideo ? { facingMode: 'user' } : false,
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+            } catch (mediaErr) {
+                console.warn("Primary getUserMedia failed, attempting audio fallback:", mediaErr);
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                } catch (audioErr) {
+                    console.error("All getUserMedia attempts failed:", audioErr);
+                    setError("Could not access microphone/camera. Please grant permissions.");
+                    setTimeout(() => { rejectCall(); }, 4000);
+                    return;
                 }
-            });
+            }
 
             setLocalStream(stream);
             localStreamRef.current = stream;
@@ -410,35 +520,47 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
             if (offerData && offerData.sdp) {
                 if (pc.signalingState === "stable") {
                     await pc.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
+                }
+                if (pc.signalingState === "have-remote-offer") {
                     const answer = await pc.createAnswer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
                     await pc.setLocalDescription(answer);
 
-                    if (socket && socket.readyState === WebSocket.OPEN) {
+                    const recipientId = callerRef.current?.id || caller?.id;
+                    if (socket && socket.readyState === WebSocket.OPEN && recipientId) {
                         socket.send(JSON.stringify({
                             type: 'answer',
                             sdp: answer,
                             sender_id: user.id,
-                            receiver_id: caller.id
+                            receiver_id: recipientId,
+                            isVideo
                         }));
                     }
 
                     while (candidatesQueue.current.length) {
-                        await pc.addIceCandidate(candidatesQueue.current.shift());
+                        const cand = candidatesQueue.current.shift();
+                        try {
+                            await pc.addIceCandidate(cand);
+                        } catch (iceErr) {
+                            console.warn("Error adding queued ICE candidate in acceptCall:", iceErr);
+                        }
                     }
                 }
             }
         } catch (e) {
             console.error("Accept Call Failed", e);
             setError("Failed to accept call");
+            setTimeout(() => { rejectCall(); }, 3000);
         }
     };
 
     const rejectCall = () => {
-        if (socket && caller && socket.readyState === WebSocket.OPEN) {
+        stopAudio();
+        const callerId = callerRef.current?.id || caller?.id;
+        if (socket && callerId && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
                 type: 'call-response',
                 response: 'reject',
-                receiver_id: caller.id
+                receiver_id: callerId
             }));
         }
         onClose(); // Just close, no hangup signal needed (call hasn't started)
@@ -465,8 +587,7 @@ export const useWebRTC = ({ user, socket, isIncoming, isVideo, caller, targetUse
 
         // Notify Peer
         if (notifyPeer && socket && socket.readyState === WebSocket.OPEN) {
-            // Differentiate between outgoing cancel vs active hangup? Same signal is fine.
-            const peerId = isIncoming ? caller?.id : targetUser?.id;
+            const peerId = isIncomingRef.current ? callerRef.current?.id : targetUserRef.current?.id;
             if (peerId) {
                 socket.send(JSON.stringify({
                     type: 'hang-up',

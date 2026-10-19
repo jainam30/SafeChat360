@@ -25,3 +25,13 @@ export const getDeviceId = () => {
         return "dev_fallback";
     }
 };
+
+// Safe media URL resolver: ensures relative backend paths (like /uploads/...) resolve to the correct backend host
+export const resolveMediaUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+        return url;
+    }
+    return getApiUrl(url.startsWith('/') ? url : `/${url}`);
+};
+

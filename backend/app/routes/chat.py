@@ -36,6 +36,54 @@ def get_chat_history(
     return service.get_history(current_user, other_user_id, group_id)
 
 
+@router.get("/ice-servers")
+def get_ice_servers(current_user: User = Depends(get_current_user)):
+    """
+    Returns configured STUN and TURN servers for WebRTC calling.
+    Supports standard Coturn / RFC 5766 REST API HMAC timestamped credentials
+    when TURN_SECRET is configured, or static TURN credentials, with fallback to Google STUN.
+    """
+    import os
+    import time
+    import hmac
+    import hashlib
+    import base64
+
+    ice_servers = [
+        {"urls": "stun:stun.l.google.com:19302"},
+        {"urls": "stun:stun1.l.google.com:19302"},
+        {"urls": "stun:stun2.l.google.com:19302"},
+        {"urls": "stun:stun3.l.google.com:19302"},
+        {"urls": "stun:global.stun.twilio.com:3478"},
+    ]
+
+    turn_urls = os.getenv("TURN_URLS") or os.getenv("TURN_SERVER_URL")
+    if turn_urls:
+        turn_url_list = [u.strip() for u in turn_urls.split(",") if u.strip()]
+        turn_secret = os.getenv("TURN_SECRET")
+        turn_username = os.getenv("TURN_USERNAME")
+        turn_credential = os.getenv("TURN_CREDENTIAL")
+
+        if turn_secret:
+            expiry = int(time.time()) + 86400  # 24 hours
+            username = f"{expiry}:{current_user.id}"
+            digest = hmac.new(turn_secret.encode("utf-8"), username.encode("utf-8"), hashlib.sha1).digest()
+            credential = base64.b64encode(digest).decode("utf-8")
+            ice_servers.append({
+                "urls": turn_url_list,
+                "username": username,
+                "credential": credential,
+            })
+        elif turn_username and turn_credential:
+            ice_servers.append({
+                "urls": turn_url_list,
+                "username": turn_username,
+                "credential": turn_credential,
+            })
+
+    return {"ice_servers": ice_servers}
+
+
 @router.websocket("/ws/{client_id}")
 async def websocket_endpoint(
     websocket: WebSocket,

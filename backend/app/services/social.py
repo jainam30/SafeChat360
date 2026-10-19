@@ -112,14 +112,53 @@ class SocialService:
     def get_posts(self, current_user: User, limit: int = 100, offset: int = 0) -> list:
         friend_ids = self.friend_repo.get_friends(current_user.id)
         posts = self.post_repo.get_visible_posts(current_user.id, friend_ids, limit, offset)
-        
+        if not posts:
+            return []
+
+        post_ids = [p.id for p in posts if p.id is not None]
+        author_ids = list({p.user_id for p in posts})
+
+        # Batch-fetch authors (eliminates N queries)
+        authors = {u.id: u for u in self.user_repo.get_users_by_ids(author_ids)}
+
+        from sqlmodel import col
+        from app.models import Like, Comment
+
+        # Batch liked by current user
+        user_likes_stmt = select(Like.post_id).where(
+            Like.user_id == current_user.id,
+            col(Like.post_id).in_(post_ids)
+        )
+        user_liked_post_ids = set(self.post_repo.session.exec(user_likes_stmt).all())
+
+        # Batch user saved posts
+        user_saved_stmt = select(SavedPost.post_id).where(
+            SavedPost.user_id == current_user.id,
+            col(SavedPost.post_id).in_(post_ids)
+        )
+        user_saved_post_ids = set(self.post_repo.session.exec(user_saved_stmt).all())
+
+        # Batch all likes for these posts
+        likes_stmt = select(Like.post_id).where(col(Like.post_id).in_(post_ids))
+        all_likes = self.post_repo.session.exec(likes_stmt).all()
+        likes_counter = {}
+        for pid in all_likes:
+            likes_counter[pid] = likes_counter.get(pid, 0) + 1
+
+        # Batch all comments for these posts
+        comments_stmt = select(Comment.post_id).where(col(Comment.post_id).in_(post_ids))
+        all_comments = self.post_repo.session.exec(comments_stmt).all()
+        comments_counter = {}
+        for pid in all_comments:
+            comments_counter[pid] = comments_counter.get(pid, 0) + 1
+
         response = []
         for post in posts:
-            user = self.user_repo.get(post.user_id)
-            likes = self.post_repo.get_likes_count(post.id)
-            comments = len(self.post_repo.get_comments(post.id))
-            has_liked = self.post_repo.has_user_liked(current_user.id, post.id)
-            is_saved = self.post_repo.session.exec(select(SavedPost).where(SavedPost.user_id == current_user.id, SavedPost.post_id == post.id)).first() is not None
+            user = authors.get(post.user_id)
+            likes = likes_counter.get(post.id, 0)
+            comments = comments_counter.get(post.id, 0)
+            has_liked = post.id in user_liked_post_ids
+            is_saved = post.id in user_saved_post_ids
 
             response.append({
                 "id": post.id,
@@ -293,16 +332,44 @@ class SocialService:
             return {"status": "saved", "message": "Post saved"}
 
     def get_saved_posts(self, current_user: User, limit: int = 50, offset: int = 0) -> list:
-        from app.models import Post
+        from app.models import Post, Like, Comment
+        from sqlmodel import col
         statement = select(Post).join(SavedPost).where(SavedPost.user_id == current_user.id).order_by(SavedPost.created_at.desc()).offset(offset).limit(limit)
         posts = self.post_repo.session.exec(statement).all()
-        
+        if not posts:
+            return []
+
+        post_ids = [p.id for p in posts if p.id is not None]
+        author_ids = list({p.user_id for p in posts})
+        authors = {u.id: u for u in self.user_repo.get_users_by_ids(author_ids)}
+
+        # Batch liked by current user
+        user_likes_stmt = select(Like.post_id).where(
+            Like.user_id == current_user.id,
+            col(Like.post_id).in_(post_ids)
+        )
+        user_liked_post_ids = set(self.post_repo.session.exec(user_likes_stmt).all())
+
+        # Batch all likes for these posts
+        likes_stmt = select(Like.post_id).where(col(Like.post_id).in_(post_ids))
+        all_likes = self.post_repo.session.exec(likes_stmt).all()
+        likes_counter = {}
+        for pid in all_likes:
+            likes_counter[pid] = likes_counter.get(pid, 0) + 1
+
+        # Batch all comments for these posts
+        comments_stmt = select(Comment.post_id).where(col(Comment.post_id).in_(post_ids))
+        all_comments = self.post_repo.session.exec(comments_stmt).all()
+        comments_counter = {}
+        for pid in all_comments:
+            comments_counter[pid] = comments_counter.get(pid, 0) + 1
+
         response = []
         for post in posts:
-            user = self.user_repo.get(post.user_id)
-            likes = self.post_repo.get_likes_count(post.id)
-            comments = len(self.post_repo.get_comments(post.id))
-            has_liked = self.post_repo.has_user_liked(current_user.id, post.id)
+            user = authors.get(post.user_id)
+            likes = likes_counter.get(post.id, 0)
+            comments = comments_counter.get(post.id, 0)
+            has_liked = post.id in user_liked_post_ids
             
             response.append({
                 "id": post.id,
@@ -318,7 +385,8 @@ class SocialService:
                 "author_photo": user.profile_photo if user else None,
                 "likes_count": likes,
                 "comments_count": comments,
-                "has_liked": has_liked
+                "has_liked": has_liked,
+                "is_saved": True
             })
         return response
 
@@ -377,6 +445,9 @@ class SocialService:
             elif s.privacy == 'friends' and s.user_id in friend_ids:
                 filtered.append(s)
                 
+        author_ids = list({s.user_id for s in filtered})
+        authors = {u.id: u for u in self.user_repo.get_users_by_ids(author_ids)}
+
         return [{
             "id": s.id,
             "user_id": s.user_id,
@@ -386,7 +457,7 @@ class SocialService:
             "content": s.content,
             "created_at": s.created_at.isoformat(),
             "expires_at": s.expires_at.isoformat(),
-            "author_photo": self.user_repo.get(s.user_id).profile_photo if self.user_repo.get(s.user_id) else None,
+            "author_photo": authors.get(s.user_id).profile_photo if authors.get(s.user_id) else None,
             "music_url": s.music_url,
             "overlays": s.overlays
         } for s in filtered]

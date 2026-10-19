@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import { 
     Image as ImageIcon, Video, Upload, Grid, Search, 
     Clock, CheckCircle2, AlertCircle
@@ -98,7 +98,7 @@ export default function Media() {
                 toast.success("Media uploaded successfully!");
                 const newItem = {
                     id: `upload-${Date.now()}`,
-                    url: getApiUrl(res.data.url),
+                    url: resolveMediaUrl(res.data.url),
                     type: res.data.type || (file.type.startsWith('video') ? 'video' : 'image'),
                     title: file.name,
                     created_at: new Date().toISOString(),
@@ -201,9 +201,9 @@ export default function Media() {
                                 className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 aspect-square shadow-sm hover:shadow-md transition-all"
                             >
                                 {item.type === 'video' ? (
-                                    <video src={item.url} className="w-full h-full object-cover" />
+                                    <video src={resolveMediaUrl(item.url)} className="w-full h-full object-cover" />
                                 ) : (
-                                    <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                    <img src={resolveMediaUrl(item.url)} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-end text-white">
                                     <p className="text-xs font-bold truncate leading-tight">{item.title}</p>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import toast from 'react-hot-toast';
 import { 
     User, Shield, Lock, Bell, Palette, HelpCircle, 
@@ -68,6 +68,51 @@ export default function Settings() {
         }
     };
 
+    const avatarInputRef = useRef(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+    const handleAvatarUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Photo exceeds 10MB limit");
+            return;
+        }
+
+        setUploadingAvatar(true);
+        const toastId = toast.loading("Uploading profile photo...");
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadRes = await axios.post(getApiUrl('/api/upload'), formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            const photoUrl = uploadRes.data.url;
+            await axios.put(getApiUrl('/api/users/me'), {
+                profile_photo: photoUrl
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success("Profile photo updated!", { id: toastId });
+            if (setUser) {
+                setUser(prev => ({ ...prev, avatar_url: photoUrl, profile_photo: photoUrl }));
+            }
+        } catch (err) {
+            console.error("Avatar upload failed:", err);
+            toast.error(err.response?.data?.detail || "Failed to update profile photo", { id: toastId });
+        } finally {
+            setUploadingAvatar(false);
+            if (avatarInputRef.current) avatarInputRef.current.value = '';
+        }
+    };
+
     const menuItems = [
         { id: 'account', label: 'Account', icon: <User size={18}/> },
         { id: 'security', label: 'Security & Privacy', icon: <Shield size={18}/> },
@@ -84,25 +129,49 @@ export default function Settings() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
                 <div className="p-4 border-b border-slate-100">
                     <h3 className="font-bold text-slate-900">Profile Information</h3>
-                    <p className="text-xs text-slate-500">Update your public name and handle.</p>
+                    <p className="text-xs text-slate-500">Update your public name, handle, and avatar photo.</p>
                 </div>
                 <div className="p-6">
                     <div className="flex items-center gap-6 mb-8">
-                        <div className="relative">
-                            {user?.avatar_url ? (
-                                <img src={user.avatar_url} className="w-20 h-20 rounded-full object-cover border border-slate-200" alt="avatar"/>
+                        <div 
+                            className="relative group cursor-pointer"
+                            onClick={() => avatarInputRef.current?.click()}
+                            title="Click to change profile photo"
+                        >
+                            <input
+                                ref={avatarInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAvatarUpload}
+                            />
+                            {user?.avatar_url || user?.profile_photo ? (
+                                <img 
+                                    src={resolveMediaUrl(user.avatar_url || user.profile_photo)} 
+                                    className="w-20 h-20 rounded-full object-cover border-2 border-slate-200 shadow-sm" 
+                                    alt="avatar"
+                                />
                             ) : (
-                                <div className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl">
+                                <div className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl shadow-sm">
                                     {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
                                 </div>
                             )}
+                            <div className="absolute inset-0 rounded-full bg-slate-900/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera size={22} className={uploadingAvatar ? 'animate-spin' : ''} />
+                                <span className="text-[10px] font-bold mt-1">Upload</span>
+                            </div>
                         </div>
                         <div>
                             <p className="font-bold text-slate-900 text-base">{user?.full_name || user?.username || 'SafeChat User'}</p>
                             <p className="text-xs text-slate-500">@{user?.username || 'user'}</p>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-2">
-                                <CheckCircle2 size={12} /> Active Account
-                            </span>
+                            <button
+                                type="button"
+                                onClick={() => avatarInputRef.current?.click()}
+                                disabled={uploadingAvatar}
+                                className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1.5 transition-colors"
+                            >
+                                <Camera size={13} /> {uploadingAvatar ? 'Uploading...' : 'Change Photo'}
+                            </button>
                         </div>
                     </div>
 

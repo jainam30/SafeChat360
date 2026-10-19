@@ -83,10 +83,10 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
       <div className="p-4 mx-4 mb-4 mt-2 bg-slate-50 rounded-xl border border-slate-100">
         <div className="flex items-center gap-2 text-slate-900 font-bold text-xs mb-1">
           <Shield className="w-4 h-4 text-emerald-500" />
-          End-to-End Encrypted
+          Protected & Verified
         </div>
         <p className="text-[11px] text-slate-500 leading-snug font-medium">
-          Messages & private data are protected with verified E2EE.
+          Encrypted transport with TLS/WSS & real-time AI safety scanning.
         </p>
       </div>
     </aside>

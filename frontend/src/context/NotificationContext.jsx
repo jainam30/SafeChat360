@@ -17,14 +17,17 @@ export const NotificationProvider = ({ children }) => {
     const checkNotifications = async () => {
         if (!token) return;
         try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [resReq, resNotif] = await Promise.allSettled([
+                fetch(getApiUrl('/api/friends/requests'), { headers }),
+                fetch(getApiUrl('/api/notifications/'), { headers })
+            ]);
+
             const newNotifications = [];
 
-            // 1. Fetch Friend Pending Requests (Legacy logic, keep as notification)
-            const resReq = await fetch(getApiUrl('/api/friends/requests'), {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (resReq.ok) {
-                const data = await resReq.json();
+            // 1. Friend Pending Requests
+            if (resReq.status === 'fulfilled' && resReq.value.ok) {
+                const data = await resReq.value.json();
                 if (Array.isArray(data)) {
                     setFriendRequests(data.length);
                     const requestNotifs = data.map(req => ({
@@ -40,23 +43,17 @@ export const NotificationProvider = ({ children }) => {
                 }
             }
 
-            // 2. Fetch System Notifications (Mentions, etc.)
-            const resNotif = await fetch(getApiUrl('/api/notifications/'), {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (resNotif.ok) {
-                const data = await resNotif.json();
+            // 2. System Notifications
+            if (resNotif.status === 'fulfilled' && resNotif.value.ok) {
+                const data = await resNotif.value.json();
                 if (Array.isArray(data)) {
-                    // We show unread ones prominently or all?
-                    // Let's filter unread for badge counts, but show all in list
                     const unreadCount = data.filter(n => !n.is_read).length;
-                    setUnreadMessages(prev => Math.max(prev, unreadCount)); // Merge logic? Or just replace?
+                    setUnreadMessages(unreadCount);
 
                     const systemNotifs = data.map(n => ({
                         id: n.id,
                         type: n.type,
-                        requester_name: n.source_name, // Map source_name to requester_name for UI consistency if used
+                        requester_name: n.source_name,
                         requester_id: n.source_id,
                         created_at: n.created_at,
                         is_read: n.is_read,
@@ -72,7 +69,7 @@ export const NotificationProvider = ({ children }) => {
             setNotifications(newNotifications);
 
         } catch (e) {
-            console.error(e);
+            console.error("Failed to check notifications:", e);
         }
     };
 
@@ -80,18 +77,23 @@ export const NotificationProvider = ({ children }) => {
         if (token && user) {
             checkNotifications();
 
-            // POLL for notifications instead of WebSocket (Vercel Compatibility)
+            // POLL for notifications when tab is visible
             const interval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 checkNotifications();
-            }, 10000); // 10 seconds poll
+            }, 10000);
 
-            return () => clearInterval(interval);
+            const handleVisibilityChange = () => {
+                if (typeof document !== 'undefined' && !document.hidden) {
+                    checkNotifications();
+                }
+            };
+            document.addEventListener('visibilitychange', handleVisibilityChange);
 
-            /* WS DISABLED
-            // Connect WebSocket for Real-time Notifications
-            let wsUrl = getApiUrl(`/api/chat/ws/${user.id}?token=${token}`);
-             // ...
-            */
+            return () => {
+                clearInterval(interval);
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+            };
         }
     }, [token, user]);
 

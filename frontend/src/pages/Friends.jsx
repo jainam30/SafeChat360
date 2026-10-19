@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config';
 import { 
     Users, UserPlus, Search, MessageSquare, Check, X, 
-    UserCheck, RefreshCw
+    UserCheck, RefreshCw, Clock, Globe, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Contacts() {
     const { token, user } = useAuth();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [activeTab, setActiveTab] = useState('all');
     const [friends, setFriends] = useState([]);
@@ -19,15 +19,72 @@ export default function Contacts() {
     const [suggestions, setSuggestions] = useState([]);
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
+    
+    // Search state
     const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+    const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get('search') || '');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
     const [processingId, setProcessingId] = useState(null);
 
+    // Sync URL search param
     useEffect(() => {
         const queryFromUrl = searchParams.get('search');
-        if (queryFromUrl) {
+        if (queryFromUrl !== null && queryFromUrl !== searchQuery) {
             setSearchQuery(queryFromUrl);
         }
     }, [searchParams]);
+
+    // Debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+            if (searchQuery.trim()) {
+                setSearchParams({ search: searchQuery.trim() }, { replace: true });
+            } else {
+                setSearchParams({}, { replace: true });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, setSearchParams]);
+
+    // Perform live user discovery search
+    useEffect(() => {
+        const query = debouncedQuery.trim();
+        if (!query) {
+            setSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+
+        if (!token) return;
+
+        const controller = new AbortController();
+        setIsSearching(true);
+
+        fetch(getApiUrl(`/api/friends/search?q=${encodeURIComponent(query)}&limit=20`), {
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: controller.signal
+        })
+        .then(async (res) => {
+            if (res.ok) {
+                const data = await res.json();
+                setSearchResults(Array.isArray(data) ? data : []);
+            } else {
+                setSearchResults([]);
+            }
+        })
+        .catch((err) => {
+            if (err.name !== 'AbortError') {
+                console.error("Discovery search error:", err);
+            }
+        })
+        .finally(() => {
+            setIsSearching(false);
+        });
+
+        return () => controller.abort();
+    }, [debouncedQuery, token]);
 
     const fetchAllData = async () => {
         if (!token) return;
@@ -77,6 +134,10 @@ export default function Contacts() {
             });
             if (res.ok) {
                 toast.success("Friend request accepted!");
+                // Update local search results if present
+                setSearchResults(prev => prev.map(u => 
+                    u.friendship_id === friendshipId ? { ...u, friendship_status: 'accepted' } : u
+                ));
                 fetchAllData();
             } else {
                 toast.error("Failed to accept request");
@@ -84,6 +145,31 @@ export default function Contacts() {
         } catch (e) {
             console.error(e);
             toast.error("Error accepting request");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const rejectRequest = async (friendshipId) => {
+        setProcessingId(friendshipId);
+        try {
+            const res = await fetch(getApiUrl(`/api/friends/reject/${friendshipId}`), {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                toast.success("Friend request declined");
+                setSearchResults(prev => prev.map(u => 
+                    u.friendship_id === friendshipId ? { ...u, friendship_status: 'none', friendship_id: null } : u
+                ));
+                setRequests(prev => prev.filter(r => r.id !== friendshipId));
+                fetchAllData();
+            } else {
+                toast.error("Failed to decline request");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("Error declining request");
         } finally {
             setProcessingId(null);
         }
@@ -97,7 +183,12 @@ export default function Contacts() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
+                const resData = await res.json().catch(() => ({}));
                 toast.success("Friend request sent!");
+                // Update search results state to reflect outgoing request immediately
+                setSearchResults(prev => prev.map(u => 
+                    u.id === targetUserId ? { ...u, friendship_status: 'outgoing_request', friendship_id: resData.friendship_id } : u
+                ));
                 setSuggestions(prev => prev.filter(s => s.id !== targetUserId));
             } else {
                 const errData = await res.json().catch(() => ({}));
@@ -123,6 +214,8 @@ export default function Contacts() {
         return true;
     });
 
+    const isSearchingMode = debouncedQuery.trim().length > 0;
+
     return (
         <div className="flex flex-col xl:flex-row h-full w-full bg-white md:bg-transparent">
             
@@ -133,7 +226,7 @@ export default function Contacts() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900 leading-tight">Contacts & Friends</h1>
-                            <p className="text-sm font-medium text-slate-500 mt-1">Manage your connections and discover new community members</p>
+                            <p className="text-sm font-medium text-slate-500 mt-1">Manage your connections and discover registered SafeChat360 users</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button 
@@ -144,7 +237,10 @@ export default function Contacts() {
                                 <RefreshCw size={14} className={loading ? "animate-spin text-blue-600" : ""} /> Refresh
                             </button>
                             <button 
-                                onClick={() => setActiveTab('suggestions')}
+                                onClick={() => {
+                                    setActiveTab('suggestions');
+                                    setSearchQuery('');
+                                }}
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
                             >
                                 <UserPlus size={14} /> Find People
@@ -152,7 +248,7 @@ export default function Contacts() {
                         </div>
                     </div>
 
-                    {/* Tabs */}
+                    {/* Tabs (shown always) */}
                     <div className="flex items-center gap-6 border-b border-slate-200">
                         {[
                             { id: 'all', label: `All Contacts (${friends.length})` },
@@ -184,14 +280,139 @@ export default function Contacts() {
                             type="text" 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search contacts by name or username..." 
-                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                            placeholder="Search registered users by username or name..." 
+                            className="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                         />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
                     </div>
 
-                    {/* TAB: ALL / ONLINE CONTACTS */}
+                    {/* GLOBAL DISCOVERY SEARCH RESULTS (when user types in search) */}
+                    {isSearchingMode && (
+                        <div className="space-y-3 bg-gradient-to-b from-blue-50/50 to-transparent p-4 rounded-2xl border border-blue-100">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Globe className="w-4 h-4 text-blue-600" />
+                                    <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                                        Global User Discovery
+                                    </h2>
+                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
+                                        {isSearching ? 'Searching...' : `${searchResults.length} found`}
+                                    </span>
+                                </div>
+                                <span className="text-[11px] text-slate-500">Live directory search</span>
+                            </div>
+
+                            {isSearching ? (
+                                <div className="p-6 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                                    <RefreshCw size={14} className="animate-spin text-blue-600" /> Searching SafeChat360 members...
+                                </div>
+                            ) : searchResults.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                                    {searchResults.map((person) => (
+                                        <div 
+                                            key={person.id} 
+                                            className="p-3.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-sm hover:border-blue-200 transition-all"
+                                        >
+                                            <div 
+                                                onClick={() => navigate(`/profile/${person.username}`)}
+                                                className="flex items-center gap-3 min-w-0 cursor-pointer group"
+                                            >
+                                                <img 
+                                                    src={person.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${person.username}`} 
+                                                    className="w-10 h-10 rounded-full object-cover border border-slate-200 group-hover:ring-2 group-hover:ring-blue-500 transition-all shrink-0" 
+                                                    alt="" 
+                                                />
+                                                <div className="min-w-0">
+                                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                                                        {person.full_name || person.username}
+                                                    </h4>
+                                                    <p className="text-[11px] text-slate-400 truncate">@{person.username}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                                {/* Action based on relationship */}
+                                                {person.friendship_status === 'none' && (
+                                                    <button 
+                                                        disabled={processingId === person.id}
+                                                        onClick={() => sendFriendRequest(person.id)}
+                                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 shadow-sm"
+                                                    >
+                                                        <UserPlus size={13} />
+                                                        <span>{processingId === person.id ? "Adding..." : "Add Friend"}</span>
+                                                    </button>
+                                                )}
+
+                                                {person.friendship_status === 'outgoing_request' && (
+                                                    <span className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl border border-slate-200">
+                                                        <Clock size={12} className="text-amber-500" />
+                                                        <span>Pending</span>
+                                                    </span>
+                                                )}
+
+                                                {person.friendship_status === 'incoming_request' && (
+                                                    <div className="flex items-center gap-1">
+                                                        <button 
+                                                            disabled={processingId === person.friendship_id}
+                                                            onClick={() => acceptRequest(person.friendship_id)}
+                                                            className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
+                                                            title="Accept request"
+                                                        >
+                                                            <Check size={12} /> Accept
+                                                        </button>
+                                                        <button 
+                                                            disabled={processingId === person.friendship_id}
+                                                            onClick={() => rejectRequest(person.friendship_id)}
+                                                            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 text-xs font-bold rounded-xl transition-colors disabled:opacity-50 border border-slate-200"
+                                                            title="Decline request"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {person.friendship_status === 'accepted' && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[11px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded-lg border border-green-200 flex items-center gap-1">
+                                                            <UserCheck size={12} /> Friend
+                                                        </span>
+                                                        <button 
+                                                            onClick={() => navigate(`/chats/${person.id}`)}
+                                                            className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
+                                                            title="Send message"
+                                                        >
+                                                            <MessageSquare size={13} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-4 text-center text-slate-400 text-xs">
+                                    No registered SafeChat360 users found matching <strong className="text-slate-600">"{debouncedQuery}"</strong>.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* SECTION: EXISTING CONTACTS */}
                     {(activeTab === 'all' || activeTab === 'online') && (
                         <div>
+                            {isSearchingMode && (
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                                    Your Saved Contacts ({filteredFriends.length})
+                                </h3>
+                            )}
+
                             {filteredFriends.length > 0 ? (
                                 <div className="space-y-1.5">
                                     {filteredFriends.map((contact) => (
@@ -199,7 +420,10 @@ export default function Contacts() {
                                             key={contact.id} 
                                             className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-2xl transition-colors border border-transparent hover:border-slate-100 group"
                                         >
-                                            <div className="flex items-center gap-3.5 min-w-0">
+                                            <div 
+                                                onClick={() => navigate(`/profile/${contact.username}`)}
+                                                className="flex items-center gap-3.5 min-w-0 cursor-pointer"
+                                            >
                                                 <div className="relative shrink-0">
                                                     <img 
                                                         src={contact.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.username}`} 
@@ -211,7 +435,7 @@ export default function Contacts() {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <h3 className="font-bold text-sm text-slate-900 truncate">
+                                                    <h3 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                                                         {contact.full_name || contact.username}
                                                     </h3>
                                                     <p className="text-xs text-slate-400 truncate">
@@ -232,23 +456,21 @@ export default function Contacts() {
                                         </div>
                                     ))}
                                 </div>
-                            ) : (
+                            ) : !isSearchingMode ? (
                                 <div className="p-12 text-center text-slate-400">
                                     <Users className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
                                     <p className="text-sm font-bold text-slate-700">No contacts found</p>
                                     <p className="text-xs text-slate-400 mt-1">
-                                        {searchQuery ? "No contacts match your search query." : "You haven't connected with any friends yet."}
+                                        You haven't connected with any friends yet. Use the search bar above to discover users!
                                     </p>
-                                    {!searchQuery && (
-                                        <button
-                                            onClick={() => setActiveTab('suggestions')}
-                                            className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition-colors"
-                                        >
-                                            Explore Suggested People
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => setActiveTab('suggestions')}
+                                        className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition-colors"
+                                    >
+                                        Explore Suggested People
+                                    </button>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
                     )}
 
@@ -259,9 +481,12 @@ export default function Contacts() {
                                 <div className="space-y-3 max-w-xl">
                                     {requests.map((req) => (
                                         <div key={req.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                                            <div className="flex items-center gap-3 min-w-0">
+                                            <div 
+                                                onClick={() => req.requester_username && navigate(`/profile/${req.requester_username}`)}
+                                                className="flex items-center gap-3 min-w-0 cursor-pointer"
+                                            >
                                                 <img 
-                                                    src={req.requester_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_name || req.requester_username}`} 
+                                                    src={req.requester_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_username || 'user'}`} 
                                                     className="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0" 
                                                     alt="" 
                                                 />
@@ -269,16 +494,23 @@ export default function Contacts() {
                                                     <h4 className="text-sm font-bold text-slate-900 truncate">
                                                         {req.requester_name || req.requester_username || 'SafeChat User'}
                                                     </h4>
-                                                    <p className="text-xs text-slate-400">Sent a friend request</p>
+                                                    <p className="text-xs text-slate-400">@{req.requester_username || 'user'} &bull; Sent request</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button 
                                                     disabled={processingId === req.id}
                                                     onClick={() => acceptRequest(req.id)} 
-                                                    className="flex items-center gap-1 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
+                                                    className="flex items-center gap-1 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
                                                 >
                                                     <Check size={14} /> Accept
+                                                </button>
+                                                <button 
+                                                    disabled={processingId === req.id}
+                                                    onClick={() => rejectRequest(req.id)} 
+                                                    className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 text-xs font-bold rounded-xl transition-colors disabled:opacity-50 border border-slate-200"
+                                                >
+                                                    <X size={14} /> Decline
                                                 </button>
                                             </div>
                                         </div>
@@ -301,7 +533,10 @@ export default function Contacts() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
                                     {suggestions.map((person) => (
                                         <div key={person.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between shadow-sm">
-                                            <div className="flex items-center gap-3 min-w-0">
+                                            <div 
+                                                onClick={() => navigate(`/profile/${person.username}`)}
+                                                className="flex items-center gap-3 min-w-0 cursor-pointer"
+                                            >
                                                 <img 
                                                     src={person.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${person.username}`} 
                                                     className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" 
@@ -327,7 +562,7 @@ export default function Contacts() {
                                 <div className="p-12 text-center text-slate-400">
                                     <Users className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
                                     <p className="text-sm font-bold text-slate-700">No suggestions right now</p>
-                                    <p className="text-xs text-slate-400 mt-1">Check back later for new connections.</p>
+                                    <p className="text-xs text-slate-400 mt-1">Check back later or search by username above.</p>
                                 </div>
                             )}
                         </div>
@@ -352,21 +587,31 @@ export default function Contacts() {
                                 <div key={req.id} className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
                                     <div className="flex items-center gap-2.5 mb-2.5">
                                         <img 
-                                            src={req.requester_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_name || 'user'}`} 
+                                            src={req.requester_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.requester_username || 'user'}`} 
                                             className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0" 
                                             alt="" 
                                         />
                                         <div className="min-w-0">
                                             <h4 className="text-xs font-bold text-slate-900 truncate">{req.requester_name || req.requester_username || 'User'}</h4>
-                                            <p className="text-[10px] text-slate-400">Friend request</p>
+                                            <p className="text-[10px] text-slate-400 truncate">@{req.requester_username || 'user'}</p>
                                         </div>
                                     </div>
-                                    <button 
-                                        onClick={() => acceptRequest(req.id)}
-                                        className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
-                                    >
-                                        Accept Request
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            disabled={processingId === req.id}
+                                            onClick={() => acceptRequest(req.id)}
+                                            className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button 
+                                            disabled={processingId === req.id}
+                                            onClick={() => rejectRequest(req.id)}
+                                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 text-xs font-bold rounded-lg transition-colors border border-slate-200 disabled:opacity-50"
+                                        >
+                                            Decline
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getApiUrl } from '../config';
+import { getApiUrl, resolveMediaUrl } from '../config';
 import { 
   Plus, Image as ImageIcon, Video, Smile, MoreHorizontal, 
   ThumbsUp, MessageSquare, Share2, Bookmark, CheckCircle2,
@@ -215,9 +215,9 @@ export default function Dashboard() {
                 {post.media_url && (
                   <div className="rounded-xl overflow-hidden max-h-[400px] mb-4 bg-slate-900">
                     {post.media_type === 'video' ? (
-                      <video src={post.media_url} controls className="w-full h-full object-cover" />
+                      <video src={resolveMediaUrl(post.media_url)} controls className="w-full h-full object-cover" />
                     ) : (
-                      <img src={post.media_url} className="w-full max-h-[400px] object-cover mx-auto" alt="Post media" />
+                      <img src={resolveMediaUrl(post.media_url)} className="w-full max-h-[400px] object-cover mx-auto" alt="Post media" />
                     )}
                   </div>
                 )}

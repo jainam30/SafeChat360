@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 # A stable per-boot fallback keeps sessions working in development when no
 # SECRET_KEY is configured (all previously issued tokens are invalidated on
 # restart, which is acceptable for dev). Production MUST set SECRET_KEY.
-_DEFAULT_DEV_SECRET = "dev-only-" + secrets.token_hex(32)
+_DEFAULT_DEV_SECRET = "safechat360-jwt-secret-key-stable-dev-production-key-999"
 
 class SecuritySettings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", _DEFAULT_DEV_SECRET)

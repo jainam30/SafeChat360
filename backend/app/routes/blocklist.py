@@ -3,23 +3,22 @@ from sqlmodel import Session, select
 from typing import List
 from app.db import get_session
 from app.models import BlockedTerm, User
-from app.deps import get_current_user
+from app.deps import require_moderator
 
 router = APIRouter(prefix="/api/blocklist", tags=["blocklist"])
 
 @router.get("/", response_model=List[BlockedTerm])
 def get_blocked_terms(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
-    # Depending on requirements, might restrict to admin only
     return session.exec(select(BlockedTerm).order_by(BlockedTerm.created_at.desc())).all()
 
 @router.post("/", response_model=BlockedTerm)
 def add_blocked_term(
     term: str = Body(..., embed=True),
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
     # Check if exists
     existing = session.exec(select(BlockedTerm).where(BlockedTerm.term == term.lower())).first()
@@ -36,7 +35,7 @@ def add_blocked_term(
 def delete_blocked_term(
     term_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_moderator)
 ):
     term = session.get(BlockedTerm, term_id)
     if not term:
