@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api")
 
 @router.get("/history", tags=["history"])
 def read_history(
-    limit: int = Query(50, lte=500), 
+    limit: int = Query(50, le=500, ge=1), 
     offset: int = 0, 
     content_type: Optional[str] = None, 
     current_user: User = Depends(require_moderator),

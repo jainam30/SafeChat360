@@ -69,12 +69,15 @@ async def lifespan(app: FastAPI):
     yield
 
 from app.core.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
-from app.core.exceptions import APIException, api_exception_handler, custom_exception_handler
+from fastapi.exceptions import RequestValidationError
+from app.core.exceptions import APIException, api_exception_handler, custom_exception_handler, validation_exception_handler
 from app.core.config import settings
 
 app = FastAPI(title="SafeChat360 Backend", lifespan=lifespan)
 
 # Add custom exception handlers
+# Order matters: specific handlers must be registered before the catch-all.
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(APIException, api_exception_handler)
 app.add_exception_handler(Exception, custom_exception_handler)
 

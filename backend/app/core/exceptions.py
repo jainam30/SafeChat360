@@ -1,5 +1,6 @@
 import re
 from fastapi import Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from .logger import logger
 from app.core.config import settings
@@ -56,6 +57,29 @@ async def api_exception_handler(request: Request, exc: APIException):
             "data": {},
             "meta": {},
             "errors": exc.errors
+        },
+        headers=headers
+    )
+
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Ensure FastAPI query/body validation errors return HTTP 422, not 500."""
+    headers = _get_cors_headers(request)
+    errors = []
+    for error in exc.errors():
+        errors.append({
+            "field": " -> ".join(str(loc) for loc in error.get("loc", [])),
+            "message": error.get("msg", "Validation error"),
+            "type": error.get("type", "value_error")
+        })
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "message": "Validation error",
+            "detail": "One or more request parameters are invalid.",
+            "data": {},
+            "meta": {},
+            "errors": errors
         },
         headers=headers
     )
