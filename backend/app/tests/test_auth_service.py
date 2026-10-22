@@ -399,37 +399,42 @@ def test_websocket_endpoint_mismatched_client_identity():
 def test_asgi_middleware_cors_and_exception_stack():
     from fastapi.testclient import TestClient
     from app.main import app
+    from app.deps import get_auth_service
 
-    client = TestClient(app, raise_server_exceptions=False)
+    app.dependency_overrides[get_auth_service] = lambda: AuthService(MockUserRepo(), MockSessionService())
+    try:
+        client = TestClient(app, raise_server_exceptions=False)
 
-    # 1. Normal route with approved production origin
-    r1 = client.get("/health", headers={"Origin": "https://safe-chat360.vercel.app"})
-    assert r1.status_code == 200
-    assert r1.headers.get("access-control-allow-origin") == "https://safe-chat360.vercel.app"
-    assert r1.headers.get("access-control-allow-credentials") == "true"
+        # 1. Normal route with approved production origin
+        r1 = client.get("/health", headers={"Origin": "https://safe-chat360.vercel.app"})
+        assert r1.status_code == 200
+        assert r1.headers.get("access-control-allow-origin") == "https://safe-chat360.vercel.app"
+        assert r1.headers.get("access-control-allow-credentials") == "true"
 
-    # 2. Normal route with approved local development origin
-    r2 = client.get("/health", headers={"Origin": "http://localhost:5173"})
-    assert r2.status_code == 200
-    assert r2.headers.get("access-control-allow-origin") == "http://localhost:5173"
+        # 2. Normal route with approved local development origin
+        r2 = client.get("/health", headers={"Origin": "http://localhost:5173"})
+        assert r2.status_code == 200
+        assert r2.headers.get("access-control-allow-origin") == "http://localhost:5173"
 
-    # 3. Normal route with arbitrary, unapproved *.vercel.app origin (MUST BE DENIED)
-    r3 = client.get("/health", headers={"Origin": "https://random-attacker.vercel.app"})
-    assert r3.status_code == 200
-    assert r3.headers.get("access-control-allow-origin") is None
+        # 3. Normal route with arbitrary, unapproved *.vercel.app origin (MUST BE DENIED)
+        r3 = client.get("/health", headers={"Origin": "https://random-attacker.vercel.app"})
+        assert r3.status_code == 200
+        assert r3.headers.get("access-control-allow-origin") is None
 
-    # 4. APIException response with approved origin
-    r4 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://safe-chat360.vercel.app"})
-    assert r4.status_code == 401
-    assert r4.headers.get("access-control-allow-origin") == "https://safe-chat360.vercel.app"
+        # 4. APIException response with approved origin
+        r4 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://safe-chat360.vercel.app"})
+        assert r4.status_code == 401
+        assert r4.headers.get("access-control-allow-origin") == "https://safe-chat360.vercel.app"
 
-    # 5. APIException response with arbitrary, unapproved *.vercel.app origin (MUST BE DENIED)
-    r5 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://random-attacker.vercel.app"})
-    assert r5.status_code == 401
-    assert r5.headers.get("access-control-allow-origin") is None
+        # 5. APIException response with arbitrary, unapproved *.vercel.app origin (MUST BE DENIED)
+        r5 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://random-attacker.vercel.app"})
+        assert r5.status_code == 401
+        assert r5.headers.get("access-control-allow-origin") is None
 
-    # 6. APIException response with external attacker origin (MUST BE DENIED)
-    r6 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://malicious-website.com"})
-    assert r6.status_code == 401
-    assert r6.headers.get("access-control-allow-origin") is None
+        # 6. APIException response with external attacker origin (MUST BE DENIED)
+        r6 = client.post("/api/auth/login", json={"identifier": "nonexistent", "password": "wrong"}, headers={"Origin": "https://malicious-website.com"})
+        assert r6.status_code == 401
+        assert r6.headers.get("access-control-allow-origin") is None
+    finally:
+        app.dependency_overrides.clear()
 
